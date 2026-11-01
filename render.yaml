@@ -8,7 +8,7 @@
 # the app then serves reads locally and syncs writes to the cloud automatically.
 services:
   - type: web
-    name: local-link
+    name: local-link-3d
     runtime: node
     plan: free
     buildCommand: npm install
