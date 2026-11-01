@@ -274,6 +274,11 @@
     document.addEventListener('pointerleave', () => { if (tiltEl) { tiltEl.style.transform = ''; tiltEl = null; } });
   }
 
+  /* sidebar: glow follows the cursor */
+  document.addEventListener('pointermove', e => { const a = e.target.closest && e.target.closest('.side a'); if (a) { const r = a.getBoundingClientRect(); a.style.setProperty('--mx', (e.clientX - r.left) + 'px'); } }, { passive: true });
+  /* admin: '/' focuses search */
+  document.addEventListener('keydown', e => { if (e.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { const i = document.querySelector('.desk .searchbar input'); if (i) { e.preventDefault(); i.focus(); } } });
+
   /* ------------------------------------------------------------------ *
    * 5. Screen transitions + staggered reveal
    * ------------------------------------------------------------------ */
@@ -300,6 +305,22 @@
       setTimeout(() => { const r = el.getBoundingClientRect(); if (r.top < innerHeight && r.bottom > 0) el.classList.add('fx-in'); }, 900 + Math.min(i, 14) * 45);
     });
     countUp(root);
+    // admin tables: avatar initials in the first column (pure decoration)
+    root.querySelectorAll('.desk td.tbn').forEach(td => {
+      if (td.__fxa) return; td.__fxa = 1;
+      const w = document.createElement('div'); w.className = 'fx-acts'; while (td.firstChild) w.appendChild(td.firstChild); td.appendChild(w);
+    });
+    root.querySelectorAll('.desk table tbody tr').forEach(tr => {
+      const td = tr.firstElementChild; if (!td || td.__fxav || td.colSpan > 1) return; td.__fxav = 1;
+      const th = tr.closest('table').querySelector('thead th');
+      if (!th || !/name|business|title|user|plan|question|label/i.test(th.textContent)) return;
+      const txt = (td.textContent || '').trim(); if (!txt || /^[\d₹#]/.test(txt) || td.querySelector('img,.badge')) return;
+      const ini = txt.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+      let hsh = 0; for (const ch of txt) hsh = (hsh * 31 + ch.charCodeAt(0)) >>> 0;
+      const av = document.createElement('span'); av.className = 'fx-av'; av.textContent = ini; av.style.setProperty('--h', 150 + (hsh % 7) * 28);
+      const wrap = document.createElement('span'); wrap.className = 'fx-cell'; while (td.firstChild) wrap.appendChild(td.firstChild);
+      td.appendChild(wrap); wrap.prepend(av);
+    });
   }
   function enter(el, dir) {
     if (RM || !el) return;
@@ -309,7 +330,7 @@
 
   /* number counters for stat tiles */
   function countUp(root) {
-    root.querySelectorAll('.stat b, .stat .v, .stat h2, .stat h3, .stat strong, .kpi b').forEach(el => {
+    root.querySelectorAll('.stat .num, .stat b, .stat strong, .kpi b, .panel > .ph > h3').forEach(el => {
       if (el.__fxc) return; el.__fxc = 1;
       const raw = el.textContent.trim(); const m = raw.match(/^([^\d-]*)([\d,]+(?:\.\d+)?)(.*)$/);
       if (!m) return; const target = parseFloat(m[2].replace(/,/g, '')); if (!isFinite(target) || target === 0) return;

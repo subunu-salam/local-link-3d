@@ -117,9 +117,10 @@ html.fx-on .stat.fx-tilt::before{background:conic-gradient(from var(--fx-a,0deg)
 
 /* ---------- buttons ---------- */
 html.fx-on .btn{transition:transform .35s var(--ease-spring),box-shadow .35s,background .3s,filter .3s}
-html.fx-on .btn:not(.ghost){background-image:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.22) 50%,transparent 70%);background-size:250% 100%;background-position:150% 0;background-repeat:no-repeat}
-html.fx-on .btn:not(.ghost):hover{background-position:-50% 0;transition:background-position .8s var(--ease-out),transform .35s var(--ease-spring),box-shadow .35s;
-  transform:translateY(-2px);box-shadow:0 16px 32px -14px color-mix(in srgb,var(--primary) 85%,transparent)}
+html.fx-on .btn{position:relative;overflow:hidden;isolation:isolate}
+html.fx-on .btn::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.28) 50%,transparent 70%);transform:translateX(-130%)}
+html.fx-on .btn:not(.ghost):hover::after{transform:translateX(130%);transition:transform .8s var(--ease-out)}
+html.fx-on .btn:not(.ghost):hover{transform:translateY(-2px);box-shadow:0 16px 32px -14px color-mix(in srgb,var(--primary) 85%,transparent)}
 html.fx-on .btn.accent:hover{box-shadow:0 16px 32px -14px color-mix(in srgb,var(--accent) 85%,transparent)}
 html.fx-on .btn:active{transform:scale(.97)}
 html.fx-on .chip,html.fx-on .tb-btn,html.fx-on .vpill{transition:transform .3s var(--ease-spring),background .25s,color .25s,border-color .25s,box-shadow .3s}
@@ -351,7 +352,6 @@ html.fx-on .side .grp{position:relative;padding-left:22px}
 html.fx-on .side .grp::before{content:"";position:absolute;left:12px;top:50%;width:5px;height:5px;margin-top:2px;border-radius:50%;background:var(--accent);opacity:.7}
 html.fx-on .desk .btn,html.fx-on .phone .btn{will-change:transform}
 html.fx-on table thead th{position:relative}
-html.fx-on table tbody tr:hover{transform:translateX(3px)}
 html.fx-on .badge{transition:transform .3s var(--ease-spring)}
 html.fx-on tr:hover .badge,html.fx-on .card:hover .badge{transform:scale(1.06)}
 /* partner quick actions + lists */
@@ -363,3 +363,135 @@ html.fx-on .modal,html.fx-on .dialog,html.fx-on [role="dialog"]{animation:fxModa
 @keyframes fxModal{from{opacity:0;transform:perspective(900px) rotateX(-12deg) translateY(20px) scale(.94)}to{opacity:1;transform:none}}
 /* Best Seller tag: readable in both themes (was white-on-white in dark mode) */
 html.fx-on .bestseller{background:linear-gradient(135deg,#111827,#1F2937)!important;color:#fff!important;border:1px solid rgba(255,255,255,.14);box-shadow:0 6px 14px -8px rgba(0,0,0,.6)}
+
+/* =====================================================================
+   v4 — product-grade UX pass (reference: Linear / Stripe / Vercel)
+   Every control gets hover, focus, press and enter states.
+   ===================================================================== */
+/* ---- buttons: sizes, ghost, danger, focus ---- */
+html.fx-on .btn.sm{padding:7px 12px;font-size:12.5px;border-radius:10px;gap:6px;font-weight:650}
+html.fx-on .btn.sm svg{width:14px;height:14px}
+html.fx-on .btn.ghost{background:transparent!important;border:1px solid var(--border-strong);color:var(--body);box-shadow:none}
+html.fx-on .btn.ghost:hover{background:color-mix(in srgb,var(--primary) 8%,transparent)!important;border-color:color-mix(in srgb,var(--primary) 45%,transparent);color:var(--primary);transform:translateY(-1px)}
+html.fx-on .btn.danger,html.fx-on .btn.ghost.danger{color:var(--error)!important;border-color:color-mix(in srgb,var(--error) 30%,transparent)}
+html.fx-on .btn.danger:hover{background:color-mix(in srgb,var(--error) 12%,transparent)!important;border-color:var(--error);color:var(--error)!important;box-shadow:0 8px 18px -12px var(--error)}
+html.fx-on .btn:focus-visible,html.fx-on .chip:focus-visible,html.fx-on .tb-btn:focus-visible{outline:none;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--primary)}
+html.fx-on .btn:disabled{opacity:.5;transform:none!important;cursor:not-allowed}
+html.fx-on .tb-btn{transition:transform .35s var(--ease-spring),background .25s,border-color .25s,color .25s}
+html.fx-on .tb-btn:hover svg{animation:fxWiggle .5s var(--ease-out)}
+@keyframes fxWiggle{30%{transform:rotate(-14deg)}60%{transform:rotate(10deg)}100%{transform:none}}
+html.fx-on .lang-toggle button{transition:background .3s,color .3s}
+
+/* ---- data tables (admin) ---- */
+html.fx-on .desk table{border-collapse:separate;border-spacing:0}
+html.fx-on .desk table thead th{position:sticky;top:0;z-index:2;background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(10px);
+  font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:650;padding:11px 16px;border-bottom:1px solid var(--border)}
+html.fx-on .desk table tbody td{padding:11px 16px;vertical-align:middle;border-bottom:1px solid color-mix(in srgb,var(--border) 70%,transparent);transition:background .2s}
+html.fx-on .desk table tbody tr{position:relative}
+html.fx-on .desk table tbody tr:hover td{background:color-mix(in srgb,var(--primary) 6%,var(--surface))}
+html.fx-on .desk table tbody tr td:first-child{position:relative;font-weight:600;color:var(--ink)}
+html.fx-on .desk table tbody tr td:first-child::before{content:"";position:absolute;left:0;top:20%;bottom:20%;width:3px;border-radius:0 3px 3px 0;background:var(--primary-grad);transform:scaleY(0);transition:transform .35s var(--ease-spring)}
+html.fx-on .desk table tbody tr:hover td:first-child::before{transform:scaleY(1)}
+html.fx-on .desk table tbody tr:hover td:first-child{box-shadow:none}
+/* row actions: one tidy line, quiet until hover */
+html.fx-on td.tbn{display:table-cell!important;max-width:none!important;white-space:nowrap;text-align:right;width:1%}
+.fx-acts{display:flex;flex-wrap:nowrap;gap:4px;justify-content:flex-end;align-items:center}
+html.fx-on td.tbn .btn.sm{padding:5px 10px;font-size:12px;border-radius:8px;box-shadow:none}
+html.fx-on td.tbn .btn.sm.ghost{border-color:transparent;color:var(--muted)}
+html.fx-on td.tbn .btn.sm.ghost:hover{border-color:var(--border-strong);color:var(--ink);background:var(--surface-2)!important}
+html.fx-on td.tbn .btn.sm.ghost.danger{color:color-mix(in srgb,var(--error) 75%,var(--muted))!important}
+html.fx-on .desk tbody tr .fx-acts{opacity:.75;transition:opacity .25s}
+html.fx-on .desk tbody tr:hover .fx-acts{opacity:1}
+html.fx-on .desk table tbody td:first-child{min-width:190px}
+html.fx-on .desk table td{line-height:1.35}
+/* avatar chips (added by fx.js) */
+.fx-av{display:inline-grid;place-items:center;width:28px;height:28px;margin-right:10px;border-radius:9px;font-size:11.5px;font-weight:800;color:#fff;vertical-align:middle;flex:0 0 auto;
+  background:linear-gradient(135deg,hsl(var(--h) 65% 52%),hsl(calc(var(--h) + 40) 70% 42%));box-shadow:0 4px 10px -4px hsl(var(--h) 60% 40% / .6);transition:transform .45s var(--ease-spring)}
+tr:hover .fx-av{transform:rotate(-8deg) scale(1.08)}
+.fx-cell{display:flex;align-items:center}
+/* panel header: count pill */
+html.fx-on .panel .ph{padding:14px 18px}
+html.fx-on .panel .ph h3{font-size:15px;letter-spacing:-.01em}
+html.fx-on .panel .ph .row .btn{animation:fxRise .6s var(--ease-out) both}
+html.fx-on .panel .ph .row .btn:nth-child(2){animation-delay:.06s}html.fx-on .panel .ph .row .btn:nth-child(3){animation-delay:.12s}
+/* badges: pill with dot, consistent */
+html.fx-on .badge{padding:3px 9px 3px 8px;font-size:11px;font-weight:650;letter-spacing:.01em;border:1px solid color-mix(in srgb,currentColor 22%,transparent)}
+html.fx-on .badge.warn::before,html.fx-on .badge.closed::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+html.fx-on .badge.warn::before{animation:fxPing 1.8s ease-out infinite}
+
+/* ---- admin top bar ---- */
+html.fx-on .desk .searchbar{transition:box-shadow .35s var(--ease-out),border-color .3s,max-width .5s var(--ease-out)}
+html.fx-on .desk .searchbar:focus-within{max-width:320px!important;border-color:var(--primary);box-shadow:var(--ring)}
+html.fx-on .desk .searchbar::after{content:"/";margin-left:auto;font-size:11px;font-weight:700;color:var(--faint);border:1px solid var(--border-strong);border-radius:6px;padding:1px 6px}
+html.fx-on .desk h1,html.fx-on .desk .atitle,html.fx-on .desk > :not(.side) h2:first-child{animation:fxTitle .6s var(--ease-out) both}
+@keyframes fxTitle{from{opacity:0;transform:translateY(8px);letter-spacing:.04em}to{opacity:1;transform:none}}
+/* sidebar: active pill slides, hover glow */
+html.fx-on .side a{overflow:hidden}
+html.fx-on .side a::before{content:"";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(120px circle at var(--mx,50%) 50%,color-mix(in srgb,var(--primary) 16%,transparent),transparent 70%);opacity:0;transition:opacity .3s}
+html.fx-on .side a:hover::before{opacity:1}
+html.fx-on .side a.on{animation:fxActive .5s var(--ease-spring)}
+@keyframes fxActive{from{transform:scaleX(.9);opacity:.6}to{transform:none;opacity:1}}
+
+/* ---- modals & sheets ---- */
+html.fx-on .sheet{background:color-mix(in srgb,#000 45%,transparent)!important;backdrop-filter:blur(8px) saturate(1.2)!important;animation:fxFade .3s ease both}
+@keyframes fxFade{from{opacity:0}to{opacity:1}}
+html.fx-on .sheet .panel-s{border:1px solid var(--glass-border);box-shadow:0 40px 90px -30px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.03)}
+html.fx-on .desk ~ .sheet .panel-s,html.fx-on body > .sheet .panel-s{animation:fxModal .6s var(--ease-spring) both!important}
+html.fx-on .phone .sheet .panel-s{animation:fxSheetUp .55s var(--ease-out) both!important}
+@keyframes fxSheetUp{from{transform:translateY(100%)}to{transform:none}}
+html.fx-on .sheet .sh-head{position:relative;padding:16px 20px 12px}
+html.fx-on .sheet .sh-head::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,var(--primary-light),var(--accent),transparent);opacity:.6}
+html.fx-on .sheet .sh-head .tb-btn{transition:transform .45s var(--ease-spring),background .25s}
+html.fx-on .sheet .sh-head .tb-btn:hover{transform:rotate(90deg);background:color-mix(in srgb,var(--error) 14%,transparent);color:var(--error)}
+html.fx-on .sheet .sh-body .field{animation:fxRise .5s var(--ease-out) both}
+html.fx-on .sheet .sh-body .field:nth-child(2){animation-delay:.04s}html.fx-on .sheet .sh-body .field:nth-child(3){animation-delay:.08s}
+html.fx-on .sheet .sh-body .field:nth-child(4){animation-delay:.12s}html.fx-on .sheet .sh-body .field:nth-child(5){animation-delay:.16s}
+html.fx-on .sheet .sh-body .field:nth-child(n+6){animation-delay:.2s}
+/* ---- forms ---- */
+html.fx-on .field label{font-size:12px;font-weight:600;letter-spacing:.01em;transition:color .25s}
+html.fx-on .field:focus-within label{color:var(--primary)}
+html.fx-on .input{border-radius:12px;padding:10px 13px;transition:border-color .25s,box-shadow .35s var(--ease-out),background .25s}
+html.fx-on .input:hover{border-color:color-mix(in srgb,var(--primary) 35%,var(--border-strong))}
+html.fx-on .input:focus-within{background:color-mix(in srgb,var(--primary) 4%,var(--surface))}
+html.fx-on .input svg{transition:transform .4s var(--ease-spring),stroke .25s}
+html.fx-on .input:focus-within svg{transform:scale(1.12);stroke:var(--primary)}
+html.fx-on input[type=checkbox],html.fx-on input[type=radio]{accent-color:var(--primary);width:16px;height:16px;transition:transform .3s var(--ease-spring)}
+html.fx-on input[type=checkbox]:active,html.fx-on input[type=radio]:active{transform:scale(.85)}
+html.fx-on .sheet .btn.block,html.fx-on .crm-card .btn.block,html.fx-on .auth-wrap .btn.block{padding:12px 18px;border-radius:12px}
+
+/* ---- partner: products, orders, lists ---- */
+html.fx-on .pmacts{display:flex;flex-wrap:wrap;gap:6px}
+html.fx-on .pmbtn{transition:transform .35s var(--ease-spring),background .25s,border-color .25s,color .25s,box-shadow .3s;border-radius:9px}
+html.fx-on .pmbtn:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--primary) 45%,transparent);color:var(--primary);box-shadow:0 8px 16px -12px var(--primary)}
+html.fx-on .pmbtn.danger:hover{border-color:var(--error);color:var(--error);box-shadow:0 8px 16px -12px var(--error)}
+html.fx-on .pmbtn svg{transition:transform .4s var(--ease-spring)}
+html.fx-on .pmbtn:hover svg{transform:rotate(-12deg) scale(1.1)}
+html.fx-on body[data-app="partner"] .card{border-radius:18px}
+/* order cards: status-coloured edge + pulse for new orders */
+html.fx-on body[data-app="partner"] .card:has(.badge.warn){box-shadow:inset 3px 0 0 var(--warning),var(--shadow-sm)}
+html.fx-on body[data-app="partner"] .card:has(.badge.open){box-shadow:inset 3px 0 0 var(--success),var(--shadow-sm)}
+html.fx-on body[data-app="partner"] .card:has(.badge.closed){box-shadow:inset 3px 0 0 var(--error),var(--shadow-sm)}
+html.fx-on body[data-app="partner"] .card:has(.badge.warn) .badge.warn{animation:fxGlowW 2s ease-in-out infinite}
+@keyframes fxGlowW{50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--warning) 18%,transparent)}}
+html.fx-on body[data-app="partner"] .card .btn.sm:not(.ghost){background:var(--primary-grad)}
+/* thumbnails float */
+html.fx-on .thumb{transition:transform .5s var(--ease-spring),box-shadow .4s}
+html.fx-on .card:hover .thumb,html.fx-on .brow:hover .thumb{transform:rotate(-4deg) scale(1.06);box-shadow:0 12px 22px -12px color-mix(in srgb,var(--primary) 80%,transparent)}
+/* chat */
+html.fx-on .chat > *{animation:fxBubble .45s var(--ease-spring) both}
+@keyframes fxBubble{from{opacity:0;transform:translateY(10px) scale(.92)}to{opacity:1;transform:none}}
+
+/* ---- customer sub-screens ---- */
+html.fx-on .brow{transition:transform .45s var(--ease-out),box-shadow .4s,border-color .3s}
+html.fx-on .brow:hover{transform:translateY(-3px);box-shadow:0 18px 30px -22px color-mix(in srgb,var(--primary) 80%,transparent)}
+html.fx-on .chip{transition:transform .35s var(--ease-spring),background .25s,color .25s,border-color .25s,box-shadow .3s}
+html.fx-on .chip.on{box-shadow:0 8px 16px -10px var(--primary)}
+html.fx-on .chip:active{transform:scale(.94)}
+html.fx-on .empty .eic{animation:fxIcoFloat 3.6s ease-in-out infinite}
+html.fx-on .empty h4{animation:fxRise .6s .1s var(--ease-out) both}
+html.fx-on .cartbadge{animation:fxPop .5s var(--ease-spring)}
+html.fx-on .desk table th:last-child,html.fx-on .desk table td:last-child{background:var(--surface)!important}
+html.fx-on .desk table td.tbn,html.fx-on .desk table th:last-child{box-shadow:-18px 0 18px -14px rgba(0,0,0,.55)}
+html.fx-on .desk table tbody tr:hover td.tbn{background:color-mix(in srgb,var(--primary) 6%,var(--surface))!important}
+html.fx-on .desk table tbody td:first-child{min-width:170px}
+html.fx-on .desk table td{font-size:13px}
