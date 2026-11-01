@@ -631,3 +631,136 @@ html.fx-on .phone .card{border:1px solid var(--hair)!important}
   --blk-coral:linear-gradient(150deg,color-mix(in srgb,var(--accent) 36%,var(--surface)),color-mix(in srgb,var(--accent) 12%,var(--surface)));
   --blk-sand:linear-gradient(150deg,color-mix(in srgb,var(--accent-2) 20%,var(--surface)),color-mix(in srgb,var(--primary-light) 10%,var(--surface)))}}
 html.fx-on .pcard .pimg{background:var(--blk-sand)}
+
+/* =====================================================================
+   v6 — navigation: aligned dock + sliding indicator (customer, partner),
+   sliding active pill in the admin sidebar
+   ===================================================================== */
+html.fx-on .bnav{display:grid!important;grid-template-columns:repeat(5,1fr);align-items:center;height:68px;padding:6px 8px!important;gap:2px;position:relative;isolation:isolate}
+html.fx-on .bnav button{position:relative;z-index:1;height:56px;display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:4px!important;
+  padding:0!important;color:var(--muted)!important;font-size:10.5px!important;font-weight:650!important;letter-spacing:.01em;transform:none!important;transition:color .35s}
+html.fx-on .bnav button::before{display:none!important}
+html.fx-on .bnav button > svg,html.fx-on .bnav button > .gi svg,html.fx-on .bnav button > .gi{width:22px!important;height:22px!important}
+html.fx-on .bnav button > svg,html.fx-on .bnav button > .gi{transition:transform .5s var(--ease-spring)}
+html.fx-on .bnav button > span:last-child{line-height:1;white-space:nowrap;transition:transform .45s var(--ease-spring),font-weight .2s}
+html.fx-on .bnav button:hover{color:var(--ink)!important}
+html.fx-on .bnav button:hover > svg,html.fx-on .bnav button:hover > .gi{transform:translateY(-2px)}
+html.fx-on .bnav button.on{color:var(--primary)!important}
+html.fx-on .bnav button.on > svg,html.fx-on .bnav button.on > .gi{animation:fxTabPop .6s var(--ease-spring);filter:none!important}
+html.fx-on .bnav button.on > span:last-child{font-weight:800!important}
+@keyframes fxTabPop{0%{transform:scale(1)}35%{transform:translateY(-4px) scale(1.18)}70%{transform:translateY(1px) scale(.96)}100%{transform:none}}
+html.fx-on .bnav button:active > svg,html.fx-on .bnav button:active > .gi{transform:scale(.86)}
+/* sliding indicator */
+.fx-ind{position:absolute;z-index:0;top:6px;height:56px;border-radius:18px;pointer-events:none;
+  background:color-mix(in srgb,var(--primary) 13%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--primary) 22%,transparent);
+  transition:left .55s var(--ease-spring),width .55s var(--ease-spring)}
+.fx-ind::after{content:"";position:absolute;left:50%;bottom:-6px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+/* badges: pinned to the icon's top-right, never shift layout */
+html.fx-on .bnav .cartbadge{position:absolute!important;top:5px!important;left:calc(50% + 5px)!important;right:auto!important;min-width:17px;height:17px;padding:0 4px;
+  border-radius:999px;background:var(--accent)!important;color:#fff!important;font-size:9.5px;font-weight:800;display:grid;place-items:center;line-height:1;
+  border:2px solid var(--surface);box-shadow:0 4px 10px -4px var(--accent);animation:fxPop .5s var(--ease-spring)}
+html.fx-on .bnav .cartbadge[hidden]{display:none!important}
+/* dock enters on first show */
+html.fx-on .phone .bnav{animation:fxDockIn .7s var(--ease-out) both}
+@keyframes fxDockIn{from{opacity:0;transform:translateY(30px) scale(.96)}to{opacity:1;transform:none}}
+html.fx-on .phone .bnav.fx-settled{animation:none}
+
+/* admin sidebar: sliding active pill */
+html.fx-on .side{position:relative;isolation:isolate}
+html.fx-on .side a{z-index:1;margin:1px 0}
+html.fx-on .side.fx-has-ind a.on{background:transparent!important;box-shadow:none!important;animation:none}
+.fx-sind{position:absolute;z-index:0;left:12px;right:12px;border-radius:14px;pointer-events:none;background:var(--primary-grad);
+  box-shadow:0 10px 24px -10px color-mix(in srgb,var(--primary) 85%,transparent);transition:top .5s var(--ease-spring),height .5s var(--ease-spring)}
+.fx-sind::after{content:"";position:absolute;right:12px;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+html.fx-on .side.fx-has-ind a.on::after{display:none}
+html.fx-on .side a.on{color:#fff!important}
+
+/* =====================================================================
+   v6 — bottom nav, login experience, chat & notification indicators
+   ===================================================================== */
+/* ---- bottom nav: equal grid, sliding indicator, aligned badges ---- */
+html.fx-on .phone .bnav{display:grid!important;grid-template-columns:repeat(5,1fr);align-items:stretch;padding:7px!important;gap:2px;position:relative;isolation:isolate}
+html.fx-on .phone .bnav button{position:relative;z-index:1;display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  padding:7px 2px 6px!important;min-height:50px;border-radius:19px;font-size:10.5px!important;font-weight:600!important;color:var(--muted);transform:none!important;
+  transition:color .35s var(--ease-out)}
+html.fx-on .phone .bnav button::before{display:none!important}
+html.fx-on .phone .bnav button > svg,html.fx-on .phone .bnav button > .gi svg,html.fx-on .phone .bnav button > .gi{width:22px!important;height:22px!important;transition:transform .5s var(--ease-spring)}
+html.fx-on .phone .bnav button > span:last-child{line-height:1;white-space:nowrap;transition:transform .45s var(--ease-spring),opacity .3s}
+html.fx-on .phone .bnav button.on{color:var(--primary)!important}
+html.fx-on .phone .bnav button.on > svg,html.fx-on .phone .bnav button.on > .gi{transform:translateY(-1px) scale(1.08)}
+html.fx-on .phone .bnav button.on > span:last-child{font-weight:750}
+html.fx-on .phone .bnav button:active > svg,html.fx-on .phone .bnav button:active > .gi{transform:scale(.82)}
+html.fx-on .phone .bnav button.fx-tap > svg,html.fx-on .phone .bnav button.fx-tap > .gi{animation:fxNavBounce .6s var(--ease-spring)}
+@keyframes fxNavBounce{0%{transform:scale(1)}30%{transform:translateY(-6px) scale(1.15) rotate(-6deg)}60%{transform:translateY(1px) scale(.96)}100%{transform:translateY(-1px) scale(1.08)}}
+/* badges on nav (cart + chats), consistent in every app */
+html.fx-on .bnav .cartbadge{position:absolute!important;top:3px!important;left:calc(50% + 4px)!important;right:auto!important;min-width:17px;height:17px;padding:0 4px;border-radius:9px;
+  display:grid;place-items:center;background:var(--accent)!important;color:#fff!important;font-size:9.5px!important;font-weight:800;line-height:1;
+  border:2px solid var(--surface);box-shadow:0 4px 10px -3px color-mix(in srgb,var(--accent) 80%,transparent);z-index:2}
+html.fx-on .bnav .cartbadge[hidden]{display:none!important}
+html.fx-on .bnav .cartbadge::after{content:"";position:absolute;inset:-2px;border-radius:inherit;border:2px solid var(--accent);animation:fxBadgeRing 2s ease-out infinite}
+@keyframes fxBadgeRing{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.9);opacity:0}}
+.fx-bump{animation:fxPop .55s var(--ease-spring)}
+
+/* ---- chat & notification indicators ---- */
+/* partner chat list: unread rows stand out */
+html.fx-on .phone :is(button,.card,.brow):has(> .badge.warn),html.fx-on .phone :is(button,.card,.brow):has(.badge.warn):not(:has(.otl)){position:relative}
+html.fx-on body[data-app="partner"] button:has(.badge.warn){background:linear-gradient(90deg,color-mix(in srgb,var(--primary) 9%,var(--surface)),var(--surface))!important;box-shadow:inset 3px 0 0 var(--primary)}
+html.fx-on body[data-app="partner"] button:has(.badge.warn) b,html.fx-on body[data-app="partner"] button:has(.badge.warn) h4{color:var(--ink)}
+html.fx-on .badge.warn{background:color-mix(in srgb,var(--warning) 16%,transparent)}
+/* bell icons swing; notifications row shakes gently */
+html.fx-on [data-tabnav="notifications"] .ic svg,html.fx-on .side a:has(svg) :is(svg)[data-bell]{transform-origin:50% 10%}
+html.fx-on [data-tabnav="notifications"]:hover .ic svg,html.fx-on .side a:hover svg{animation:fxBell .9s var(--ease-out)}
+@keyframes fxBell{0%,100%{transform:rotate(0)}15%{transform:rotate(16deg)}30%{transform:rotate(-14deg)}45%{transform:rotate(10deg)}60%{transform:rotate(-6deg)}75%{transform:rotate(3deg)}}
+/* notification feed items */
+html.fx-on #l > .card,html.fx-on #l > div{animation:fxRowIn .55s var(--ease-out) both}
+html.fx-on #l > *:nth-child(2){animation-delay:.05s}html.fx-on #l > *:nth-child(3){animation-delay:.1s}html.fx-on #l > *:nth-child(n+4){animation-delay:.15s}
+/* chat thread bubbles */
+html.fx-on .bub,html.fx-on .msg,html.fx-on .chat .me,html.fx-on .chat .them{animation:fxBubble .45s var(--ease-spring) both}
+/* in-app notification pill (fx.js) */
+.fx-note{position:fixed;left:50%;top:14px;z-index:450;display:flex;align-items:center;gap:10px;padding:9px 14px 9px 9px;border-radius:999px;
+  background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--glass-border);
+  box-shadow:0 18px 40px -16px rgba(0,0,0,.55);color:var(--ink);font-size:13px;font-weight:650;transform:translate(-50%,-140%);transition:transform .6s var(--ease-spring);cursor:pointer}
+.fx-note.on{transform:translate(-50%,0)}
+.fx-note i{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--primary-grad);color:#fff;font-style:normal;font-size:14px;animation:fxBell 1.2s var(--ease-out) .3s}
+.fx-note b{color:var(--accent)}
+
+/* ---- login: customer + partner ---- */
+html.fx-on .auth-wrap{position:relative;isolation:isolate;padding:22px 20px 26px}
+html.fx-on .auth-wrap::before{content:"";position:absolute;left:0;right:0;top:0;height:300px;z-index:-1;
+  background:radial-gradient(420px 260px at 50% 0%,color-mix(in srgb,var(--primary-light) 28%,transparent),transparent 70%),
+             radial-gradient(260px 200px at 90% 30%,color-mix(in srgb,var(--accent) 16%,transparent),transparent 70%)}
+html.fx-on .auth-hero{position:relative;min-height:190px;justify-content:center;margin:6px 0 18px!important}
+html.fx-on .auth-hero > svg,html.fx-on .auth-hero > span:first-child{animation:fxSpin 1.2s var(--ease-out) both,fxBob 3s 1.2s ease-in-out infinite;filter:drop-shadow(0 16px 26px color-mix(in srgb,var(--primary) 55%,transparent))}
+html.fx-on .auth-hero h2{font-size:28px!important;font-weight:800;letter-spacing:-.035em;animation:fxRise .7s .15s var(--ease-out) both,fxSheen 9s linear infinite!important}
+html.fx-on .auth-hero p{animation:fxRise .7s .25s var(--ease-out) both}
+html.fx-on .auth-wrap .field,html.fx-on .crm-card .field{animation:fxRise .6s var(--ease-out) both}
+html.fx-on .auth-wrap .field:nth-of-type(1),html.fx-on .crm-card .field:nth-of-type(1){animation-delay:.3s}
+html.fx-on .auth-wrap .field:nth-of-type(2),html.fx-on .crm-card .field:nth-of-type(2){animation-delay:.38s}
+html.fx-on .auth-wrap .input,html.fx-on .crm-card .input{padding:13px 14px;border-radius:16px}
+html.fx-on .auth-wrap > .btn.block,html.fx-on .crm-card .btn.block{height:50px;border-radius:16px!important;font-size:15px;animation:fxRise .6s .46s var(--ease-out) both;background:var(--primary-grad)!important}
+/* demo accounts become role cards */
+html.fx-on .demo-pill{display:grid!important;grid-template-columns:auto repeat(3,1fr);gap:8px;margin-top:14px;animation:fxRise .6s .54s var(--ease-out) both}
+html.fx-on .demo-pill button{border:1px solid var(--hair)!important;border-radius:14px!important;padding:9px 6px!important;font-weight:650;color:var(--body)!important;background:var(--surface)!important;
+  transition:transform .4s var(--ease-spring),border-color .3s,color .3s,box-shadow .3s}
+html.fx-on .demo-pill button:hover{transform:translateY(-3px);border-color:var(--primary)!important;color:var(--primary)!important;box-shadow:0 10px 20px -14px var(--primary)}
+html.fx-on .demo-pill button.fx-picked{border-color:var(--primary)!important;color:var(--primary)!important;background:color-mix(in srgb,var(--primary) 10%,var(--surface))!important}
+/* password eye + loading button (fx.js) */
+.fx-eye{display:grid;place-items:center;width:30px;height:30px;margin:-6px -6px -6px 0;border-radius:50%;color:var(--muted);transition:background .25s,color .25s,transform .35s var(--ease-spring);flex:0 0 auto}
+.fx-eye:hover{background:var(--surface-2);color:var(--primary)}
+.fx-eye:active{transform:scale(.85)}
+.fx-eye svg{width:17px;height:17px}
+.btn.fx-loading{pointer-events:none;color:transparent!important}
+.btn.fx-loading::before{content:"";position:absolute;left:50%;top:50%;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:fxSpinner .7s linear infinite;z-index:2}
+@keyframes fxSpinner{to{transform:rotate(360deg)}}
+.fx-shake{animation:fxShake .45s var(--ease-out)}
+@keyframes fxShake{20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(2px)}}
+/* ---- admin login ---- */
+html.fx-on .crm-form-side{position:relative}
+html.fx-on .crm-card{padding:30px 28px;border-radius:26px;background:color-mix(in srgb,var(--surface) 80%,transparent);border:1px solid var(--glass-border);
+  box-shadow:0 40px 90px -40px rgba(0,0,0,.65);backdrop-filter:blur(18px);animation:fxModal .8s var(--ease-spring) both}
+html.fx-on .crm-card-head h2{font-size:28px!important;letter-spacing:-.035em}
+html.fx-on .crm-demo{border-radius:14px!important;transition:border-color .3s,background .3s,transform .35s var(--ease-spring);cursor:pointer}
+html.fx-on .crm-demo:hover{border-color:var(--primary)!important;transform:translateY(-2px)}
+html.fx-on .crm-feats li{animation:fxRowIn .6s var(--ease-out) both}
+html.fx-on .crm-feats li:nth-child(2){animation-delay:.08s}html.fx-on .crm-feats li:nth-child(3){animation-delay:.16s}html.fx-on .crm-feats li:nth-child(4){animation-delay:.24s}
+html.fx-on .auth-hero .fx3d-local{opacity:.5;-webkit-mask:radial-gradient(closest-side,#000 55%,transparent);mask:radial-gradient(closest-side,#000 55%,transparent)}

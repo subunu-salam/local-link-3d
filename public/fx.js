@@ -361,7 +361,7 @@
     const main = document.querySelector('.desk > :not(.side)');
     const first = main && main.querySelector(':scope > :last-child');
     if (first && first !== lastMain) { lastMain = first; enter(first, 'fwd'); }
-    _launcher(); cancelAnimationFrame(decoT);
+    _launcher(); placeNav(); enhanceLogin(document); cancelAnimationFrame(decoT);
     decoT = requestAnimationFrame(() => {
       decoQ.forEach(t => t.isConnected && decorate(t)); decoQ.clear();
       mountLocal(document.querySelector('.crm-brand'), { nodes: 200, radius: 0.32, cx: 0.62, cy: 0.62, pins: 6 });
@@ -369,9 +369,89 @@
       mountLocal(document.querySelector('.splash'), { nodes: 180, radius: 0.36, cx: 0.5, cy: 0.42, pins: 6, stars: 60 });
     });
   });
+  /* sliding indicators: remember last spot so a re-render glides from it */
+  let lastTab = null, lastSide = null;
+  function placeNav() {
+    const nav = document.querySelector('.bnav');
+    if (nav) {
+      const on = nav.querySelector('button.on');
+      let ind = nav.querySelector(':scope > .fx-ind');
+      if (!on) { if (ind) ind.style.opacity = 0; }
+      else {
+        const fresh = !ind;
+        if (fresh) { ind = document.createElement('span'); ind.className = 'fx-ind'; nav.prepend(ind); if (lastTab) nav.classList.add('fx-settled'); }
+        const r = on.getBoundingClientRect(), n = nav.getBoundingClientRect();
+        const target = { left: r.left - n.left + 4, width: r.width - 8 };
+        if (fresh && lastTab) { ind.style.transition = 'none'; ind.style.left = lastTab.left + 'px'; ind.style.width = lastTab.width + 'px'; void ind.offsetWidth; ind.style.transition = ''; }
+        if (!lastTab || ind.style.left !== target.left + 'px') { ind.style.left = target.left + 'px'; ind.style.width = target.width + 'px'; }
+        ind.style.opacity = 1; lastTab = target;
+      }
+    }
+    const side = document.querySelector('.side');
+    if (side) {
+      const on = side.querySelector('a.on'); let si = side.querySelector(':scope > .fx-sind');
+      if (on) {
+        const fresh = !si;
+        if (fresh) { si = document.createElement('span'); si.className = 'fx-sind'; side.prepend(si); side.classList.add('fx-has-ind'); }
+        const target = { top: on.offsetTop, height: on.offsetHeight };
+        if (fresh && lastSide) { si.style.transition = 'none'; si.style.top = lastSide.top + 'px'; si.style.height = lastSide.height + 'px'; void si.offsetWidth; si.style.transition = ''; }
+        si.style.top = target.top + 'px'; si.style.height = target.height + 'px'; lastSide = target;
+      }
+    }
+  }
+  window.addEventListener('resize', () => { lastTab = null; placeNav(); });
+  document.addEventListener('click', e => { if (e.target.closest('.bnav button, .side a')) requestAnimationFrame(placeNav); });
+
+
+  /* ------------------------------------------------------------------ *
+   * 6. Bottom nav indicator, badges, notifications, login UX
+   * ------------------------------------------------------------------ */
+  let lastBadge = {};
+  document.addEventListener('click', e => {
+    const b = e.target.closest('.bnav button'); if (!b) return;
+    b.classList.remove('fx-tap'); void b.offsetWidth; b.classList.add('fx-tap');
+  }, true);
+
+  function note(icon, html, onClick) {
+    const n = document.createElement('div'); n.className = 'fx-note'; n.innerHTML = `<i>${icon}</i><span>${html}</span>`;
+    document.body.appendChild(n); requestAnimationFrame(() => n.classList.add('on'));
+    n.onclick = () => { onClick && onClick(); n.classList.remove('on'); };
+    setTimeout(() => { n.classList.remove('on'); setTimeout(() => n.remove(), 700); }, 4200);
+  }
+  function watchBadges() {
+    document.querySelectorAll('.bnav .cartbadge').forEach(b => {
+      const key = b.classList.contains('pchatbadge') ? 'chat' : 'cart';
+      const n = b.hidden ? 0 : parseInt(b.textContent, 10) || 0;
+      if (lastBadge[key] != null && n > lastBadge[key]) {
+        b.classList.remove('fx-bump'); void b.offsetWidth; b.classList.add('fx-bump');
+        if (key === 'chat') note('💬', `<b>${n}</b> unread chat${n > 1 ? 's' : ''} from customers`, () => { const t = document.querySelector('[data-tabnav="p_chats"]'); t && t.click(); });
+      }
+      lastBadge[key] = n;
+    });
+  }
+  setInterval(watchBadges, 700);
+
+  const EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1M6.6 6.6C3.8 8.4 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+  function enhanceLogin(root) {
+    root.querySelectorAll('input[type=password]').forEach(inp => {
+      if (inp.__fxeye) return; inp.__fxeye = 1;
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'fx-eye'; b.innerHTML = EYE; b.setAttribute('aria-label', 'Show password');
+      b.onclick = () => { const show = inp.type === 'password'; inp.type = show ? 'text' : 'password'; b.innerHTML = show ? EYE_OFF : EYE; b.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); };
+      inp.after(b);
+    });
+    const hero = root.querySelector('.auth-hero'); if (hero) mountLocal(hero, { nodes: 120, radius: 0.42, cx: 0.5, cy: 0.42, pins: 4, stars: 0, auto: true });
+    root.querySelectorAll('.demo-pill [data-d]').forEach(d => { if (d.__fxd) return; d.__fxd = 1; d.addEventListener('click', () => {
+      root.querySelectorAll('.demo-pill [data-d]').forEach(x => x.classList.toggle('fx-picked', x === d));
+      const i = root.querySelector('#lid'); if (i) { i.closest('.input').classList.remove('fx-shake'); void i.offsetWidth; i.closest('.input').classList.add('fx-shake'); } }); });
+    ['#lsubmit', '#al_go'].forEach(sel => { const b = root.querySelector(sel); if (!b || b.__fxl) return; b.__fxl = 1;
+      b.addEventListener('click', () => { b.classList.add('fx-loading'); setTimeout(() => { if (b.isConnected) { b.classList.remove('fx-loading'); const card = b.closest('.auth-wrap, .crm-card'); card && (card.classList.remove('fx-shake'), void card.offsetWidth, card.classList.add('fx-shake')); } }, 1600); }); });
+    root.querySelectorAll('#lid, #lpw, #al_id, #al_pw').forEach(i => { if (i.__fxk) return; i.__fxk = 1; i.addEventListener('keydown', e => { if (e.key === 'Enter') { const b = root.querySelector('#lsubmit, #al_go'); b && b.click(); } }); });
+  }
+
   const start = () => {
     mo.observe(document.getElementById('stage'), { childList: true, subtree: true });
-    decorate(document.getElementById('stage'));
+    decorate(document.getElementById('stage')); placeNav(); enhanceLogin(document);
     const intro = document.getElementById('fx-intro');
     if (intro) setTimeout(() => { intro.classList.add('out'); setTimeout(() => intro.remove(), 900); }, RM ? 0 : 900);
   };
