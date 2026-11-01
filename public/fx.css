@@ -297,7 +297,7 @@ html.fx-on .pcard:hover h4{color:var(--primary)}
 html.fx-on .countdown .cbox{animation:fxTick 1s steps(1) infinite}
 @keyframes fxTick{50%{box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 50%,transparent)}}
 /* offer stack + hero carousels */
-html.fx-on .ostack > *,html.fx-on .hero > *{transition:transform .7s var(--ease-out),box-shadow .4s}
+html.fx-on .hero > *{transition:transform .7s var(--ease-out),box-shadow .4s}
 html.fx-on .bcard{transition:transform .5s var(--ease-out),box-shadow .45s}
 html.fx-on .bcard:hover{transform:translateY(-5px);box-shadow:0 24px 40px -24px color-mix(in srgb,var(--primary) 70%,transparent)}
 html.fx-on .bcard .banner{overflow:hidden}
@@ -495,3 +495,139 @@ html.fx-on .desk table td.tbn,html.fx-on .desk table th:last-child{box-shadow:-1
 html.fx-on .desk table tbody tr:hover td.tbn{background:color-mix(in srgb,var(--primary) 6%,var(--surface))!important}
 html.fx-on .desk table tbody td:first-child{min-width:170px}
 html.fx-on .desk table td{font-size:13px}
+
+/* =====================================================================
+   v5 — reference-driven redesign (bento colour blocks, bold type,
+   floating cards, dock nav, round icon chips, step timelines, 3D motion)
+   Palette stays teal + coral: blocks are tints of the existing tokens.
+   ===================================================================== */
+:root{
+  --blk-deep:linear-gradient(150deg,var(--primary-dark) 0%,color-mix(in srgb,var(--primary-dark) 70%,#000) 100%);
+  --blk-teal:color-mix(in srgb,var(--primary-light) 26%,var(--surface));
+  --blk-coral:color-mix(in srgb,var(--accent) 24%,var(--surface));
+  --blk-sand:color-mix(in srgb,var(--accent-2) 14%,color-mix(in srgb,var(--primary-light) 8%,var(--surface)));
+  --r-card:24px;
+}
+/* ---- type: bold, tight, oversized like the refs ---- */
+html.fx-on .sec-head h3,html.fx-on .nsec h3{font-size:19px;font-weight:800;letter-spacing:-.025em}
+html.fx-on .addrbar .atop,html.fx-on .cbrand-name{letter-spacing:-.02em}
+html.fx-on .sec-head .see,html.fx-on .nsec .viewall{font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px;border:1px solid var(--hair,var(--border));transition:background .3s,transform .35s var(--ease-spring)}
+html.fx-on .sec-head .see:hover,html.fx-on .nsec .viewall:hover{background:color-mix(in srgb,var(--primary) 10%,transparent);transform:translateX(2px)}
+html.fx-on .chead h2,html.fx-on .chead h1{font-size:24px;font-weight:800;letter-spacing:-.03em;line-height:1.05}
+
+/* ---- bento stat blocks (partner + admin) ---- */
+html.fx-on .stat{border:none!important;border-radius:var(--r-card)!important;padding:18px 18px 20px!important;min-height:112px;box-shadow:0 14px 30px -24px rgba(0,0,0,.5)}
+html.fx-on .stat .lab{font-size:11.5px;font-weight:600;text-transform:none!important;letter-spacing:0!important;opacity:.85}
+html.fx-on .stat .num{font-size:30px!important;font-weight:800;letter-spacing:-.04em;margin-top:8px}
+html.fx-on :is(.stat-grid,.grid2) > .stat:nth-child(4n+1){background:var(--blk-deep)!important;color:#fff}
+html.fx-on :is(.stat-grid,.grid2) > .stat:nth-child(4n+1) :is(.lab,.num){color:#fff!important;-webkit-text-fill-color:#fff}
+html.fx-on :is(.stat-grid,.grid2) > .stat:nth-child(4n+1) .ic{background:rgba(255,255,255,.14)!important;color:#fff!important}
+html.fx-on :is(.stat-grid,.grid2) > .stat:nth-child(4n+1)::after{opacity:.9;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 46' preserveAspectRatio='none'%3E%3Cpath d='M0 30 C60 4 110 44 170 22 S280 2 330 26 S390 30 400 12' fill='none' stroke='%23ffffff' stroke-opacity='.35' stroke-width='1.6'/%3E%3C/svg%3E") 0 100%/200% 100% repeat-x}
+html.fx-on :is(.stat-grid,.grid2) > .stat:nth-child(4n+2){background:var(--blk-teal)!important}
+html.fx-on :is(.stat-grid,.grid2) > .stat:nth-child(4n+3){background:var(--blk-coral)!important}
+html.fx-on :is(.stat-grid,.grid2) > .stat:nth-child(4n+4){background:var(--blk-sand)!important}
+html.fx-on :is(.stat-grid,.grid2) > .stat:not(:nth-child(4n+1)) .num{-webkit-text-fill-color:var(--ink);background:none}
+html.fx-on .stat .ic{border-radius:50%!important;width:36px!important;height:36px!important}
+html.fx-on .stat-grid,html.fx-on .grid2{gap:12px!important}
+/* outlined pill label on hero block (like "Tonight · 11 pm") */
+html.fx-on :is(.stat-grid,.grid2) > .stat:nth-child(4n+1) .lab{display:inline-block;padding:3px 10px;border:1px solid rgba(255,255,255,.4);border-radius:999px}
+
+/* ---- cards & panels: soft, very rounded, borderless ---- */
+html.fx-on .phone .card,html.fx-on .panel{border-radius:var(--r-card)!important}
+html.fx-on .phone .card{border-color:var(--hair,var(--border))}
+html.fx-on .grid2 .btn.ghost{border-radius:18px;padding:14px;background:var(--surface)!important;border:1px solid var(--hair,var(--border))}
+
+/* ---- floating dock bottom nav ---- */
+html.fx-on .phone #navholder{position:relative}
+html.fx-on .phone .bnav{margin:0 12px 12px;border-radius:26px;border:1px solid var(--glass-border)!important;padding:8px 6px;
+  box-shadow:0 18px 40px -18px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.03)}
+html.fx-on .phone .bnav button.on{color:var(--primary)}
+html.fx-on .phone .bnav button.on .ic,html.fx-on .phone .bnav button.on > svg:first-child{filter:drop-shadow(0 6px 10px color-mix(in srgb,var(--primary) 60%,transparent))}
+html.fx-on .phone .bnav button.on::before{top:-9px}
+@media(max-width:520px){html.fx-on .phone .bnav{margin:0 10px calc(10px + env(safe-area-inset-bottom))}}
+
+/* ---- list rows: round tinted icon chips + chevron bubbles ---- */
+html.fx-on .acct-list .ic{border-radius:50%!important;width:38px!important;height:38px!important;background:var(--blk-teal)!important}
+html.fx-on .acct-list > *:nth-child(3n+2) .ic{background:var(--blk-coral)!important;color:var(--accent)}
+html.fx-on .acct-list > *:nth-child(3n) .ic{background:var(--blk-sand)!important}
+html.fx-on .acct-list .rt svg{width:26px;height:26px;padding:6px;border-radius:50%;background:var(--surface-2)}
+html.fx-on .acct-list{border-radius:var(--r-card)!important}
+html.fx-on .acard{border-radius:var(--r-card)!important;background:var(--blk-deep)!important;padding:20px!important}
+html.fx-on .acard h4{font-size:20px!important;letter-spacing:-.02em}
+html.fx-on .acard .abtn{border-radius:999px!important;padding:8px 16px!important}
+
+/* ---- business rows (search/category lists) ---- */
+html.fx-on .brow{border-radius:20px!important;border-color:var(--hair,var(--border))!important}
+html.fx-on .brow .thumb,html.fx-on .card .thumb{border-radius:16px!important}
+
+/* ---- product cards: tinted image well + overlapping price ---- */
+html.fx-on .pcard{border-radius:22px!important;border-color:var(--hair,var(--border))!important}
+html.fx-on .pcard .pimg{margin:6px;border-radius:17px;background:var(--blk-sand)}
+html.fx-on .hscroll > .pcard:nth-child(3n+2) .pimg{background:var(--blk-teal)}
+html.fx-on .hscroll > .pcard:nth-child(3n) .pimg{background:var(--blk-coral)}
+html.fx-on .pcard .add{border-radius:50%!important;background:var(--ink)!important;color:var(--bg)!important}
+html.fx-on .pcard .price{font-size:16px;letter-spacing:-.02em}
+
+/* ---- category pills: round icon chips like "Dessert / Pizza" ---- */
+html.fx-on .vpill .gi{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:color-mix(in srgb,var(--primary) 16%,transparent);margin-left:-5px}
+html.fx-on .vpill:not(.on) .gi svg{stroke:var(--primary)!important}
+html.fx-on .vpill.on .gi{background:rgba(255,255,255,.22)}
+
+/* ---- hero / offer carousels: big type, 3D depth ---- */
+html.fx-on .hero > *{border-radius:var(--r-card)!important}
+html.fx-on .hero h2,html.fx-on .hero h3,html.fx-on .ostack h3{letter-spacing:-.03em}
+@keyframes fxCardIn{from{transform:perspective(1000px) rotateY(-25deg) translateX(40px);opacity:0}to{transform:none;opacity:1}}
+
+/* ---- order step timeline (customer + partner) ---- */
+html.fx-on .otl{display:flex;align-items:center;gap:0;padding:14px;border-radius:20px;background:var(--surface-2)}
+html.fx-on .ostep{display:flex;flex-direction:column;align-items:center;gap:6px;flex:0 0 auto}
+html.fx-on .odot{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--border-strong);background:var(--surface);font-size:11px;transition:all .4s var(--ease-spring)}
+html.fx-on .ostep.done .odot{background:var(--primary);border-color:var(--primary);color:#fff}
+html.fx-on .ostep.now .odot{background:var(--accent);border-color:var(--accent);color:#fff;animation:fxNow 1.8s ease-out infinite}
+@keyframes fxNow{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}100%{box-shadow:0 0 0 10px transparent}}
+html.fx-on .olab{font-size:10.5px;font-weight:650;color:var(--muted)}
+html.fx-on .ostep.now .olab{color:var(--ink)}
+html.fx-on .oline{flex:1;height:2px;margin:0 4px 18px;border-radius:2px;background:var(--border-strong);position:relative;overflow:hidden}
+html.fx-on .oline.done{background:var(--primary)}
+html.fx-on .oline.done::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);animation:fxShift 1.6s linear infinite;background-size:200% 100%}
+html.fx-on .otl .ostep{animation:fxRise .5s var(--ease-out) both}
+html.fx-on .otl .ostep:nth-of-type(2){animation-delay:.08s}html.fx-on .otl .ostep:nth-of-type(3){animation-delay:.16s}html.fx-on .otl .ostep:nth-of-type(4){animation-delay:.24s}html.fx-on .otl .ostep:nth-of-type(5){animation-delay:.32s}
+
+/* ---- partner order cards: header row like "No 34621" refs ---- */
+html.fx-on body[data-app="partner"] .card{padding:16px 16px 14px!important}
+html.fx-on body[data-app="partner"] .card .badge{border-radius:999px}
+
+/* ---- admin: bento dashboard + rounded shell ---- */
+html.fx-on .desk{border-radius:28px!important}
+html.fx-on .desk .stat-grid{grid-template-columns:1.35fr 1fr 1fr 1fr!important}
+html.fx-on .desk .stat-grid > .stat:nth-child(4n+1){min-height:132px}
+html.fx-on .desk .stat-grid > .stat:nth-child(4n+1) .num{font-size:38px!important}
+html.fx-on .side{border-right:none!important}
+html.fx-on .side a{border-radius:14px!important}
+html.fx-on .side a.on{border-radius:14px!important}
+html.fx-on .panel{border:none!important;box-shadow:0 20px 40px -32px rgba(0,0,0,.6)!important;background:var(--surface)}
+html.fx-on .desk #donut svg circle{stroke-linecap:round}
+
+/* ---- 3D page transitions (stronger, card-flip feel) ---- */
+@keyframes fxScreenIn{from{opacity:0;transform:perspective(1200px) translate3d(40px,0,-60px) rotateY(-12deg)}to{opacity:1;transform:none}}
+@keyframes fxScreenBack{from{opacity:0;transform:perspective(1200px) translate3d(-40px,0,-60px) rotateY(12deg)}to{opacity:1;transform:none}}
+.fx-enter,.fx-enter-back{transform-origin:50% 50%;animation-duration:.65s!important}
+@keyframes fxDeskMain{from{opacity:0;transform:perspective(1400px) translateY(16px) rotateX(6deg)}to{opacity:1;transform:none}}
+html.fx-on .desk > :not(.side) > .fx-enter{animation-name:fxDeskMain!important}
+.fx-rv{transform:perspective(800px) translate3d(0,26px,-40px) rotateX(14deg)!important}
+.fx-rv.fx-in{transform:none!important}
+/* stagger lists of cards with 3D flip */
+html.fx-on body[data-app="partner"] .stack > .card{animation:fxFlipIn .7s var(--ease-out) both}
+html.fx-on body[data-app="partner"] .stack > .card:nth-child(2){animation-delay:.06s}html.fx-on body[data-app="partner"] .stack > .card:nth-child(3){animation-delay:.12s}
+html.fx-on body[data-app="partner"] .stack > .card:nth-child(4){animation-delay:.18s}html.fx-on body[data-app="partner"] .stack > .card:nth-child(n+5){animation-delay:.24s}
+@keyframes fxFlipIn{from{opacity:0;transform:perspective(900px) rotateX(-28deg) translateY(20px)}to{opacity:1;transform:none}}
+
+:root{--hair:color-mix(in srgb,var(--ink) 9%,transparent)}
+html.fx-on .phone .card{border:1px solid var(--hair)!important}
+:root[data-theme="dark"],body.cdark{--blk-teal:linear-gradient(150deg,color-mix(in srgb,var(--primary-light) 34%,var(--surface)),color-mix(in srgb,var(--primary) 14%,var(--surface)));
+  --blk-coral:linear-gradient(150deg,color-mix(in srgb,var(--accent) 36%,var(--surface)),color-mix(in srgb,var(--accent) 12%,var(--surface)));
+  --blk-sand:linear-gradient(150deg,color-mix(in srgb,var(--accent-2) 20%,var(--surface)),color-mix(in srgb,var(--primary-light) 10%,var(--surface)))}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--blk-teal:linear-gradient(150deg,color-mix(in srgb,var(--primary-light) 34%,var(--surface)),color-mix(in srgb,var(--primary) 14%,var(--surface)));
+  --blk-coral:linear-gradient(150deg,color-mix(in srgb,var(--accent) 36%,var(--surface)),color-mix(in srgb,var(--accent) 12%,var(--surface)));
+  --blk-sand:linear-gradient(150deg,color-mix(in srgb,var(--accent-2) 20%,var(--surface)),color-mix(in srgb,var(--primary-light) 10%,var(--surface)))}}
+html.fx-on .pcard .pimg{background:var(--blk-sand)}
