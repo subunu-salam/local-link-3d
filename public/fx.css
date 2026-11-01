@@ -764,3 +764,6 @@ html.fx-on .crm-demo:hover{border-color:var(--primary)!important;transform:trans
 html.fx-on .crm-feats li{animation:fxRowIn .6s var(--ease-out) both}
 html.fx-on .crm-feats li:nth-child(2){animation-delay:.08s}html.fx-on .crm-feats li:nth-child(3){animation-delay:.16s}html.fx-on .crm-feats li:nth-child(4){animation-delay:.24s}
 html.fx-on .auth-hero .fx3d-local{opacity:.5;-webkit-mask:radial-gradient(closest-side,#000 55%,transparent);mask:radial-gradient(closest-side,#000 55%,transparent)}
+
+/* tall blocks fade up gently instead of tilting */
+.fx-tall{animation:fxRise .7s var(--ease-out) both}

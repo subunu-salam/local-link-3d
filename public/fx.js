@@ -298,11 +298,12 @@
     root.querySelectorAll(REVEAL).forEach(el => {
       if (el.classList.contains('fx-rv')) return;
       if (el.closest('.sheet, .toast, .bnav')) return;
+      if (el.offsetHeight > 420) { el.classList.add('fx-tall'); return; } // big blocks: no 3D tilt reveal (it can push them off-screen)
       el.classList.add('fx-rv');
       el.style.setProperty('--fx-d', Math.min(i++, 14) * 45 + 'ms');
       io.observe(el);
       // safety net: never leave content hidden if the observer misses it
-      setTimeout(() => { const r = el.getBoundingClientRect(); if (r.top < innerHeight && r.bottom > 0) el.classList.add('fx-in'); }, 900 + Math.min(i, 14) * 45);
+      setTimeout(() => { const r = el.getBoundingClientRect(); if (r.top < innerHeight + 200 && r.bottom > -200) el.classList.add('fx-in'); }, 900 + Math.min(i, 14) * 45);
     });
     countUp(root);
     // admin tables: avatar initials in the first column (pure decoration)
