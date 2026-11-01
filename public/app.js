@@ -152,7 +152,7 @@ const I = {
   pin:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c-3.9 0-7 3-7 6.9 0 4.6 5.5 10.4 6.4 11.3.3.3.9.3 1.2 0 .9-.9 6.4-6.7 6.4-11.3C19 5 15.9 2 12 2Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"/></svg>',
   dir:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-8-8 18-2-8-8-2Z"/></svg>',
   share:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.7 7.6-4.4M8.2 13.3l7.6 4.4"/></svg>',
-  heart:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 20s-7-4.4-9.2-8.6C1.2 8 3 5 6 5c1.9 0 3 1 3 1s1.1-1 3-1c3 0 4.8 3 3.2 6.4C19 15.6 12 20 12 20Z"/></svg>',
+  heart:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 20.6 10.6 19.3C5.6 14.8 2.3 11.8 2.3 8.1 2.3 5.1 4.6 2.8 7.6 2.8c1.7 0 3.3.8 4.4 2.1 1.1-1.3 2.7-2.1 4.4-2.1 3 0 5.3 2.3 5.3 5.3 0 3.7-3.3 6.7-8.3 11.2L12 20.6Z"/></svg>',
   star:'<svg viewBox="0 0 24 24"><path d="M12 2l2.9 6 6.6.6-5 4.3 1.5 6.5L12 16l-5.9 3.4L7.6 13l-5-4.3L9.1 8 12 2Z"/></svg>',
   chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>',
   back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>',
@@ -542,13 +542,21 @@ function autoAdvanceRow(rowEl, count){
     rowEl.scrollTo({ left: atEnd ? 0 : rowEl.scrollLeft + step(), behavior:'smooth' });
   }, 3000);
 }
+/* demo cover photos for category tiles (icon tile shows if a photo can't load) */
+const CAT_PHOTO = {
+  'food-grocery':'1542838132-92c53300491e', 'shopping':'1489987707025-afc232f7ea0f', 'services':'1581578731548-c64695cc6952',
+  'workers':'1504307651254-35680f356dfd', 'transport':'1449965408869-eaa3f722e40d', 'healthcare':'1576091160399-112ba8d25d1d',
+  'local-info':'1477959858617-67f85cf4f1df', 'news':'1504711434969-e33886168f5c', 'events':'1492684223066-81342ee5ff30',
+  'classifieds':'1556742049-0cfed4f6a45d', 'offers':'1607083206869-4c7672e72a8a', 'deals':'1607083206869-4c7672e72a8a'
+};
+function catPhoto(slug, label){ const id=CAT_PHOTO[slug]; return id ? `https://images.unsplash.com/photo-${id}?w=360&h=360&q=70&auto=format&fit=crop` : pic(label||slug, slug, 360, 360); }
 function ncatCard(c){ const cc=c.color1||'#12A594';
   return `<button class="ncat" data-nav="category" data-slug="${c.slug}">
-    <span class="tile catico" style="--cc:${cc}">${catIcon(c.slug)}</span>
+    <span class="tile catico" style="--cc:${cc}">${photoLayer(catPhoto(c.slug, c.name))}${catIcon(c.slug)}</span>
     <span>${esc(catLabel(c))}</span></button>`; }
 function tileCard(label, kw, seed, route, slug){
   return `<button class="ncat" data-nav="${route}" ${slug?`data-slug="${slug}"`:''}>
-    <span class="tile catico" style="--cc:#12A594">${catIcon(slug||route)}</span><span>${esc(label)}</span></button>`; }
+    <span class="tile catico" style="--cc:#12A594">${photoLayer(catPhoto(slug||route, kw||label))}${catIcon(slug||route)}</span><span>${esc(label)}</span></button>`; }
 /* live countdown for mega-deals */
 let _cdTimer=null;
 function startCountdown(){ if(_cdTimer) clearInterval(_cdTimer);

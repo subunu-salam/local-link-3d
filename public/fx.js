@@ -238,10 +238,26 @@
     b.classList.add('fx-clip'); b.appendChild(s); setTimeout(() => s.remove(), 650);
   }, { passive: true });
 
+  /* heart: pop + particle burst when saving */
+  document.addEventListener('click', e => {
+    const f = e.target.closest('[data-fav]'); if (!f || RM) return;
+    const r = f.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    setTimeout(() => {
+      const el = document.querySelector(`[data-fav][data-ftype="${f.dataset.ftype}"][data-fid="${f.dataset.fid}"]`) || f;
+      el.classList.remove('fx-pop'); void el.offsetWidth; el.classList.add('fx-pop');
+      if (!el.classList.contains('on')) return;
+      for (let i = 0; i < 10; i++) {
+        const p = document.createElement('i'); p.className = 'fx-burst'; const a = (i / 10) * 6.283, d = 22 + Math.random() * 14;
+        p.style.cssText = `left:${cx - 3}px;top:${cy - 3}px;--bx:${Math.cos(a) * d}px;--by:${Math.sin(a) * d}px;background:${i % 2 ? 'var(--accent)' : 'var(--primary-light)'}`;
+        document.body.appendChild(p); setTimeout(() => p.remove(), 750);
+      }
+    }, 30);
+  });
+
   /* ------------------------------------------------------------------ *
    * 4. 3D tilt + glare on cards
    * ------------------------------------------------------------------ */
-  const TILT = '.launch-card, .card, .cat, .ocard, .ncard, .ecard, .brow, .stat, .offcard, .promo, .hero, .pcard, .ncat, .tile, .bcard';
+  const TILT = '.launch-card, .card, .cat, .ocard, .ncard, .ecard, .brow, .stat, .offcard, .promo, .bcard, .pcard';
   let tiltEl = null;
   if (FINE && !RM) {
     document.addEventListener('pointermove', e => {
@@ -262,7 +278,7 @@
    * 5. Screen transitions + staggered reveal
    * ------------------------------------------------------------------ */
   const REVEAL = [
-    '.sec-head', '.nsec', '.card', '.cat', '.ocard', '.ncard', '.ecard', '.brow', '.stat', '.offcard', '.promo', '.hero',
+    '.sec-head', '.nsec', '.card', '.cat', '.pcard', '.bcard', '.ocard', '.ncard', '.ecard', '.brow', '.stat', '.offcard', '.promo', '.hero',
     '.launch-card', '.panel', '.field', '.btn.block', '.bill', '.chat', '.dealrow', '.plist > *', '.empty', '.ncat', '.tile',
     'table tbody tr', '.addrbar', '.vbar', '.countdown', '.ostack', '.intro', '.auth-hero'
   ].join(',');
@@ -317,6 +333,7 @@
         const depth = document.querySelectorAll('#__back').length;
         enter(t, depth < lastDepth ? 'back' : 'fwd'); lastDepth = depth;
       } else if (t.id === 'stage') enter(t.firstElementChild, 'fwd');
+      if (t.id === 'rotsq' || (t.classList && t.classList.contains('sq'))) { t.classList.remove('fx-swap'); void t.offsetWidth; t.classList.add('fx-swap'); continue; }
       decoQ.add(t);
     }
     // desktop admin: animate the main pane when its content block is replaced
