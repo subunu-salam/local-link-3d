@@ -1622,12 +1622,105 @@ function barChartSVG(data){
   return `<div style="overflow-x:auto;margin-top:10px"><svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:${W}px;max-width:${Math.max(W,320)}px;display:block">
     <line x1="${pad}" y1="${base+1}" x2="${W-pad}" y2="${base+1}" stroke="var(--border-strong)" stroke-width="1"/>${bars}</svg></div>`;
 }
+
+/* ==================== AI DEMAND FORECAST (DevX Nexus logic) ==================== */
+const FC_STEPS = ['Reading 6 months of orders','Weighting recent demand & trend','Applying the Kerala festival calendar','Scoring confidence & best / worst range'];
+function fcCount(el, to, fmt){ if(!el) return; const t0=performance.now(), dur=900; const f=fmt||(v=>Math.round(v).toLocaleString('en-IN'));
+  (function tick(now){ const k=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-k,3); el.textContent=f(to*e); if(k<1) requestAnimationFrame(tick); })(t0); }
+function fcConfLabel(c){ return c>=85?'High':c>=70?'Good':'Low'; }
+function fcSpark(vals, w=84, hgt=26){ const mx=Math.max(...vals,1), mn=Math.min(...vals,0);
+  const pts=vals.map((v,i)=>[ (i/(vals.length-1||1))*w, hgt-2-((v-mn)/((mx-mn)||1))*(hgt-4) ]);
+  const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  return `<svg class="fc-spark" viewBox="0 0 ${w} ${hgt}" preserveAspectRatio="none"><path d="${d} L${w} ${hgt} L0 ${hgt}Z" class="a"/><path d="${d}" class="l"/></svg>`; }
+function fcChart(r){
+  const hist=r.history, fut=r.months, all=[...hist.map(x=>x.units),...fut.map(x=>x.units)], mx=Math.max(...all,1);
+  const W=320, H=150, n=all.length, bw=W/n;
+  const bars=hist.map((x,i)=>{ const hh=(x.units/mx)*(H-34); return `<rect class="fc-hb" x="${(i*bw+4).toFixed(1)}" y="${(H-18-hh).toFixed(1)}" width="${(bw-8).toFixed(1)}" height="${hh.toFixed(1)}" rx="5" style="--d:${i*60}ms"/>`; }).join('');
+  const pts=fut.map((x,i)=>{ const j=hist.length+i; return [j*bw+bw/2, H-18-(x.units/mx)*(H-34)]; });
+  const lastH=[(hist.length-1)*bw+bw/2, H-18-(hist[hist.length-1].units/mx)*(H-34)];
+  const line=[lastH,...pts].map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const area=line+` L${pts[pts.length-1][0].toFixed(1)} ${H-18} L${lastH[0].toFixed(1)} ${H-18}Z`;
+  const dots=pts.map((p,i)=>`<g class="fc-pt" style="--d:${700+i*90}ms"><circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${fut[i].events.length?5:3.6}" class="${fut[i].events.length?'ev':''}"/>${fut[i].events.length?`<text x="${p[0].toFixed(1)}" y="${(p[1]-10).toFixed(1)}" text-anchor="middle" class="evl">${esc(fut[i].events[0].split(' ')[0])}</text>`:''}</g>`).join('');
+  const labels=[...hist,...fut].map((x,i)=>`<text x="${(i*bw+bw/2).toFixed(1)}" y="${H-3}" text-anchor="middle" class="${i>=hist.length?'f':''}">${x.label}</text>`).join('');
+  const split=hist.length*bw;
+  return `<svg class="fc-chart" viewBox="0 0 ${W} ${H}"><rect x="${split}" y="0" width="${W-split}" height="${H-16}" rx="10" class="fc-zone"/>
+    <text x="${split+8}" y="13" class="fc-zl">FORECAST</text><text x="6" y="13" class="fc-zl h">LAST 6 MONTHS</text>
+    ${bars}<path d="${area}" class="fc-area"/><path d="${line}" class="fc-line" pathLength="1"/>${dots}${labels}</svg>`;
+}
+async function renderForecastHub(host){
+  host.innerHTML = `<section class="fc-hub">
+    <div class="fc-hero"><div class="fc-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="fc-eyebrow"><span class="fc-live"></span>AI Demand Forecast · Nexus engine</div>
+      <h2 class="fc-title">Know what sells<br>before it sells</h2>
+      <div class="fc-sum" id="fcSum"><div class="sk" style="height:66px;border-radius:18px;background:rgba(255,255,255,.12)"></div></div></div>
+    <div class="fc-pickh"><b>Select a product</b><span class="muted">Forecast generates instantly</span></div>
+    <div class="fc-picks" id="fcPicks">${skeletonCards(3)}</div>
+    <div id="fcOut"></div></section>`;
+  let data; try{ data = await api('/partner/forecast'); }catch(e){ host.innerHTML=''; return; }
+  const S=data.summary, P=data.products||[];
+  if(!P.length){ $('#fcSum').innerHTML=`<p class="fc-empty">Add your first product and its forecast appears here automatically.</p>`; $('#fcPicks').innerHTML=''; return; }
+  $('#fcSum').innerHTML = `<div class="fc-kpi"><b id="fcU">0</b><span>units · next 30 days</span></div>
+    <div class="fc-kpi"><b id="fcR">₹0</b><span>expected revenue</span></div>
+    <div class="fc-ring" style="--p:${S.confidence}"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" class="t"/><circle cx="22" cy="22" r="18" class="v" pathLength="100"/></svg><b>${S.confidence}%</b><span>confidence</span></div>
+    ${S.events.length?`<div class="fc-evs">${S.events.slice(0,3).map(e=>`<span>${GI.calendar}${esc(e)}</span>`).join('')}</div>`:''}`;
+  fcCount($('#fcU'), S.units); fcCount($('#fcR'), S.revenue, v=>money(Math.round(v)));
+  $('#fcPicks').innerHTML = P.map((p,i)=>`<button class="fc-pick" data-fp="${p.id}" style="--n:${i}">
+      <span class="fc-pimg">${photoLayer(p.image_url||pic((p.name||'product').toLowerCase(),500+p.id,160,160))}</span>
+      <span class="fc-pn">${esc(p.name)}</span>
+      <span class="fc-pq"><b>${p.qty}</b> units ${p.trendPct>=5?'<em class="up">▲</em>':p.trendPct<=-5?'<em class="dn">▼</em>':''}</span>
+      ${fcSpark(p.spark)}
+      <span class="fc-pc c-${fcConfLabel(p.confidence).toLowerCase()}">${Math.round(p.confidence)}% conf.</span></button>`).join('');
+  const pick = async (id, auto) => {
+    host.querySelectorAll('.fc-pick').forEach(b=>b.classList.toggle('on', Number(b.dataset.fp)===id));
+    const out=$('#fcOut');
+    out.innerHTML = `<div class="fc-scan"><div class="fc-radar"><i></i><i></i><span>${GI.sparkles}</span></div>
+      <ol>${FC_STEPS.map((t,i)=>`<li style="--d:${i*260}ms">${t}</li>`).join('')}</ol></div>`;
+    if(!auto) setTimeout(()=>{ const sc=$('#screen'); const top=out.offsetTop-90; if(sc) sc.scrollTo({top, behavior:'smooth'}); },60);
+    const t0=Date.now(); let r;
+    try{ r = await api('/partner/forecast/'+id); }catch(e){ out.innerHTML=errorState(e.message,()=>pick(id)); return; }
+    await new Promise(ok=>setTimeout(ok, Math.max(0, 1150-(Date.now()-t0))));
+    renderReport(out, r, id);
+  };
+  const renderReport = (out, r, id, quiet) => {
+    const f=r.forecast, cl=fcConfLabel(f.confidence), po=r.po;
+    const lo=Math.min(f.worst,f.qty), span=Math.max(1,f.best-lo);
+    out.innerHTML = `<article class="fc-rep${quiet?' quiet':''}">
+      <header class="fc-rh"><span class="fc-rimg">${photoLayer(r.product.image_url||pic((r.product.name||'p').toLowerCase(),500+r.product.id,160,160))}</span>
+        <div><small>${esc(r.product.business||'')}</small><h3>${esc(r.product.name)}</h3>
+        <span class="fc-basis ${r.basis}">${r.basis==='orders'?'Learned from your orders':'Modelled baseline'} · ${esc(f.model)}</span></div></header>
+      <div class="fc-main">
+        <div class="fc-big"><small>Forecast · next 30 days</small><b id="fcBig">0</b><span>units · ≈ ${f.perDay}/day</span>
+          <div class="fc-band"><i style="left:${((f.worst-lo)/span*100).toFixed(0)}%;width:${((f.best-f.worst)/span*100).toFixed(0)}%"></i><em style="left:${((f.qty-lo)/span*100).toFixed(0)}%"></em></div>
+          <div class="fc-bandl"><span>Worst ${f.worst}</span><span>Best ${f.best}</span></div></div>
+        <div class="fc-gauge c-${cl.toLowerCase()}" style="--p:${f.confidence}"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" class="t"/><circle cx="60" cy="60" r="50" class="v" pathLength="100"/></svg>
+          <div><b id="fcConf">0%</b><span>${cl} confidence</span></div></div></div>
+      <div class="fc-why"><span>${f.depthMonths} months of data</span><span>Volatility ${Math.round(f.cv*100)}%</span><span>${f.trendPct>=0?'+':''}${f.trendPct}% trend</span><span>Season ×${f.seasonFactor}</span></div>
+      <div class="fc-card"><div class="fc-ch"><b>6-month outlook</b><span class="muted">${r.units6} units · ${money(Math.round(r.revenue6))}</span></div>${fcChart(r)}
+        <div class="fc-mrow">${r.months.map((m,i)=>`<div style="--d:${i*70}ms"><small>${m.label}</small><b>${m.units}</b><i style="--c:${m.confidence}">${Math.round(m.confidence)}%</i></div>`).join('')}</div></div>
+      <div class="fc-card fc-stock"><div class="fc-ch"><b>Restock plan</b><span class="muted">forecast + safety − stock</span></div>
+        <div class="fc-sin"><label for="fcStock">Units in stock now</label><div class="input"><input id="fcStock" type="number" min="0" inputmode="numeric" placeholder="e.g. 20" value="${r.stock==null?'':r.stock}"/></div></div>
+        <div class="fc-po">
+          <div><small>Restock</small><b>${r.stock==null? f.qty+po.safety : po.poQty}</b><span>units</span></div>
+          <div><small>${r.stock==null?'Keep ready':'Order by'}</small><b>${r.stock==null?'30 days':(po.orderBy?new Date(po.orderBy).toLocaleDateString('en-IN',{day:'numeric',month:'short'}):'—')}</b><span>${r.stock==null?'incl. '+po.safety+' safety':(po.coverDays!=null?po.coverDays+' days cover':'')}</span></div>
+          <div><small>Revenue</small><b>${money(Math.round(po.revenue))}</b><span>${po.marginPct}% margin</span></div></div>
+        ${r.stock!=null?`<span class="fc-urg u-${po.urgency}">${{critical:'Out of stock — restock now',urgent:'Runs out before restock arrives',plan:'Plan this restock',ok:'Stock covers demand'}[po.urgency]}</span>`:''}</div>
+      <div class="fc-ins">${r.insights.map((x,i)=>`<p class="t-${x.tone}" style="--d:${i*110}ms"><i></i>${esc(x.text)}</p>`).join('')}</div>
+    </article>`;
+    if(quiet){ $('#fcBig').textContent=f.qty; $('#fcConf').textContent=Math.round(f.confidence)+'%'; } else { fcCount($('#fcBig'), f.qty); fcCount($('#fcConf'), f.confidence, v=>Math.round(v)+'%'); }
+    const si=$('#fcStock'); let tm=null;
+    si.addEventListener('input',()=>{ clearTimeout(tm); tm=setTimeout(async()=>{ try{ const v=si.value.trim(); const r2=await api('/partner/forecast/'+id+(v!==''?'?stock='+encodeURIComponent(v):'')); const pos=si.selectionStart; renderReport(out,r2,id,true); const n=$('#fcStock'); n.focus(); try{n.setSelectionRange(pos,pos);}catch(e){} }catch(e){ toast(e.message); } },450); });
+  };
+  host.querySelectorAll('[data-fp]').forEach(b=>b.onclick=()=>pick(Number(b.dataset.fp)));
+  pick(P[0].id, true);
+}
 SCREENS.p_dash = async (el) => {
   if(!token || (me.role!=='business_partner')) return renderLogin(el,'partner');
   el.innerHTML = `<header class="vhd"><div class="vhd-brand"><span class="cbrand-logo">${logoMark(30)}</span>${wordmark()}<span class="vhd-tag">Partner</span><div style="flex:1"></div>${miniControls()}
       <button class="avatar vav" data-tabnav="p_profile" aria-label="Profile" style="background:${grad(me.avatar_color,'#0B5A55')}">${me.name[0]}</button></div>
     <div class="vgreet" style="margin:12px 2px 0"><b>${greetWord()}, ${esc(me.name.split(' ')[0])}</b><span>Here’s how your shop is doing today</span></div></header>
+    <div id="fcHub"></div>
     <div class="px" id="body" style="margin-top:12px">${skeletonRow(2)}</div><div style="height:90px"></div>`;
+  renderForecastHub($('#fcHub'));
   const [d, an] = await Promise.all([api('/partner/overview'), api('/partner/analytics').catch(()=>null)]);
   const stat=(lab,val,emoji)=>`<div class="stat vstat"><span class="ic">${gi(emoji)}</span><div class="lab">${lab}</div><div class="num">${val}</div></div>`;
   $('#body').innerHTML = `
