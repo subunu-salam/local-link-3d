@@ -47,7 +47,7 @@
         tick = requestAnimationFrame(() => {
           tick = 0;
           if (inner) inner.style.transform = `translate3d(0,${(-sc.scrollTop * .12).toFixed(1)}px,0)`;
-          const hd = sc.querySelector('.vhd, .qc-head'); if (hd) hd.classList.toggle('tight', sc.scrollTop > 40);
+          const hd = sc.querySelector('.vhd, .qc-head, .lx-head'); if (hd) hd.classList.toggle('tight', sc.scrollTop > 40);
         });
       }, { passive: true });
     }

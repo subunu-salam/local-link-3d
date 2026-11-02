@@ -470,7 +470,7 @@ function productCard(p, biz, opts={}){ const disc = p.mrp && p.mrp>p.price;
   const fav = `<button class="fav2 ${isSaved('product',p.id)?'on':''}" data-fav data-ftype="product" data-fid="${p.id}" data-fname="${esc(p.name)}" data-fprice="${p.price}" data-fimg="${esc(src)}" aria-label="Save ${esc(p.name)}">${I.heart}</button>`;
   return `<div class="pcard qc-card${oos?' oos-card':''}" data-nav="product" data-id="${p.id}" role="link" tabindex="0" aria-label="${esc(p.name)}, ${money(p.price)}">
     <div class="pimg">${photoLayer(src)}${dIcon({name:p.name, category_slug: biz&&biz.category_slug},'cart')}${rib}${fav}${oos?'<span class="qc-oos">Out of stock</span>':addCtl(p,src,biz)}</div>
-    <div class="pb"><span class="qc-time">${gi('clock')} 15 MINS</span>
+    <div class="pb">${(p.business||(biz&&biz.name))?`<span class="qc-time">${gi('store')} ${esc(String(p.business||biz.name).split(' ').slice(0,2).join(' '))}</span>`:''}
       <h4>${esc(p.name)}</h4>
       <div class="punit">${esc(p.unit||'1 unit')} · ${rating?`<span class="prate">${I.star}${rating}</span>`:'<span class="qc-new">New</span>'}</div>
       <div class="price">${money(p.price)}${disc?`<span class="old">${money(p.mrp)}</span>`:''}</div></div></div>`; }
@@ -602,7 +602,7 @@ function startCountdown(){ if(_cdTimer) clearInterval(_cdTimer);
 const VERTICALS=[['all','store','All'],['food','fork','Food'],['grocery','cart','Grocery'],['services','wrench','Services'],['quick','bolt','Quick'],['workers','helmet','Workers'],['transport','car','Transport']];
 function vpillsHtml(active){ return `<div class="vbar"><div class="vpills">${VERTICALS.map(([k,icn,lab])=>`<button class="vpill ${active===k?'on':''}" data-vert="${k}"><span class="gi">${GI[icn]}</span>${esc(lab)}</button>`).join('')}</div></div>`; }
 function wireVerticals(el){ el.querySelectorAll('[data-vert]').forEach(b=>b.onclick=()=>{ const k=b.dataset.vert;
-  const hd=b.closest('.qc-head'); if(hd && k!=='all'){ hd.style.setProperty('--tone',QC_TONES[k]); el.querySelectorAll('.qc-tab').forEach(x=>{ x.classList.toggle('on',x===b); x.setAttribute('aria-selected',x===b); }); return setTimeout(()=>vertGo(k),220); }
+  const hd=b.closest('.lx-head'); if(hd && k!=='all'){ hd.style.setProperty('--tone',QC_TONES[k]); el.querySelectorAll('.lx-tab').forEach(x=>{ x.classList.toggle('on',x===b); x.setAttribute('aria-selected',x===b); }); return setTimeout(()=>vertGo(k),220); }
   vertGo(k); }); }
 function vertGo(k){
   if(k==='all'){ setTab('home'); return; }
@@ -795,19 +795,20 @@ function pickArea(id,name){ state.areaId=id; state.areaName=name; state.onboarde
   nav.customer=[{name:dest}]; routeRender(); toast('Location set to '+name); }
 
 const QC_TONES={all:'#0C8F82',food:'#E0573E',grocery:'#2E9D5B',services:'#3D6FD8',quick:'#C98A00',workers:'#8A55D6',transport:'#0B7FA8'};
+function lxGo(row,i){ const c=row.children[i]; if(!c) return; const left=row.scrollLeft + c.getBoundingClientRect().left - row.getBoundingClientRect().left - 16; row.scrollTo({left, behavior:'smooth'}); }
 function qcHeader(active){
-  return `<header class="qc-head" style="--tone:${QC_TONES[active]||QC_TONES.all}">
-    <div class="qc-top">
-      <button class="qc-eta" data-tabnav-loc aria-label="Delivering to ${esc(state.areaName)}. Change area">
-        <small>Local Link in</small><b>15 minutes</b>
-        <span>${I.pin}<em>${esc(state.areaName)}, Kozhikode</em>${I.chev.replace('m9 6 6 6-6 6','m6 9 6 6 6-6')}</span></button>
-      <div class="qc-acts">${custControls()}<button class="qc-ico" data-nav="saved" aria-label="Saved items">${I.heart}</button></div>
-    </div>
-    <div class="qc-search"><span aria-hidden="true">${I.search}</span>
-      <button class="qc-stxt" data-nav="searchScreen" aria-label="Search"><span class="sq" id="rotsq">Search "biriyani"</span></button>
-      <i class="qc-sdiv" aria-hidden="true"></i>
-      <button class="qc-smic" id="askHome" aria-label="Ask Local Link by voice">${GI.mic}</button></div>
-    <nav class="qc-tabs" role="tablist" aria-label="Browse">${VERTICALS.map(([k,icn,lab])=>`<button role="tab" aria-selected="${active===k}" class="qc-tab ${active===k?'on':''}" data-vert="${k}" style="--t:${QC_TONES[k]}"><span class="gi">${GI[icn]}</span>${esc(lab)}</button>`).join('')}</nav>
+  return `<header class="lx-head" style="--tone:${QC_TONES[active]||QC_TONES.all}">
+    <div class="lx-glow" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="lx-brand"><span class="lx-logo">${logoMark(32)}</span><span class="lx-word"><span>Local</span><span>Link</span></span><span class="lx-tag">Everything local</span>
+      <span style="flex:1"></span>${custControls()}</div>
+    <div class="lx-row">
+      <button class="lx-loc" data-tabnav-loc aria-label="Your area: ${esc(state.areaName)}. Change area">
+        <span class="lx-pin">${I.pin}</span><span class="lx-lt"><small>Your neighbourhood <em class="lx-open">${t('openNow')}</em></small><b>${esc(state.areaName)}, Kozhikode</b></span>${I.chev.replace('m9 6 6 6-6 6','m6 9 6 6 6-6')}</button>
+      <button class="lx-round" data-nav="saved" aria-label="Saved items">${I.heart}</button></div>
+    <div class="lx-search"><span aria-hidden="true">${I.search}</span>
+      <button class="lx-stxt" data-nav="searchScreen" aria-label="Search"><span class="sq" id="rotsq">Search shops, food, services…</span></button>
+      <button class="lx-mic" id="askHome" aria-label="Ask Local Link by voice"><i></i>${GI.mic}</button></div>
+    <nav class="lx-tabs" role="tablist" aria-label="Browse">${VERTICALS.map(([k,icn,lab],i)=>`<button role="tab" aria-selected="${active===k}" class="lx-tab ${active===k?'on':''}" data-vert="${k}" style="--n:${i}"><span class="gi">${GI[icn]}</span>${esc(lab)}</button>`).join('')}</nav>
   </header>`;
 }
 SCREENS.home = async (el) => {
@@ -816,7 +817,7 @@ SCREENS.home = async (el) => {
     <div id="orderPill"></div>
     ${state.introSeen?'':`<div class="qc-intro" id="introCard"><span class="qc-ii">${logoMark(34)}</span><div><b>${t('introT')}</b><small>${t('introS')}</small></div><button id="introOk" class="btn sm">${t('gotIt')}</button></div>`}
     <div id="near"></div>
-    <div class="qc-greet"><b>${greetWord()}${token&&me?', '+esc(me.name.split(' ')[0]):''} 👋</b><span>Shops, food & services around ${esc(state.areaName)} — delivered fast.</span></div>
+    <div class="qc-greet"><b>${greetWord()}${token&&me?', '+esc(me.name.split(' ')[0]):''} 👋</b><span>Shops, food, services, workers & rides around ${esc(state.areaName)}.</span></div>
     <div class="qc-voice" role="button" tabindex="0" data-talk aria-label="Ask Local Link by voice">
       <span class="qc-vorb">${GI.mic}</span><span><b>${t('voiceT')}</b><small>${t('voiceS')}</small></span>
       <span class="wave" aria-hidden="true">${Array.from({length:7},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span></div>
@@ -860,9 +861,15 @@ SCREENS.home = async (el) => {
   // hero from offers
   $('#hero').innerHTML = offers.slice(0,5).map(heroCard).join('');
   $('#dots').innerHTML = offers.slice(0,5).map((_,i)=>`<i class="${i===0?'on':''}"></i>`).join('');
-  const hero=$('#hero'); if(hero){ hero.addEventListener('scroll',()=>{ const i=Math.round(hero.scrollLeft/(hero.clientWidth*0.86+12)); $('#dots').querySelectorAll('i').forEach((d,x)=>d.classList.toggle('on',x===i)); },{passive:true}); if(offers.length>1){ wireRowArrows(hero); autoAdvanceRow(hero, Math.min(5,offers.length)); } }
+  const hero=$('#hero'); if(hero){ hero.classList.add('lx-banners'); const dots=$('#dots'); dots.classList.add('lx-dots');
+    const mark=()=>{ const w=hero.firstElementChild?hero.firstElementChild.offsetWidth+12:1; const i=Math.round(hero.scrollLeft/w); dots.querySelectorAll('i').forEach((d,x)=>{ d.classList.toggle('on',x===i); d.classList.toggle('done',x<i); }); [...hero.children].forEach((c,x)=>c.classList.toggle('on',x===i)); };
+    hero.addEventListener('scroll',mark,{passive:true}); mark();
+    let paused=0; dots.querySelectorAll('i').forEach((d,x)=>d.onclick=()=>{ paused=Date.now(); lxGo(hero,x); });
+    if(offers.length>1){ ['pointerdown','touchstart','wheel'].forEach(ev=>hero.addEventListener(ev,()=>{ paused=Date.now(); },{passive:true}));
+      const tm=setInterval(()=>{ if(!document.body.contains(hero)){ clearInterval(tm); return; } if(Date.now()-paused<5000||document.hidden) return;
+        const w=hero.firstElementChild.offsetWidth+12; const i=(Math.round(hero.scrollLeft/w)+1)%hero.children.length; lxGo(hero,i); }, 3000); } }
   // offers for you — stacked card carousel (swipe / prev-next)
-  renderOfferStack($('#promow'), offers);
+  $('#promow').innerHTML = `<div class="promorow lx-offers">${offers.slice(0,8).map(promoCard).join('')}</div>`;
   // mega deals — horizontal carousel with arrows
   $('#dealw').innerHTML = deals.slice(0,10).map((p,i)=>productCard(p,null,{best:i<2})).join('') || `<div class="px muted" style="font-size:13px">No deals right now.</div>`;
   if(deals.length) wireRowArrows($('#dealw'));
@@ -925,7 +932,7 @@ SCREENS.cart = async (el) => {
   el.innerHTML = `${topbarBack('Your cart')}
     <div class="qc-cart px">
       ${saved>0?`<div class="qc-save" role="status">${gi('percent')}<span>You're saving <b>${money(saved)}</b> on this order</span></div>`:''}
-      <section class="qc-ship"><div class="qc-shiph"><span class="qc-clock">${gi('clock')}</span><div><b>Delivery in 15 minutes</b><small>Shipment of ${cartCount()} item${cartCount()>1?'s':''} from ${esc(cart[0].biz||'your store')}</small></div></div>
+      <section class="qc-ship"><div class="qc-shiph"><span class="qc-clock">${gi('store')}</span><div><b>From ${esc(cart[0].biz||'your local store')}</b><small>Order of ${cartCount()} item${cartCount()>1?'s':''} from ${esc(cart[0].biz||'your store')}</small></div></div>
         ${rows}
         <button class="qc-more" data-nav="business" data-id="${cartBizId()||1}">${I.plus} Add more items</button></section>
       <div id="qcSugg"></div>
@@ -1074,13 +1081,13 @@ SCREENS.product = async (el, {id}) => {
         <button class="st-ib fav ${isSaved('product',p.id)?'on':''}" data-fav data-ftype="product" data-fid="${p.id}" data-fname="${esc(p.name)}" data-fprice="${p.price}" data-fimg="${esc(src)}" aria-label="Save">${I.heart}</button></div>
       ${p.promo_label?`<span class="pd-tag">${esc(p.promo_label)}</span>`:(disc?`<span class="pd-tag">${pct}% OFF</span>`:'')}</div>
     <section class="pd-sheet">
-      <span class="qc-time">${gi('clock')} 15 MINS</span>
+      <span class="qc-time">${gi('store')} ${esc(p.business||'Local store')}</span>
       <h1>${esc(p.name)}</h1>
       <p class="pd-unit">${esc(p.unit||'1 unit')} · ${rating?`<span class="prate">${I.star}${rating}</span>${p.review_count?` <small>(${p.review_count})</small>`:''}`:'<span class="qc-new">New</span>'}</p>
       <div class="pd-price"><b>${money(p.price)}</b>${disc?`<s>MRP ${money(p.mrp)}</s><em>Save ${money(p.mrp-p.price)}</em>`:''}</div>
       <p class="pd-tax">Inclusive of all taxes</p>
       <button class="pd-store" data-nav="business" data-id="${p.business_id}"><span>${GI.store}</span><div><small>Sold by</small><b>${esc(p.business)}</b></div>${I.chev}</button>
-      <div class="pd-perks"><div>${gi('bolt')}<b>Fast delivery</b><small>from a store near you</small></div><div>${gi('shield')}<b>${oos?'Out of stock':'In stock'}</b><small>${esc(p.category_name||'Local')}</small></div><div>${gi('chat')}<b>Ask the store</b><small>chat or call</small></div></div>
+      <div class="pd-perks"><div>${gi('pin')}<b>Local store</b><small>in your neighbourhood</small></div><div>${gi('shield')}<b>${oos?'Out of stock':'In stock'}</b><small>${esc(p.category_name||'Local')}</small></div><div>${gi('chat')}<b>Ask the store</b><small>chat or call</small></div></div>
       ${p.description?`<h3 class="pd-h">About this item</h3><p class="pd-desc">${esc(p.description)}</p>`:''}
       <div id="related"></div><div style="height:120px"></div></section>
     <div class="pd-bar">${oos?`<button class="btn block" disabled style="opacity:.6">Out of stock</button>`:`

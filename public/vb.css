@@ -1499,3 +1499,90 @@ html.lite img.ph{transition:none; transform:none}
 .ad-sdd button:hover,.ad-sdd button:focus-visible{background:var(--brand-50)}
 .ad-sdd b{display:block; font-size:13.5px} .ad-sdd small{font-size:12px; color:var(--muted)}
 @media (max-width:1100px){ .ad-row2{grid-template-columns:1fr !important} }
+
+/* =====================================================================
+   v28 — elevated VoiceBite-style top section + Instamart/Zepto banners
+   ===================================================================== */
+.lx-head{position:sticky; top:0; z-index:9; isolation:isolate; overflow:hidden; color:#fff; padding:calc(14px + var(--top)) 16px 0; border-radius:0 0 32px 32px;
+  background:radial-gradient(320px 220px at 100% 0%, color-mix(in srgb,var(--tone) 60%,#7CF2E2) 0%, transparent 70%), radial-gradient(260px 200px at 0% 100%, rgba(255,138,107,.35), transparent 70%), linear-gradient(160deg, color-mix(in srgb,var(--tone) 92%,#000) 0%, color-mix(in srgb,var(--tone) 70%,#022) 100%);
+  box-shadow:0 24px 44px -26px color-mix(in srgb,var(--tone) 70%,#000), 0 2px 0 rgba(255,255,255,.06) inset; transition:background .5s var(--ease)}
+.lx-head::after{content:""; position:absolute; inset:0; z-index:-1; opacity:.35; pointer-events:none;
+  background:repeating-radial-gradient(circle at 105% -10%, transparent 0 26px, rgba(255,255,255,.07) 26px 27px)}
+.lx-glow{position:absolute; inset:0; z-index:-1; pointer-events:none}
+.lx-glow i{position:absolute; border-radius:50%; filter:blur(2px); background:radial-gradient(circle at 35% 35%, rgba(255,255,255,.55), rgba(255,255,255,0) 70%); animation:lxFloat 9s ease-in-out infinite}
+.lx-glow i:nth-child(1){width:70px; height:70px; right:22%; top:30px}
+.lx-glow i:nth-child(2){width:36px; height:36px; left:12%; top:120px; animation-delay:-3s; background:radial-gradient(circle at 35% 35%, rgba(247,201,72,.75), rgba(247,201,72,0) 70%)}
+.lx-glow i:nth-child(3){width:50px; height:50px; right:6%; bottom:70px; animation-delay:-6s; background:radial-gradient(circle at 35% 35%, rgba(255,150,120,.6), rgba(255,150,120,0) 70%)}
+@keyframes lxFloat{50%{transform:translate(-10px,-12px) scale(1.15); opacity:.6}}
+.lx-brand{display:flex; align-items:center; gap:8px; max-height:52px; transition:max-height .35s var(--ease), opacity .3s, margin .35s}
+.lx-logo svg{display:block; filter:drop-shadow(0 6px 12px rgba(0,0,0,.3)); animation:logoBob 4s ease-in-out infinite}
+.lx-word{font-family:var(--display); font-style:italic; font-weight:800; font-size:25px; text-transform:uppercase; line-height:1; letter-spacing:.005em}
+.lx-word span:last-child{color:#FFD86B; margin-left:.08em}
+.lx-tag{font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#DFF7F3; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.18); border-radius:999px; padding:4px 9px; white-space:nowrap}
+.lx-brand .hicon{width:38px; height:38px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.2); color:#fff; box-shadow:none}
+.lx-brand .clang{background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.2); box-shadow:none}
+.lx-brand .clang button{color:#fff} .lx-brand .clang button.on{background:#fff; color:var(--tone); box-shadow:none}
+.lx-row{display:flex; align-items:center; gap:10px; margin-top:14px; max-height:70px; transition:max-height .35s var(--ease), opacity .3s, margin .35s}
+.lx-loc{flex:1; min-width:0; display:flex; align-items:center; gap:10px; padding:6px 12px 6px 6px; border-radius:18px; text-align:left; color:#fff;
+  background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); transition:transform .3s var(--spring)}
+.lx-loc:active{transform:scale(.98)}
+.lx-pin{width:38px; height:38px; flex:none; border-radius:13px; display:grid; place-items:center; background:#fff; color:var(--tone); box-shadow:0 6px 14px -8px rgba(0,0,0,.5)}
+.lx-pin svg{width:19px; height:19px; fill:currentColor}
+.lx-lt{flex:1; min-width:0}
+.lx-lt small{display:flex; gap:8px; font-size:11px; color:#CFF1EC; font-weight:600}
+.lx-lt b{display:block; font-size:15px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.lx-open{font-style:normal; color:#7DF0B9; font-weight:800}
+.lx-open::before{content:""; display:inline-block; width:6px; height:6px; border-radius:50%; background:currentColor; margin-right:4px; vertical-align:1px; animation:pulse 1.8s infinite}
+.lx-loc > svg{width:15px; height:15px; flex:none; opacity:.85}
+.lx-round{width:48px; height:48px; flex:none; border-radius:50%; display:grid; place-items:center; background:#fff; color:var(--hot); box-shadow:0 10px 20px -10px rgba(0,0,0,.55); transition:transform .3s var(--spring)}
+.lx-round:active{transform:scale(.88)}
+.lx-round svg{width:21px; height:21px; fill:currentColor}
+.lx-search{display:flex; align-items:center; gap:6px; margin-top:12px; padding:5px 5px 5px 16px; border-radius:999px; background:#fff; color:#4C565D; box-shadow:0 16px 30px -16px rgba(0,0,0,.6)}
+.lx-search > span svg{width:18px; height:18px; display:block}
+.lx-stxt{flex:1; min-width:0; text-align:left; padding:11px 2px; font-size:14.5px; color:#7A848C; white-space:nowrap; overflow:hidden}
+.lx-mic{position:relative; width:44px; height:44px; flex:none; border-radius:50%; display:grid; place-items:center; color:#fff; background:radial-gradient(circle at 35% 28%, #2CCBBA, #0C8F82 55%, #0A5C55); box-shadow:0 10px 20px -8px rgba(12,143,130,.8)}
+.lx-mic svg{position:relative; width:20px; height:20px}
+.lx-mic i{position:absolute; inset:-3px; border-radius:50%; background:conic-gradient(from 0deg,#F7C948,#0C8F82 30%,transparent 55%,#FF6B4A 85%); animation:spin 4s linear infinite;
+  -webkit-mask:radial-gradient(circle, transparent 66%, #000 68%); mask:radial-gradient(circle, transparent 66%, #000 68%)}
+.lx-tabs{display:flex; gap:8px; overflow-x:auto; margin:14px -16px 0; padding:0 16px 16px; scrollbar-width:none}
+.lx-tabs::-webkit-scrollbar{display:none}
+.lx-tab{flex:none; display:inline-flex; align-items:center; gap:6px; padding:6px 13px 6px 6px; border-radius:999px; font-size:12.5px; font-weight:700; color:#fff;
+  background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); animation:moodIn .5s var(--spring) both; animation-delay:calc(.15s + var(--n) * 45ms); transition:background .25s, color .25s, transform .25s var(--spring)}
+.lx-tab .gi{width:26px; height:26px; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.16)}
+.lx-tab .gi svg{width:15px; height:15px}
+.lx-tab:active{transform:scale(.94)}
+.lx-tab.on{background:#fff; color:var(--tone); border-color:#fff; box-shadow:0 10px 20px -12px rgba(0,0,0,.6)}
+.lx-tab.on .gi{background:color-mix(in srgb,var(--tone) 14%,#fff); color:var(--tone)}
+.lx-head.tight .lx-brand,.lx-head.tight .lx-row{max-height:0; opacity:0; margin-top:0; overflow:hidden}
+.lx-head.tight .lx-search{margin-top:2px}
+.lx-head.tight .lx-tabs{margin-top:10px; padding-bottom:12px}
+html.lite .lx-glow,html.lite .lx-head::after{display:none}
+/* Instamart / Zepto banner carousel */
+.hero.lx-banners{gap:12px; padding:6px 16px 4px; scroll-padding-inline:16px; scroll-snap-type:x mandatory}
+.lx-banners .hcard{flex:0 0 calc(100% - 40px); width:auto; height:156px; padding:16px; border-radius:20px; box-shadow:0 14px 28px -18px rgba(0,0,0,.55); transform:scale(.96); opacity:.85; transition:transform .45s var(--spring), opacity .35s}
+.lx-banners .hcard.on{transform:none; opacity:1}
+.lx-banners .hcard::after{background:linear-gradient(90deg,rgba(0,0,0,.72) 0%,rgba(0,0,0,.35) 55%,rgba(0,0,0,0) 100%)}
+.lx-banners .hcard img.ph{transform:scale(1.05); transition:transform 6s ease-out, opacity .45s}
+.lx-banners .hcard.on img.ph.on{transform:scale(1.14)}
+.lx-banners .htag{background:#FFD86B; color:#3A2C00; border-radius:8px; font-size:11px; padding:4px 9px; margin-bottom:auto}
+.lx-banners .hcard h3{font-size:26px; max-width:70%}
+.lx-banners .hcard .hsub{max-width:72%; white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-weight:500}
+.lx-banners .hcard::before{content:"Shop now ›"; position:absolute; right:14px; bottom:14px; z-index:3; background:#fff; color:#14161A; font-size:12px; font-weight:800; border-radius:999px; padding:7px 12px; box-shadow:0 8px 18px -10px rgba(0,0,0,.6)}
+.lx-banners + .crow-arrow,.lx-banners ~ .crow-arrow{display:none}
+.dots.lx-dots{gap:5px; margin:8px 0 2px}
+.dots.lx-dots i{width:18px; height:4px; border-radius:2px; background:var(--line); position:relative; overflow:hidden}
+.dots.lx-dots i.done{background:var(--brand-100)}
+.dots.lx-dots i.on{width:28px; background:var(--line)}
+.dots.lx-dots i.on::after{content:""; position:absolute; inset:0; background:var(--brand); transform-origin:left; animation:lxProg 3s linear both}
+@keyframes lxProg{from{transform:scaleX(0)}}
+/* Zepto-style offers rail */
+.lx-offers{padding:2px 16px 14px; gap:10px; scroll-snap-type:x mandatory}
+.lx-offers .offcard{flex:0 0 220px; padding:0; border:1px solid var(--line); box-shadow:none; overflow:hidden; scroll-snap-align:start; transition:transform .3s var(--spring)}
+.lx-offers .offcard:active{transform:scale(.97)}
+.lx-offers .offcard-img{height:96px; border-radius:0}
+.lx-offers .offcard-body{padding:10px 12px 12px}
+.lx-offers .offcard-body p{min-height:0; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden}
+.lx-offers .offcard-code{border:1.5px dashed var(--brand); color:var(--brand); border-radius:6px; padding:2px 6px; font-weight:800}
+.lx-tag{display:none}
+@media (min-width:430px){ .phone .lx-tag{display:none} }
+.lx-brand .clang button{padding:6px 9px}
