@@ -340,7 +340,7 @@ function renderShell(){
   if (state.view==='admin'){ stage.innerHTML = `<div class="admin-shell" id="adminshell"></div>`; renderAdmin($('#adminshell')); return; }
   if (state.view==='launcher'){ renderLauncher(stage); return; }
   // customer / partner render as a standalone full-screen mobile app
-  stage.innerHTML = `<div class="appwrap vb-stage"><div class="atmo" aria-hidden="true"><i></i><i></i><i></i></div><div class="phone vb-app"><div class="atmo" aria-hidden="true"><i></i><i></i><i></i></div><div class="screen" id="screen"></div><div id="navholder"></div></div></div>`;
+  stage.innerHTML = `<div class="appwrap"><div class="phone"><div class="screen" id="screen"></div><div id="navholder"></div></div></div>`;
   if (!nav[state.view].length) nav[state.view].push(state.view==='customer'
     ? {name:'splash'}   // always show the branded opening animation on launch
     : {name: token && me && me.role==='business_partner' ? 'p_dash' : 'p_login'});
@@ -369,8 +369,6 @@ function renderLauncher(stage){
   stage.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>openView(b.dataset.view));
 }
 
-function wordmark(){ return `<span class="vb-word"><span class="w1">Local</span><span class="w2">Link</span></span>`; }
-function greetWord(){ const h=new Date().getHours(); return h<12?'Good morning':h<17?'Good afternoon':'Good evening'; }
 function logoMark(size=26){
   return `<svg width="${size}" height="${size}" viewBox="0 0 40 44" fill="none" aria-hidden="true">
     <path d="M20 2c8 0 14 6.5 14 14.5C34 27 24 37 20 42 16 37 6 27 6 16.5 6 8.5 12 2 20 2Z" fill="url(#lg${size})"/>
@@ -624,26 +622,20 @@ function renderBottomNav(){
   const holder = $('#navholder'); if(!holder) return;
   const cur = stack()[stack().length-1].name;
   if (cur==='chat' || cur==='p_chatThread'){ holder.innerHTML=''; return; }  // full-screen chat thread
-  const tab=(r,icon,lab,extra='')=>`<button class="vtab ${cur===r?'on':''}" data-tabnav="${r}" ${cur===r?'aria-current="page"':''}><span class="vico">${icon}${extra}</span><span>${esc(lab)}</span></button>`;
-  const talk=(lab,icon)=>`<button class="vtalk" data-tabnav="__talk" aria-label="${esc(lab)}"><span class="t-glow"></span><span class="t-ring"></span><span class="t-core">${icon}</span><span class="t-lab">${esc(lab)}</span></button>`;
   if (state.view==='customer'){
     if (['splash','location','intro','register','login'].includes(cur)){ holder.innerHTML=''; return; }
-    const cb=`<span class="cartbadge" ${cartCount()?'':'hidden'}>${cartCount()}</span>`;
-    holder.innerHTML = `<nav class="bnav vdock">${tab('home',I.home,'Home')}${tab('categories',I.grid,'Explore')}${talk('Ask',GI.mic)}${tab('cart',I.bag,'Cart',cb)}${tab('account',I.user,'Account')}</nav>`;
+    const items=[['home','home','Home'],['categories','grid','Categories'],['deals','tag','Deals'],['account','user','Account'],['cart','bag','Cart']];
+    holder.innerHTML = `<div class="bnav">${items.map(([r,icn,lab])=>{
+      const on = cur===r?'on':''; const badge = r==='cart'?`<span class="cartbadge" ${cartCount()?'':'hidden'}>${cartCount()}</span>`:'';
+      return `<button class="${on}" data-tabnav="${r}">${I[icn]}${badge}<span>${esc(lab)}</span></button>`;
+    }).join('')}</div>`;
   } else if (state.view==='partner'){
     if (cur==='p_login'){ holder.innerHTML=''; return; }
-    holder.innerHTML = `<nav class="bnav vdock">${tab('p_dash',I.home,'Home')}${tab('p_products',I.store,'Products')}${talk('Add',I.plus)}${tab('p_orders',I.bag,'Orders')}${tab('p_chats',GI.chat,'Chats','<span class="cartbadge pchatbadge" hidden></span>')}</nav>`;
+    const items=[['p_dash','home','Home'],['p_products','store','Products'],['p_orders','bag','Orders'],['p_chats','chat','Chats'],['p_profile','user','Profile']];
+    holder.innerHTML = `<div class="bnav">${items.map(([r,icn,lab])=>`<button class="${cur===r?'on':''}" data-tabnav="${r}">${icn==='chat'?GI.chat:I[icn]}${r==='p_chats'?`<span class="cartbadge pchatbadge" hidden></span>`:''}<span>${esc(lab)}</span></button>`).join('')}</div>`;
     setTimeout(()=>{ try{ api('/partner/overview').then(d=>setPartnerChatBadge(d.usage&&d.usage.unreadChats)).catch(()=>{}); }catch(e){} }, 50);
   }
-  holder.querySelectorAll('[data-tabnav]').forEach(b=>b.onclick=async()=>{ const r=b.dataset.tabnav;
-    if(r==='__talk'){
-      b.classList.remove('boing'); void b.offsetWidth; b.classList.add('boing');
-      if(state.view==='customer') return openAsk('', {voice:true});
-      try{ const d=await api('/partner/overview');
-        if(d.plan && !d.plan.products) return setTab('p_plans');
-        openAddProduct(d.businesses[0]); }catch(e){ toast(e.message); }
-      return; }
-    if(r==='ask'){ openAsk(); } else setTab(r); });
+  holder.querySelectorAll('[data-tabnav]').forEach(b=>b.onclick=()=>{ const r=b.dataset.tabnav; if(r==='ask'){ openAsk(); } else setTab(r); });
 }
 
 /* ==================== CUSTOMER SCREENS ==================== */
@@ -742,36 +734,22 @@ function pickArea(id,name){ state.areaId=id; state.areaName=name; state.onboarde
 
 SCREENS.home = async (el) => {
   el.innerHTML = `
-    <header class="vhd">
-      <div class="vhd-brand"><span class="cbrand-logo">${logoMark(30)}</span>${wordmark()}<span class="vhd-tag">Everything local</span>
-        <div style="flex:1"></div>${custControls()}</div>
-      <div class="vhd-row">
-        <button class="vloc" data-tabnav-loc><span class="vloc-ico">${I.pin}</span>
-          <span class="vloc-t"><small>Delivering to <em class="opennow">Open now</em></small><b>${esc(state.areaName)} · Kozhikode</b></span></button>
-        <button class="vround" data-nav="saved" aria-label="Saved">${I.heart}</button>
-      </div>
-      <div class="vsrch"><span class="vsrch-ic">${I.search}</span>
-        <button class="vsrch-txt" data-nav="searchScreen"><span class="sq" id="rotsq">Search local shops & products…</span></button>
-        <button class="vsrch-mic" id="askHome" aria-label="Ask Local Link by voice">${GI.mic}</button></div>
-    </header>
-    <div class="vpromos" id="vpromos">
-      <div class="vpromo p-voice"><small>Ask Local Link</small><h2>Just say what you need</h2><p>English · മലയാളം</p>
-        <span class="vchips"><span>${GI.sparkles}<b>AI search</b></span><span>${GI.bolt}<b>Instant</b></span></span>
-        <span class="wave" aria-hidden="true">${Array.from({length:14},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span>
-        <button class="vpromo-btn" data-talk>${GI.mic}<span>Start talking</span></button></div>
-      <div class="vpromo p-deal" id="vpDeal"><small>Today's deal</small><h2>Mega deals near you</h2><p>Fresh local discounts — ending at midnight</p>
-        <span class="vchips"><span>${GI.percent}<b>Up to 50% off</b></span><span>${GI.clock}<b>Today only</b></span></span>
-        <button class="vpromo-btn" data-nav="deals"><span>Shop deals</span>${I.chev}</button></div>
-      <div class="vpromo p-near"><small>Near you</small><h2>Your whole neighbourhood</h2><p>Shops, services, workers & rides</p>
-        <span class="vchips"><span>${GI.store}<b>Local shops</b></span><span>${GI.car}<b>Rides</b></span></span>
-        <button class="vpromo-btn" data-nav="categories"><span>Explore</span>${I.chev}</button></div>
+    <div class="cbrand">
+      <span class="cbrand-logo">${logoMark(30)}</span><span class="cbrand-name">Local Link</span>
+      <div style="flex:1"></div>
+      ${custControls()}
     </div>
-    <div class="vdots" id="vdots"><i class="on"></i><i></i><i></i></div>
-    <div class="vgreet"><b>${greetWord()}${token&&me?', '+esc(me.name.split(' ')[0]):''}</b><span>What are you looking for in ${esc(state.areaName)} today?</span></div>
-    <div class="vmoods">${VERTICALS.map(([k,icn,lab],i)=>`<button class="vmood ${k==='all'?'on':''}" data-vert="${k}" style="--n:${i}"><i>${GI[icn]}</i>${esc(lab)}</button>`).join('')}</div>
-    <div class="nsec"><h3>${esc(t('categories'))}</h3><button class="viewall" data-nav="categories">${t('seeAll')} ${I.chev}</button></div>
-    <div class="vcats">${(ref.categories||[]).slice(0,10).map(c=>`<button class="vcat" data-nav="category" data-slug="${c.slug}"><span class="vcat-pic">${catIcon(c.slug)}</span><b>${esc(catLabel(c))}</b></button>`).join('')}</div>
-    <div class="nsec"><h3>Top offers</h3><button class="viewall" data-nav="offers">${t('seeAll')} ${I.chev}</button></div>
+    ${vpillsHtml('all')}
+    <div class="addrbar">
+      <span class="pinwrap">${I.pin}</span>
+      <div class="atext"><div class="atop" data-tabnav-loc>${esc(state.areaName)} ${I.chev.replace('m9 6 6 6-6 6','m6 9 6 6 6-6')}</div>
+        <div class="asub">${esc(state.areaName)} · Kozhikode, Kerala</div></div>
+      <button class="favpill" data-nav="saved" aria-label="Saved / Wishlist">${I.heart}<span>Saved</span></button>
+    </div>
+    <div class="searchrow">
+      <button class="nsearch" data-nav="searchScreen">${I.search}<span class="sq" id="rotsq">Search local shops & products…</span></button>
+      <button class="askbtn" id="askHome" aria-label="Ask Local Link AI">${GI.sparkles}<span>Ask AI</span></button>
+    </div>
     <div class="hero" id="hero">${skeletonCards(1)}</div><div class="dots" id="dots"></div>
     <div id="promo"></div>
     <div id="deals"></div>
@@ -781,9 +759,7 @@ SCREENS.home = async (el) => {
     <div id="updates"></div>
     <div style="height:96px"></div>`;
   wireVerticals(el); wireCustControls(el);
-  const ask=$('#askHome'); if(ask) ask.onclick=()=>openAsk('', {voice:true});
-  el.querySelectorAll('[data-talk]').forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); openAsk('', {voice:true}); });
-  const vp=$('#vpromos'); if(vp){ vp.addEventListener('scroll',()=>{ const i=Math.round(vp.scrollLeft/(vp.clientWidth*0.9)); el.querySelectorAll('#vdots i').forEach((d,x)=>d.classList.toggle('on',x===i)); [...vp.children].forEach((c,x)=>c.classList.toggle('on',x===i)); },{passive:true}); vp.firstElementChild.classList.add('on'); autoAdvanceRow(vp,3); }
+  const ask=$('#askHome'); if(ask) ask.onclick=()=>openAsk();
   const loc=el.querySelector('[data-tabnav-loc]'); if(loc) loc.onclick=()=>go('location');
   // rotating search placeholder
   const rot=$('#rotsq'); let ri=0; if(rot){ setInterval(()=>{ ri=(ri+1)%ROTATE.length; rot.textContent=ROTATE[ri]; },2600); }
@@ -1437,21 +1413,16 @@ SCREENS.chat = async (el, {id, name}) => {
 
 /* ---------------- Ask Local Link — chat panel with voice ---------------- */
 let aiVoiceLang = localStorage.getItem('ll_voicelang') || 'en-IN';
-function openAsk(prefill, opts={}){
+function openAsk(prefill){
   closeSheet();
   const phone = $('.phone') || document.body;
   const aiOn = state.aiStatus.openai;
   const chips = [t('chipPlumber'),t('chipBiriyani'),t('chipAuto'),t('chipGrocery'),t('chipAC')];
-  const panel = h(`<div class="sheet vvoice-wrap" id="sheet"><div class="ai-panel vvoice">
+  const panel = h(`<div class="sheet" id="sheet"><div class="ai-panel">
     <div class="ai-head">
-      <div class="row" style="gap:9px"><span class="ai-badge">${logoMark(26)}</span><b style="font-size:16px">${t('askTitle')}</b>
+      <div class="row" style="gap:9px"><span class="ai-badge">${I.ai}</span><b style="font-size:16px">${t('askTitle')}</b>
         <span class="badge ${aiOn?'primary':'neutral'}" style="font-size:10px">${aiOn?'AI':'Offline'}</span></div>
-      <button class="tb-btn" id="ai-close" aria-label="Close">✕</button>
-    </div>
-    <div class="vorb-zone">
-      <div class="vorb" id="vorb"><span class="o-halo"></span><span class="o-halo h2"></span><span class="o-core">${GI.mic}</span></div>
-      <div class="vstate" id="vstate">${opts.voice?'Tap the orb and speak':'Ask me anything local'}</div>
-      <div class="vbars" aria-hidden="true">${Array.from({length:18},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</div>
+      <button class="tb-btn" id="ai-close">✕</button>
     </div>
     <div class="ai-msgs" id="ai-msgs">
       <div class="ai-bubble bot">${t('askHi')} ${aiOn?'':`<span class="faint">${t('askOffline')}</span>`}</div>
@@ -1463,7 +1434,6 @@ function openAsk(prefill, opts={}){
       <input id="aq" placeholder="${t('askPh')}" value="${esc(prefill||'')}" autocomplete="off"/>
       <button class="ai-sendbtn" id="asend" title="Send">${GI.send}</button>
     </div>
-    <button class="vend" id="ai-end">End</button>
   </div></div>`);
   phone.appendChild(panel);
   const msgs=$('#ai-msgs'), input=$('#aq');
@@ -1475,14 +1445,12 @@ function openAsk(prefill, opts={}){
     input.value=''; const chipsEl=$('#ai-chips'); if(chipsEl) chipsEl.remove();
     addUser(q);
     const loading=addBot(`<div class="ai-bubble bot"><span class="ai-typing"><i></i><i></i><i></i></span></div>`);
-    panel.classList.add('thinking'); const vs0=$('#vstate'); if(vs0) vs0.textContent='Finding the best local match…';
     try{
       const r=await api('/ask',{method:'POST',body:{query:q, lang: state.lang}});
       loading.innerHTML = `<div class="ai-bubble bot">${esc(r.answer)}</div>` + (r.results||[]).map(x=>aiResultRow(x)).join('');
       loading.querySelectorAll('[data-go-biz]').forEach(b=>b.onclick=()=>{ closeSheet(); go('business',{id:Number(b.dataset.goBiz)}); });
       scrollDown();
     }catch(e){ loading.innerHTML=`<div class="ai-bubble bot">${esc(e.message)}</div>`; }
-    panel.classList.remove('thinking'); panel.classList.add('answered'); const vs1=$('#vstate'); if(vs1) vs1.textContent='Here’s what I found';
   };
   $('#ai-close').onclick=closeSheet;
   panel.addEventListener('click', e=>{ if(e.target===panel) closeSheet(); });
@@ -1491,12 +1459,7 @@ function openAsk(prefill, opts={}){
   $('#ai-chips').querySelectorAll('[data-aq]').forEach(b=>b.onclick=()=>run(b.dataset.aq));
   $('#ai-lang').querySelectorAll('[data-vl]').forEach(b=>b.onclick=()=>{ aiVoiceLang=b.dataset.vl; localStorage.setItem('ll_voicelang',aiVoiceLang); $('#ai-lang').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.vl===aiVoiceLang)); });
   setupVoice($('#ai-mic'), input, run);
-  $('#ai-end').onclick=closeSheet;
-  const orb=$('#vorb'), vst=$('#vstate'), micB=$('#ai-mic');
-  orb.onclick=()=>micB.click();
-  new MutationObserver(()=>{ const on=micB.classList.contains('listening'); panel.classList.toggle('listening',on);
-    if(vst) vst.textContent = on ? (aiVoiceLang==='ml-IN'?'കേൾക്കുന്നു…':'Listening…') : 'Tap the orb and speak'; }).observe(micB,{attributes:true,attributeFilter:['class']});
-  if(prefill) run(prefill); else if(opts.voice && (window.SpeechRecognition||window.webkitSpeechRecognition)) setTimeout(()=>micB.click(),350); else setTimeout(()=>input.focus(),200);
+  if(prefill) run(prefill); else setTimeout(()=>input.focus(),200);
 }
 
 /* voice input (English + Malayalam) via Web Speech API */
@@ -1622,14 +1585,106 @@ function barChartSVG(data){
   return `<div style="overflow-x:auto;margin-top:10px"><svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:${W}px;max-width:${Math.max(W,320)}px;display:block">
     <line x1="${pad}" y1="${base+1}" x2="${W-pad}" y2="${base+1}" stroke="var(--border-strong)" stroke-width="1"/>${bars}</svg></div>`;
 }
+/* ==================== AI DEMAND FORECAST (DevX Nexus logic) ==================== */
+const FC_STEPS = ['Reading 6 months of orders','Weighting recent demand & trend','Applying the Kerala festival calendar','Scoring confidence & best / worst range'];
+function fcCount(el, to, fmt){ if(!el) return; const t0=performance.now(), dur=900; const f=fmt||(v=>Math.round(v).toLocaleString('en-IN'));
+  (function tick(now){ const k=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-k,3); el.textContent=f(to*e); if(k<1) requestAnimationFrame(tick); })(t0); }
+function fcConfLabel(c){ return c>=85?'High':c>=70?'Good':'Low'; }
+function fcSpark(vals, w=84, hgt=26){ const mx=Math.max(...vals,1), mn=Math.min(...vals,0);
+  const pts=vals.map((v,i)=>[ (i/(vals.length-1||1))*w, hgt-2-((v-mn)/((mx-mn)||1))*(hgt-4) ]);
+  const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  return `<svg class="fc-spark" viewBox="0 0 ${w} ${hgt}" preserveAspectRatio="none"><path d="${d} L${w} ${hgt} L0 ${hgt}Z" class="a"/><path d="${d}" class="l"/></svg>`; }
+function fcChart(r){
+  const hist=r.history, fut=r.months, all=[...hist.map(x=>x.units),...fut.map(x=>x.units)], mx=Math.max(...all,1);
+  const W=320, H=150, n=all.length, bw=W/n;
+  const bars=hist.map((x,i)=>{ const hh=(x.units/mx)*(H-34); return `<rect class="fc-hb" x="${(i*bw+4).toFixed(1)}" y="${(H-18-hh).toFixed(1)}" width="${(bw-8).toFixed(1)}" height="${hh.toFixed(1)}" rx="5" style="--d:${i*60}ms"/>`; }).join('');
+  const pts=fut.map((x,i)=>{ const j=hist.length+i; return [j*bw+bw/2, H-18-(x.units/mx)*(H-34)]; });
+  const lastH=[(hist.length-1)*bw+bw/2, H-18-(hist[hist.length-1].units/mx)*(H-34)];
+  const line=[lastH,...pts].map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const area=line+` L${pts[pts.length-1][0].toFixed(1)} ${H-18} L${lastH[0].toFixed(1)} ${H-18}Z`;
+  const dots=pts.map((p,i)=>`<g class="fc-pt" style="--d:${700+i*90}ms"><circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${fut[i].events.length?5:3.6}" class="${fut[i].events.length?'ev':''}"/>${fut[i].events.length?`<text x="${p[0].toFixed(1)}" y="${(p[1]-10).toFixed(1)}" text-anchor="middle" class="evl">${esc(fut[i].events[0].split(' ')[0])}</text>`:''}</g>`).join('');
+  const labels=[...hist,...fut].map((x,i)=>`<text x="${(i*bw+bw/2).toFixed(1)}" y="${H-3}" text-anchor="middle" class="${i>=hist.length?'f':''}">${x.label}</text>`).join('');
+  const split=hist.length*bw;
+  return `<svg class="fc-chart" viewBox="0 0 ${W} ${H}"><rect x="${split}" y="0" width="${W-split}" height="${H-16}" rx="10" class="fc-zone"/>
+    <text x="${split+8}" y="13" class="fc-zl">FORECAST</text><text x="6" y="13" class="fc-zl h">LAST 6 MONTHS</text>
+    ${bars}<path d="${area}" class="fc-area"/><path d="${line}" class="fc-line" pathLength="1"/>${dots}${labels}</svg>`;
+}
+async function renderForecastHub(host){
+  host.innerHTML = `<section class="fc-hub">
+    <div class="fc-hero"><div class="fc-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="fc-eyebrow"><span class="fc-live"></span>AI Demand Forecast · Nexus engine</div>
+      <h2 class="fc-title">Know what sells<br>before it sells</h2>
+      <div class="fc-sum" id="fcSum"><div class="sk" style="height:66px;border-radius:18px;background:rgba(255,255,255,.12)"></div></div></div>
+    <div class="fc-pickh"><b>Select a product</b><span class="muted">Forecast generates instantly</span></div>
+    <div class="fc-picks" id="fcPicks">${skeletonCards(3)}</div>
+    <div id="fcOut"></div></section>`;
+  let data; try{ data = await api('/partner/forecast'); }catch(e){ host.innerHTML=''; return; }
+  const S=data.summary, P=data.products||[];
+  if(!P.length){ $('#fcSum').innerHTML=`<p class="fc-empty">Add your first product and its forecast appears here automatically.</p>`; $('#fcPicks').innerHTML=''; return; }
+  $('#fcSum').innerHTML = `<div class="fc-kpi"><b id="fcU">0</b><span>units · next 30 days</span></div>
+    <div class="fc-kpi"><b id="fcR">₹0</b><span>expected revenue</span></div>
+    <div class="fc-ring" style="--p:${S.confidence}"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" class="t"/><circle cx="22" cy="22" r="18" class="v" pathLength="100"/></svg><b>${S.confidence}%</b><span>confidence</span></div>
+    ${S.events.length?`<div class="fc-evs">${S.events.slice(0,3).map(e=>`<span>${GI.calendar}${esc(e)}</span>`).join('')}</div>`:''}`;
+  fcCount($('#fcU'), S.units); fcCount($('#fcR'), S.revenue, v=>money(Math.round(v)));
+  $('#fcPicks').innerHTML = P.map((p,i)=>`<button class="fc-pick" data-fp="${p.id}" style="--n:${i}">
+      <span class="fc-pimg">${photoLayer(p.image_url||pic((p.name||'product').toLowerCase(),500+p.id,160,160))}</span>
+      <span class="fc-pn">${esc(p.name)}</span>
+      <span class="fc-pq"><b>${p.qty}</b> units ${p.trendPct>=5?'<em class="up">▲</em>':p.trendPct<=-5?'<em class="dn">▼</em>':''}</span>
+      ${fcSpark(p.spark)}
+      <span class="fc-pc c-${fcConfLabel(p.confidence).toLowerCase()}">${Math.round(p.confidence)}% conf.</span></button>`).join('');
+  const pick = async (id, auto) => {
+    host.querySelectorAll('.fc-pick').forEach(b=>b.classList.toggle('on', Number(b.dataset.fp)===id));
+    const out=$('#fcOut');
+    out.innerHTML = `<div class="fc-scan"><div class="fc-radar"><i></i><i></i><span>${GI.sparkles}</span></div>
+      <ol>${FC_STEPS.map((t,i)=>`<li style="--d:${i*260}ms">${t}</li>`).join('')}</ol></div>`;
+    if(!auto) setTimeout(()=>{ const sc=$('#screen'); const top=out.offsetTop-90; if(sc) sc.scrollTo({top, behavior:'smooth'}); },60);
+    const t0=Date.now(); let r;
+    try{ r = await api('/partner/forecast/'+id); }catch(e){ out.innerHTML=errorState(e.message,()=>pick(id)); return; }
+    await new Promise(ok=>setTimeout(ok, Math.max(0, 1150-(Date.now()-t0))));
+    renderReport(out, r, id);
+  };
+  const renderReport = (out, r, id, quiet) => {
+    const f=r.forecast, cl=fcConfLabel(f.confidence), po=r.po;
+    const lo=Math.min(f.worst,f.qty), span=Math.max(1,f.best-lo);
+    out.innerHTML = `<article class="fc-rep${quiet?' quiet':''}">
+      <header class="fc-rh"><span class="fc-rimg">${photoLayer(r.product.image_url||pic((r.product.name||'p').toLowerCase(),500+r.product.id,160,160))}</span>
+        <div><small>${esc(r.product.business||'')}</small><h3>${esc(r.product.name)}</h3>
+        <span class="fc-basis ${r.basis}">${r.basis==='orders'?'Learned from your orders':'Modelled baseline'} · ${esc(f.model)}</span></div></header>
+      <div class="fc-main">
+        <div class="fc-big"><small>Forecast · next 30 days</small><b id="fcBig">0</b><span>units · ≈ ${f.perDay}/day</span>
+          <div class="fc-band"><i style="left:${((f.worst-lo)/span*100).toFixed(0)}%;width:${((f.best-f.worst)/span*100).toFixed(0)}%"></i><em style="left:${((f.qty-lo)/span*100).toFixed(0)}%"></em></div>
+          <div class="fc-bandl"><span>Worst ${f.worst}</span><span>Best ${f.best}</span></div></div>
+        <div class="fc-gauge c-${cl.toLowerCase()}" style="--p:${f.confidence}"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" class="t"/><circle cx="60" cy="60" r="50" class="v" pathLength="100"/></svg>
+          <div><b id="fcConf">0%</b><span>${cl} confidence</span></div></div></div>
+      <div class="fc-why"><span>${f.depthMonths} months of data</span><span>Volatility ${Math.round(f.cv*100)}%</span><span>${f.trendPct>=0?'+':''}${f.trendPct}% trend</span><span>Season ×${f.seasonFactor}</span></div>
+      <div class="fc-card"><div class="fc-ch"><b>6-month outlook</b><span class="muted">${r.units6} units · ${money(Math.round(r.revenue6))}</span></div>${fcChart(r)}
+        <div class="fc-mrow">${r.months.map((m,i)=>`<div style="--d:${i*70}ms"><small>${m.label}</small><b>${m.units}</b><i style="--c:${m.confidence}">${Math.round(m.confidence)}%</i></div>`).join('')}</div></div>
+      <div class="fc-card fc-stock"><div class="fc-ch"><b>Restock plan</b><span class="muted">forecast + safety − stock</span></div>
+        <div class="fc-sin"><label for="fcStock">Units in stock now</label><div class="input"><input id="fcStock" type="number" min="0" inputmode="numeric" placeholder="e.g. 20" value="${r.stock==null?'':r.stock}"/></div></div>
+        <div class="fc-po">
+          <div><small>Restock</small><b>${r.stock==null? f.qty+po.safety : po.poQty}</b><span>units</span></div>
+          <div><small>${r.stock==null?'Keep ready':'Order by'}</small><b>${r.stock==null?'30 days':(po.orderBy?new Date(po.orderBy).toLocaleDateString('en-IN',{day:'numeric',month:'short'}):'—')}</b><span>${r.stock==null?'incl. '+po.safety+' safety':(po.coverDays!=null?po.coverDays+' days cover':'')}</span></div>
+          <div><small>Revenue</small><b>${money(Math.round(po.revenue))}</b><span>${po.marginPct}% margin</span></div></div>
+        ${r.stock!=null?`<span class="fc-urg u-${po.urgency}">${{critical:'Out of stock — restock now',urgent:'Runs out before restock arrives',plan:'Plan this restock',ok:'Stock covers demand'}[po.urgency]}</span>`:''}</div>
+      <div class="fc-ins">${r.insights.map((x,i)=>`<p class="t-${x.tone}" style="--d:${i*110}ms"><i></i>${esc(x.text)}</p>`).join('')}</div>
+    </article>`;
+    if(quiet){ $('#fcBig').textContent=f.qty; $('#fcConf').textContent=Math.round(f.confidence)+'%'; } else { fcCount($('#fcBig'), f.qty); fcCount($('#fcConf'), f.confidence, v=>Math.round(v)+'%'); }
+    const si=$('#fcStock'); let tm=null;
+    si.addEventListener('input',()=>{ clearTimeout(tm); tm=setTimeout(async()=>{ try{ const v=si.value.trim(); const r2=await api('/partner/forecast/'+id+(v!==''?'?stock='+encodeURIComponent(v):'')); const pos=si.selectionStart; renderReport(out,r2,id,true); const n=$('#fcStock'); n.focus(); try{n.setSelectionRange(pos,pos);}catch(e){} }catch(e){ toast(e.message); } },450); });
+  };
+  host.querySelectorAll('[data-fp]').forEach(b=>b.onclick=()=>pick(Number(b.dataset.fp)));
+  pick(P[0].id, true);
+}
 SCREENS.p_dash = async (el) => {
   if(!token || (me.role!=='business_partner')) return renderLogin(el,'partner');
-  el.innerHTML = `<header class="vhd"><div class="vhd-brand"><span class="cbrand-logo">${logoMark(30)}</span>${wordmark()}<span class="vhd-tag">Partner</span><div style="flex:1"></div>${miniControls()}
-      <button class="avatar vav" data-tabnav="p_profile" aria-label="Profile" style="background:${grad(me.avatar_color,'#0B5A55')}">${me.name[0]}</button></div>
-    <div class="vgreet" style="margin:12px 2px 0"><b>${greetWord()}, ${esc(me.name.split(' ')[0])}</b><span>Here’s how your shop is doing today</span></div></header>
+  el.innerHTML = `<div class="chead"><div class="row" style="justify-content:space-between">
+    <div><div class="muted" style="font-size:12.5px">Partner dashboard</div><h2 style="font-size:20px">${esc(me.name.split(' ')[0])}'s businesses</h2></div>
+    <div class="row" style="gap:8px">${miniControls()}<div class="avatar" style="background:${grad(me.avatar_color,'#0B5A55')}">${me.name[0]}</div></div></div></div>
+    <div id="fcHub"></div>
     <div class="px" id="body" style="margin-top:12px">${skeletonRow(2)}</div><div style="height:90px"></div>`;
+  renderForecastHub($('#fcHub'));
   const [d, an] = await Promise.all([api('/partner/overview'), api('/partner/analytics').catch(()=>null)]);
-  const stat=(lab,val,emoji)=>`<div class="stat vstat"><span class="ic">${gi(emoji)}</span><div class="lab">${lab}</div><div class="num">${val}</div></div>`;
+  const stat=(lab,val,emoji)=>`<div class="stat" style="padding:14px"><span class="ic" style="background:var(--primary-50);font-size:18px;color:var(--primary)">${gi(emoji)}</span><div class="lab">${lab}</div><div class="num" style="font-size:24px">${val}</div></div>`;
   $('#body').innerHTML = `
     <div class="grid2" style="gap:12px">
       ${stat('New orders', d.stats.orders, 'package')}${stat('Enquiries', d.stats.enquiries, 'chat')}
@@ -1648,7 +1703,7 @@ SCREENS.p_dash = async (el) => {
         ${d.plan.leads?`<span class="muted">Leads <b style="color:var(--ink)">${d.usage.leadsUsed}/${d.usage.leadsLimit}</b></span>`:''}</div>`:
         `<div class="muted" style="font-size:12px;margin-top:8px">Upgrade to Premium for promotions, customer leads & live chat.</div>`}</div>
     <div class="sec-head" style="margin:20px 0 10px"><h3 style="font-size:16px">Quick actions</h3></div>
-    <div class="grid2 vqa" style="gap:10px">
+    <div class="grid2" style="gap:10px">
       ${d.plan.products?`<button class="btn ghost" id="qa-prod">${I.plus} Add product</button>`:`<button class="btn ghost" data-tabnav="p_plans" style="opacity:.7">${I.plus} Add product 🔒</button>`}
       ${d.plan.offers?`<button class="btn ghost" id="qa-offer">${I.tag} Create offer</button>`:`<button class="btn ghost" data-tabnav="p_plans" style="opacity:.7">${I.tag} Promotions 🔒</button>`}
       <button class="btn ghost" data-tabnav="p_orders">${I.bag} View orders</button>
@@ -1960,8 +2015,8 @@ function renderAdminLogin(body){
   body.innerHTML = `<div class="crm-login">
     <div class="crm-brand">
       <div class="crm-brand-in">
-        <div class="crm-logo">${logoMark(40)}${wordmark()}</div>
-        <h1>Admin console</h1><p class="crm-sub">Run your whole marketplace from one place.</p>
+        <div class="crm-logo">${logoMark(40)}<span>Local Link</span><em>Admin CRM</em></div>
+        <h1>Run your whole marketplace from one place.</h1>
         <p>Businesses, products, orders, leads, offers, community content, advertisements and platform settings — all in a single control panel.</p>
         <ul class="crm-feats">
           <li>${gi('store')}<span>Approve & manage every business and partner</span></li>
@@ -2009,18 +2064,16 @@ function renderAdmin(body){
   ];
   body.innerHTML = `<div class="desk">
     <aside class="side">
-      <div class="lg">${logoMark(30)}${wordmark()}</div><span class="side-tag">Admin console</span>
+      <div class="lg">${logoMark(24)} Local Link</div>
       ${groups.map(([g,items])=>`<div class="grp">${g}</div>${items.map(([r,l,icn])=>`<a data-r="${r}" class="${adminRoute===r?'on':''}">${icn.startsWith('<')?icn:`<span style="width:18px;text-align:center">${icn}</span>`}<span>${l}</span></a>`).join('')}`).join('')}
       <div style="flex:1"></div>
-      <div class="who"><b>${esc(me.name)}</b><span>${me.role==='super_admin'?'Super admin':'Administrator'}</span></div>
-      <a id="a-out" class="out">${I.logout}<span>Sign out</span></a>
+      <a id="a-out" style="color:var(--error)">${I.logout}<span>Log out</span></a>
     </aside>
-    <main class="admain"><div class="adtop"><button class="menubtn" id="a-menu" aria-label="Open navigation">☰</button><h2 id="adtitle">Dashboard</h2><div class="spacer" style="flex:1"></div>
+    <main class="admain"><div class="adtop"><h2 id="adtitle">Dashboard</h2><div class="spacer" style="flex:1"></div>
       <div class="searchbar" style="padding:9px 14px;max-width:220px">${I.search}<input placeholder="Search…" style="font-size:13px"/></div>
       ${miniControls()}
       <div class="avatar" style="width:36px;height:36px;font-size:14px;background:${grad(me.avatar_color,'#0B5A55')}">${me.name[0]}</div></div>
       <div class="adbody" id="adbody"></div></main></div>`;
-  const am=$('#a-menu'); if(am) am.onclick=()=>body.querySelector('.side').classList.toggle('show');
   body.querySelectorAll('.side a[data-r]').forEach(a=>a.onclick=()=>{ adminRoute=a.dataset.r; adminBiz=null; renderAdmin(body); });
   $('#a-out').onclick=()=>{ token=null;me=null;localStorage.removeItem('ll_token');localStorage.removeItem('ll_user'); openView('customer'); };
   renderAdminRoute();
@@ -2171,16 +2224,16 @@ function adminPlaceholder(name){
 async function renderAdminDashboard(el){
   const d = await api('/admin/overview');
   const S=d.stats;
-  const card=(lab,val,emoji,tone)=>`<div class="kpi"><div class="kpi-top"><span>${lab}</span><i class="kic">${gi(emoji)}</i></div><b class="tabnums">${val}</b><svg class="spark" viewBox="0 0 120 30" preserveAspectRatio="none" aria-hidden="true"><path d="M0 24 C15 20 22 26 36 18 S58 8 72 14 S98 4 120 8 L120 30 L0 30Z" class="sa"/><path d="M0 24 C15 20 22 26 36 18 S58 8 72 14 S98 4 120 8" class="sl"/></svg></div>`;
+  const card=(lab,val,emoji,tone)=>`<div class="stat"><span class="ic" style="background:${tone||'var(--primary-50)'};color:var(--primary)">${gi(emoji)}</span><div class="lab">${lab}</div><div class="num tabnums">${val}</div></div>`;
   const donutColors=['#0EA5A4','#F97362','#6366F1','#F59E0B','#EC4899','#0EA5E9','#22C55E','#8B5CF6'];
   el.innerHTML = `
-    <div class="kpis">
+    <div class="stat-grid">
       ${card('Total users', S.users, 'users')}
       ${card('Active businesses', S.businesses, 'store')}
       ${card('Total orders', S.orders, 'package')}
       ${card('Revenue (completed)', money(S.revenue), 'card','var(--success-bg)')}
     </div>
-    <div class="kpis">
+    <div class="stat-grid" style="margin-top:14px">
       ${card('Pending approvals', S.pending, 'store','var(--warning-bg)')}
       ${card('Leads captured', S.leads||0, 'star')}
       ${card('Premium businesses', S.premium||0, 'card','var(--primary-50)')}
