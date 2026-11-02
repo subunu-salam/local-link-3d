@@ -297,7 +297,7 @@ async function addToCart(item){
     cart = []; // clear the old store's cart
   }
   const ex=cart.find(i=>i.id===item.id); if(ex) ex.qty++; else cart.push({...item,qty:1});
-  saveCart(); track('add_to_cart',{id:item.id}); updateCartBadge(); return true;
+  saveCart(); buzz(); track('add_to_cart',{id:item.id}); updateCartBadge(); return true;
 }
 function setQty(id,d){ const it=cart.find(i=>i.id===id); if(!it)return; it.qty+=d; if(it.qty<=0) cart=cart.filter(i=>i.id!==id); saveCart(); updateCartBadge(); }
 function syncCartUI(){
@@ -321,6 +321,7 @@ function renderCartBar(){
     <span class="qc-cgo">View cart ${I.chev}</span><span class="qc-prog" style="--p:${pct}%"></span></button>`;
   $('#qcGoCart').onclick=()=>{ track('view_cart'); go('cart'); };
 }
+function buzz(ms=12){ try{ navigator.vibrate && navigator.vibrate(ms); }catch(e){} }
 function track(evt, data){ try{ let sid=sessionStorage.getItem('ll_sid'); if(!sid){ sid=Math.random().toString(36).slice(2,12); sessionStorage.setItem('ll_sid',sid); } fetch('/api/track',{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({name:evt,session:sid,meta:data||null})}).catch(()=>{}); }catch(e){} try{ const k='ll_events'; const a=safeParse(localStorage.getItem(k))||[]; a.push({e:evt,d:data||null,t:Date.now(),v:state.view}); localStorage.setItem(k,JSON.stringify(a.slice(-200))); }catch(e){} }
 function updateCartBadge(){ const b=document.querySelector('.bnav .cartbadge:not(.pchatbadge)'); const n=cartCount(); if(b){ b.textContent=n; b.hidden=!n; } syncCartUI(); }
 function setPartnerChatBadge(n){ const b=document.querySelector('.pchatbadge'); if(b){ b.textContent=n||0; b.hidden=!n; } }
@@ -411,16 +412,26 @@ function logoMark(size=26){
 
 /* ---------------- customer router ---------------- */
 function stack(){ return nav[state.view]; }
-function go(routeName, params){ stack().push({name:routeName, params:params||{}}); routeRender(); const s=$('#screen'); if(s) s.scrollTop=0; }
-function back(){ if(stack().length>1){ stack().pop(); routeRender(); } }
+function go(routeName, params){ stack().push({name:routeName, params:params||{}}); try{ history.pushState({ll:1, view:state.view}, ''); }catch(e){} routeRender(); const s=$('#screen'); if(s) s.scrollTop=0; }
+function back(){ if(stack().length>1){ if(history.state && history.state.ll){ history.back(); return; } stack().pop(); routeRender(); } }
 function setTab(routeName){ nav[state.view]=[{name:routeName}]; routeRender(); }
 
 const SCREENS = {};
+function wirePullToRefresh(){
+  const sc=document.getElementById('screen'); if(!sc || sc.__ptr) return; sc.__ptr=true;
+  const ok=()=>['p_dash','p_orders','p_chats','p_products','home','orders'].includes((stack()[stack().length-1]||{}).name);
+  const ind=document.createElement('div'); ind.className='ptr'; ind.innerHTML=I.dir; sc.parentNode.appendChild(ind);
+  let y0=null, dy=0;
+  sc.addEventListener('touchstart',e=>{ if(sc.scrollTop<=0 && ok()){ y0=e.touches[0].clientY; dy=0; } },{passive:true});
+  sc.addEventListener('touchmove',e=>{ if(y0===null) return; dy=Math.max(0,e.touches[0].clientY-y0); const k=Math.min(1,dy/80); ind.style.opacity=k; ind.style.transform=`translate(-50%,${Math.min(70,dy*.6)}px) rotate(${dy*3}deg)`; ind.classList.toggle('ready',dy>80); },{passive:true});
+  sc.addEventListener('touchend',()=>{ if(y0===null) return; y0=null; if(dy>80){ ind.classList.add('spin'); buzz(); Promise.resolve(routeRender()).finally(()=>setTimeout(()=>{ ind.classList.remove('spin','ready'); ind.style.opacity=0; ind.style.transform=''; },400)); } else { ind.style.opacity=0; ind.style.transform=''; } });
+}
 async function routeRender(){
   const cur = stack()[stack().length-1];
   const screen = $('#screen');
   if (!screen) return;
   screen.scrollTop = 0;                 // always start a screen at the top (fixes "stuck in middle")
+  wirePullToRefresh();
   const fn = SCREENS[cur.name];
   if (!fn){ screen.innerHTML = emptyState('compass','Screen not found',''); return; }
   try { await fn(screen, cur.params||{}); }
@@ -1630,7 +1641,7 @@ function aiResultRow(x){
 
 /* ---------------- bottom sheet ---------------- */
 function showSheet(title, bodyHtml, wire){
-  closeSheet();
+  closeSheet(); try{ history.pushState({llsheet:1}, ''); }catch(e){}
   const phone = $('.phone') || document.body;
   const s = h(`<div class="sheet" id="sheet"><div class="panel-s"><div class="grab"></div>
     <div class="sh-head"><h3 style="font-size:16px;flex:1">${title}</h3><button class="tb-btn" id="sclose">✕</button></div>
@@ -1640,7 +1651,7 @@ function showSheet(title, bodyHtml, wire){
   $('#sclose').onclick=closeSheet;
   if(wire) wire();
 }
-function closeSheet(){ const s=$('#sheet'); if(s) s.remove(); }
+function closeSheet(){ const s=$('#sheet'); if(s){ s.classList.add('closing'); setTimeout(()=>s.remove(),180); if(history.state && history.state.llsheet){ try{ history.replaceState(null,''); }catch(e){} } } }
 
 /* ---------------- auth (customer/partner/admin shared) ---------------- */
 function renderLogin(el, kind){
@@ -1871,11 +1882,10 @@ SCREENS.p_dash = async (el) => {
     <div class="px" id="body" style="margin-top:12px">${skeletonRow(2)}</div><div style="height:90px"></div>`;
   renderForecastEntry($('#fcEntry')); renderPartnerToday($('#todo'));
   const [d, an] = await Promise.all([api('/partner/overview'), api('/partner/analytics').catch(()=>null)]);
-  const stat=(lab,val,emoji)=>`<div class="stat vstat"><span class="ic">${gi(emoji)}</span><div class="lab">${lab}</div><div class="num">${val}</div></div>`;
+  const stat=(lab,val,emoji)=>`<div class="pt-kpi"><span>${gi(emoji)}</span><div><b>${val}</b><small>${lab}</small></div></div>`;
   $('#body').innerHTML = `
-    <div class="grid2" style="gap:12px">
-      ${stat('New orders', d.stats.orders, 'package')}${stat('Enquiries', d.stats.enquiries, 'chat')}
-      ${stat('Revenue', money(d.stats.revenue), 'card')}${stat('Profile views', d.stats.views, 'compass')}</div>
+    <div class="pt-sh"><b>Your shop at a glance</b><small>All time</small></div>
+    <div class="pt-kpis">${stat('Orders', d.stats.orders, 'package')}${stat('Revenue', money(d.stats.revenue), 'card')}${stat('Enquiries', d.stats.enquiries, 'chat')}${stat('Profile views', d.stats.views, 'compass')}</div>
     ${an ? `<div class="card" style="padding:15px;margin-top:14px">
       <div class="row" style="justify-content:space-between;align-items:baseline"><h3 style="font-size:15px">Sales — last 7 days</h3><span class="muted" style="font-size:12px">Avg order ${money(an.avgOrder)}</span></div>
       ${barChartSVG(an.revenue7)}
@@ -1944,42 +1954,70 @@ SCREENS.p_offers = async (el) => {
   const e3=$('#e3'); if(e3) e3.onclick=()=>openAddOffer(ov.businesses);
   el.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{ try{ await api('/partner/offers/'+b.dataset.del,{method:'DELETE'}); toast('Offer removed'); setTab('p_offers'); }catch(e){toast(e.message);} });
 };
+/* Add product — 3 quick steps (photo → name & price → stock) with a live
+   preview of the card customers will see. Same API and fields as before. */
 function openAddProduct(biz){
   if(!biz) return toast('No business found');
-  let uploaded=null;   // data URL from an uploaded photo
-  showSheet('Add product', `
-    <div class="field"><label>Product photo</label>
-      <div class="photo-up"><input type="file" id="pfile" accept="image/*" hidden/>
-        <button type="button" class="pu-drop" id="puDrop"><span class="gi">${GI.package}</span><span>Tap to upload a photo from your device</span></button>
-        <div class="pu-prevwrap" id="puWrap" hidden><img id="puPrev" class="pu-prev"/><button type="button" class="pu-x" id="puClear">${I.back.replace('m15 18-6-6 6-6','M6 6l12 12M18 6 6 18')}</button></div>
-      </div></div>
-    <div class="field"><label>Product name</label><div class="input"><input id="pn" placeholder="e.g. Chicken Biriyani"/></div></div>
-    <div class="row" style="gap:10px"><div class="field" style="flex:1"><label>Selling price ₹</label><div class="input"><input id="pp" type="number" placeholder="210"/></div></div>
-      <div class="field" style="flex:1"><label>Unit</label><div class="input"><input id="pu" placeholder="plate, kg, piece"/></div></div></div>
-    <div class="promo-box">
-      <label class="promo-toggle"><input type="checkbox" id="pofferOn"/> <span>Add an offer / promotion</span></label>
-      <div id="pofferFields" hidden>
-        <div class="row" style="gap:10px;margin-top:8px"><div class="field" style="flex:1"><label>Original price ₹ <span class="faint" style="font-weight:500">(for % off)</span></label><div class="input"><input id="pm" type="number" placeholder="240"/></div></div>
-          <div class="field" style="flex:1"><label>Promo tag</label><div class="input"><input id="ppromo" placeholder="Buy 1 Get 1 / Combo"/></div></div></div>
-        <p class="faint" style="font-size:11.5px;margin:2px 0 0">An original price shows a strike-through discount; the promo tag shows as a badge on your product.</p>
-      </div>
-    </div>
-    <details style="margin-top:6px"><summary class="faint" style="font-size:12px;cursor:pointer">Or paste a photo URL instead</summary>
-      <div class="field" style="margin-top:8px"><div class="input"><input id="pimg" placeholder="https://… link to your product photo"/></div></div></details>
-    <button class="btn block" id="psave" style="margin-top:14px">Publish product</button>`, ()=>{
-      const drop=$('#puDrop'), file=$('#pfile'), wrap=$('#puWrap'), prev=$('#puPrev');
-      drop.onclick=()=>file.click();
-      file.onchange=async()=>{ const f=file.files[0]; if(!f)return; try{ toast('Processing photo…'); uploaded=await readImageFile(f); prev.src=uploaded; wrap.hidden=false; drop.hidden=true; }catch(e){ toast('Could not read that image'); } };
-      $('#puClear').onclick=()=>{ uploaded=null; file.value=''; wrap.hidden=true; drop.hidden=false; };
-      $('#pofferOn').onchange=(e)=>{ $('#pofferFields').hidden=!e.target.checked; };
-      $('#psave').onclick=async()=>{ const name=$('#pn').value.trim(), price=Number($('#pp').value); if(!name||!price)return toast('Name & price required');
-        const offerOn=$('#pofferOn').checked;
-        try{ await api('/partner/products',{method:'POST',body:{business_id:biz.id,name,price,
-          mrp: offerOn ? (Number($('#pm').value)||null) : null,
-          promo_label: offerOn ? ($('#ppromo').value.trim()||null) : null,
-          unit:$('#pu').value.trim()||null, image_url: uploaded || $('#pimg').value.trim() || null, emoji:null}});
-          closeSheet(); toast('Product published'); setTab('p_products'); }catch(e){toast(e.message);} };
-    });
+  const d={ img:null, name:'', price:'', unit:'', mrp:'', promo:'', offer:false, stock:'in_stock' };
+  let step=1;
+  const preview=()=>{ const price=Number(d.price)||0, mrp=Number(d.mrp)||0, disc=d.offer&&mrp>price&&price>0;
+    return `<div class="ap-prev"><small>Customers will see</small><div class="pcard qc-card ap-card">
+      <div class="pimg">${d.img?`<img class="ph on" src="${d.img}" alt=""/>`:`<span class="gi">${GI.package}</span>`}${d.offer&&d.promo?`<span class="qc-rib">${esc(d.promo)}</span>`:disc?`<span class="qc-rib">${Math.round((1-price/mrp)*100)}%<br>OFF</span>`:''}${d.stock==='out_of_stock'?'<span class="qc-oos">Out of stock</span>':'<span class="qc-add" aria-hidden="true">ADD</span>'}</div>
+      <div class="pb"><span class="qc-time">${gi('store')} ${esc(String(biz.name||'').split(' ').slice(0,2).join(' '))}</span><h4>${esc(d.name||'Product name')}</h4><div class="punit">${esc(d.unit||'1 unit')} · <span class="qc-new">New</span></div>
+        <div class="price">${price?money(price):'₹—'}${disc?`<span class="old">${money(mrp)}</span>`:''}</div></div></div></div>`; };
+  const body=()=>{
+    const dots=`<div class="ap-steps" aria-label="Step ${step} of 3">${['Photo','Details','Stock'].map((l,i)=>`<span class="${i+1<step?'done':i+1===step?'on':''}"><i>${i+1<step?'✓':i+1}</i>${l}</span>`).join('<b></b>')}</div>`;
+    if(step===1) return dots+`<div class="ap-photo">
+        <input type="file" id="pcam" accept="image/*" capture="environment" hidden/><input type="file" id="pfile" accept="image/*" hidden/>
+        ${d.img?`<div class="ap-shot"><img src="${d.img}" alt="Product photo preview"/><button type="button" class="pu-x" id="puClear" aria-label="Remove photo">✕</button></div>`
+          :`<button type="button" class="ap-cam" id="apCam"><span>${GI.package}</span><b>Take a photo</b><small>Opens your camera</small></button>
+            <button type="button" class="ap-gal" id="apGal">Choose from gallery</button>`}
+        <details class="ap-url"><summary>Or paste a photo link</summary><div class="input" style="margin-top:8px"><input id="pimg" placeholder="https://…" value=""/></div></details></div>
+      <div class="ap-nav"><button class="btn ghost" id="apSkip">${d.img?'':'Skip photo'}</button><button class="btn" id="apNext">Next</button></div>`;
+    if(step===2) return dots+`<div class="ap-two">
+        <div class="field"><label for="pn">Product name</label><div class="input"><input id="pn" value="${esc(d.name)}" placeholder="e.g. Chicken Biriyani" autocomplete="off"/></div></div>
+        <div class="row" style="gap:8px"><div class="field" style="flex:1"><label for="pp">Price ₹</label><div class="input"><input id="pp" type="number" inputmode="decimal" value="${esc(d.price)}" placeholder="210"/></div></div>
+          <div class="field" style="flex:1"><label for="pu">Unit</label><div class="input"><input id="pu" value="${esc(d.unit)}" placeholder="plate, kg, piece"/></div></div></div>
+        <div class="ap-units">${['1 plate','1 kg','500 g','1 piece','1 L','1 pack'].map(u=>`<button type="button" data-u="${u}" class="${d.unit===u?'on':''}">${u}</button>`).join('')}</div>
+        <div class="promo-box"><label class="promo-toggle"><input type="checkbox" id="pofferOn" ${d.offer?'checked':''}/> <span>Add an offer / promotion</span></label>
+          <div id="pofferFields" ${d.offer?'':'hidden'}><div class="row" style="gap:8px;margin-top:8px"><div class="field" style="flex:1"><label for="pm">Original price ₹</label><div class="input"><input id="pm" type="number" inputmode="decimal" value="${esc(d.mrp)}" placeholder="240"/></div></div>
+            <div class="field" style="flex:1"><label for="ppromo">Promo tag</label><div class="input"><input id="ppromo" value="${esc(d.promo)}" placeholder="Combo"/></div></div></div></div></div>
+        <div id="apPrev">${preview()}</div></div>
+      <div class="ap-nav"><button class="btn ghost" id="apBack">Back</button><button class="btn" id="apNext">Next</button></div>`;
+    return dots+`<div class="ap-stock">
+        <button type="button" class="ap-opt ${d.stock==='in_stock'?'on':''}" data-st="in_stock"><span class="ok">●</span><div><b>In stock</b><small>Customers can order it now</small></div></button>
+        <button type="button" class="ap-opt ${d.stock==='out_of_stock'?'on':''}" data-st="out_of_stock"><span class="no">●</span><div><b>Out of stock</b><small>Listed, but can't be ordered yet</small></div></button></div>
+      ${preview()}
+      <div class="ap-nav"><button class="btn ghost" id="apBack">Back</button><button class="btn" id="psave">Publish product</button></div>`;
+  };
+  const read=()=>{ const v=id=>{ const e=document.getElementById(id); return e?e.value.trim():null; };
+    if(step===1){ const u=v('pimg'); if(u) d.img=u; }
+    if(step===2){ d.name=v('pn')??d.name; d.price=v('pp')??d.price; d.unit=v('pu')??d.unit; d.mrp=v('pm')??d.mrp; d.promo=v('ppromo')??d.promo; const o=$('#pofferOn'); if(o) d.offer=o.checked; } };
+  const render=()=>{ const sb=document.querySelector('#sheet .sh-body'); if(!sb) return; sb.innerHTML=body(); wire(); sb.scrollTop=0; };
+  const wire=()=>{
+    const cam=$('#pcam'), file=$('#pfile');
+    const take=async(inp)=>{ const f=inp.files[0]; if(!f) return; try{ toast('Processing photo…'); d.img=await readImageFile(f); buzz(); render(); }catch(e){ toast('Could not read that image'); } };
+    if(cam){ cam.onchange=()=>take(cam); } if(file){ file.onchange=()=>take(file); }
+    const ac=$('#apCam'); if(ac) ac.onclick=()=>cam.click();
+    const ag=$('#apGal'); if(ag) ag.onclick=()=>file.click();
+    const pc=$('#puClear'); if(pc) pc.onclick=()=>{ d.img=null; render(); };
+    const sk=$('#apSkip'); if(sk) sk.onclick=()=>{ read(); step=2; render(); };
+    const nx=$('#apNext'); if(nx) nx.onclick=()=>{ read();
+      if(step===2){ if(!d.name) { toast('Add a product name'); $('#pn').focus(); return; } if(!(Number(d.price)>0)){ toast('Add a price'); $('#pp').focus(); return; } }
+      step++; render(); };
+    const bk=$('#apBack'); if(bk) bk.onclick=()=>{ read(); step--; render(); };
+    document.querySelectorAll('#sheet [data-u]').forEach(b=>b.onclick=()=>{ $('#pu').value=b.dataset.u; read(); render(); });
+    const of=$('#pofferOn'); if(of) of.onchange=()=>{ $('#pofferFields').hidden=!of.checked; read(); $('#apPrev').innerHTML=preview(); };
+    ['pn','pp','pu','pm','ppromo'].forEach(id=>{ const e=document.getElementById(id); if(e) e.oninput=()=>{ read(); const pv=$('#apPrev'); if(pv) pv.innerHTML=preview(); }; });
+    document.querySelectorAll('#sheet [data-st]').forEach(b=>b.onclick=()=>{ d.stock=b.dataset.st; render(); });
+    const sv=$('#psave'); if(sv) sv.onclick=async()=>{ sv.disabled=true;
+      try{ const r=await api('/partner/products',{method:'POST',body:{business_id:biz.id,name:d.name,price:Number(d.price),
+          mrp: d.offer ? (Number(d.mrp)||null) : null, promo_label: d.offer ? (d.promo||null) : null,
+          unit:d.unit||null, image_url:d.img||null, emoji:null}});
+        if(d.stock==='out_of_stock' && r && r.id){ try{ await api('/partner/products/'+r.id,{method:'PATCH',body:{stock_status:'out_of_stock'}}); }catch(e){} }
+        buzz(20); closeSheet(); toast('Product published'); setTab('p_products'); }catch(e){ sv.disabled=false; toast(e.message); } };
+  };
+  showSheet('Add product', body(), wire);
 }
 SCREENS.p_products = async (el) => {
   if(!token||me.role!=='business_partner') return renderLogin(el,'partner');
@@ -2011,7 +2049,7 @@ SCREENS.p_products = async (el) => {
   const wire=()=>{
     el.querySelectorAll('[data-pedit]').forEach(b=>b.onclick=()=>{ const p=prods.find(x=>String(x.id)===b.dataset.pedit); if(p) openEditProduct(p); });
     el.querySelectorAll('[data-poos]').forEach(b=>b.onchange=async()=>{ const next=b.dataset.cur==='out_of_stock'?'in_stock':'out_of_stock';
-      try{ await api('/partner/products/'+b.dataset.poos,{method:'PATCH',body:{stock_status:next}}); toast(next==='out_of_stock'?'Marked out of stock':'Marked in stock'); refresh(); }catch(e){toast(e.message); b.checked=!b.checked;} });
+      try{ await api('/partner/products/'+b.dataset.poos,{method:'PATCH',body:{stock_status:next}}); buzz(); toast(next==='out_of_stock'?'Marked out of stock':'Marked in stock'); refresh(); }catch(e){toast(e.message); b.checked=!b.checked;} });
     el.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=async()=>{ const ok=await confirmDialog({title:'Delete product?',message:'Delete "'+b.dataset.pname+'"? This cannot be undone.',ok:'Delete',cancel:'Keep',icon:I.trash||GI.warning,danger:true}); if(!ok)return;
       try{ await api('/partner/products/'+b.dataset.pdel,{method:'DELETE'}); toast('Product deleted'); refresh(); }catch(e){toast(e.message);} });
   };
@@ -2068,8 +2106,19 @@ SCREENS.p_orders = async (el) => {
       <p class="pt-items">${esc(o.item_summary)}</p>
       ${['rejected','cancelled'].includes(o.status)?'':orderTimeline(o.status)}
       <footer><b>${money(o.total)}</b><div class="row" style="gap:7px">${(nextActs[o.status]||[]).map(([s,l])=>`<button class="btn sm ${s==='rejected'?'ghost':''}" data-oid="${o.id}" data-st="${s}">${l}</button>`).join('')}</div></footer></article>`).join('')
-      : emptyState('package','Nothing here','Orders in this stage will show up here.');
-    $('#l').querySelectorAll('[data-oid]').forEach(b=>b.onclick=async()=>{ try{ await api(`/partner/orders/${b.dataset.oid}/status`,{method:'POST',body:{status:b.dataset.st}}); toast('Order updated'); draw(); }catch(e){toast(e.message);} });
+      : emptyState('package', lane==='new'?'No new orders right now':'Nothing here', lane==='new'?'Share your shop so nearby customers can order.':'Orders in this stage will show up here.', lane==='new'?`<button class="btn sm" id="shareShop">${I.share} Share your shop</button>`:'');
+    const setStatus=async(oid,st,card)=>{ try{ await api(`/partner/orders/${oid}/status`,{method:'POST',body:{status:st}}); buzz(st==='rejected'?[10,40,10]:18); if(card){ card.classList.add(st==='rejected'?'gone-l':'gone-r'); await new Promise(r=>setTimeout(r,260)); } toast(st==='rejected'?'Order rejected':'Order updated'); draw(); }catch(e){toast(e.message);} };
+    $('#l').querySelectorAll('[data-oid]').forEach(b=>b.onclick=()=>setStatus(b.dataset.oid,b.dataset.st,b.closest('.pt-ticket')));
+    // swipe: right = next step (accept / advance), left = reject (only where allowed)
+    $('#l').querySelectorAll('.pt-ticket').forEach(card=>{ const btns=[...card.querySelectorAll('[data-oid]')]; if(!btns.length) return;
+      const fwd=btns.find(b=>b.dataset.st!=='rejected'), rej=btns.find(b=>b.dataset.st==='rejected');
+      card.insertAdjacentHTML('afterbegin',`<span class="sw-hint r">${I.chev} ${fwd?esc(fwd.textContent):''}</span>${rej?`<span class="sw-hint l">Reject</span>`:''}`);
+      let x0=null, dx=0; card.addEventListener('pointerdown',e=>{ if(e.target.closest('button')) return; x0=e.clientX; dx=0; card.setPointerCapture(e.pointerId); });
+      card.addEventListener('pointermove',e=>{ if(x0===null) return; dx=e.clientX-x0; if(!rej&&dx<0) dx=0; card.style.transform=`translateX(${dx}px) rotate(${dx/40}deg)`; card.classList.toggle('sw-r',dx>40); card.classList.toggle('sw-l',dx<-40); });
+      const end=()=>{ if(x0===null) return; x0=null; card.style.transform=''; card.classList.remove('sw-r','sw-l');
+        if(dx>90 && fwd) setStatus(fwd.dataset.oid,fwd.dataset.st,card); else if(dx<-90 && rej) setStatus(rej.dataset.oid,'rejected',card); };
+      card.addEventListener('pointerup',end); card.addEventListener('pointercancel',end); });
+    const es=$('#shareShop'); if(es) es.onclick=async()=>{ const url=location.origin+'/'; try{ if(navigator.share) await navigator.share({title:'Order from my shop on Local Link',url}); else { await navigator.clipboard.writeText(url); toast('Link copied'); } }catch(e){} };
     $('#of').querySelectorAll('[data-lane]').forEach(b=>b.onclick=()=>{ lane=b.dataset.lane; draw(); });
   };
   $('#oref').onclick=()=>draw();
@@ -2159,8 +2208,9 @@ SCREENS.p_profile = async (el) => {
         <button data-tabnav="p_settings"><span class="ic">${gi('card')}</span> Payments & business settings <span class="chev">${I.chev}</span></button>
       </div>
       <div class="plist" style="margin-top:12px"><button data-tabnav="p_plans"><span class="ic">${I.chart}</span> Subscription plan <span class="rt" id="planlab">…</span></button></div>
-      <button class="btn ghost block" style="margin-top:16px;color:var(--error);border-color:var(--error)" id="out">${I.logout} Log out</button></div>`;
-  $('#out').onclick=()=>{ token=null;me=null;localStorage.removeItem('ll_token');localStorage.removeItem('ll_user'); nav.partner=[{name:'p_login'}]; toast('Logged out'); routeRender(); };
+      <button class="btn ghost block pt-logout" id="out">${I.logout} Log out</button></div>`;
+  $('#out').onclick=async()=>{ const ok=await confirmDialog({title:'Log out?',message:'You will stop getting new-order alerts on this device until you log in again.',ok:'Log out',cancel:'Stay',danger:true,icon:I.logout}); if(!ok) return;
+    token=null;me=null;localStorage.removeItem('ll_token');localStorage.removeItem('ll_user'); nav.partner=[{name:'p_login'}]; toast('Logged out'); routeRender(); };
   el.querySelectorAll('[data-tabnav]').forEach(b=>b.onclick=()=>setTab(b.dataset.tabnav));
   api('/partner/overview').then(d=>{ const p=$('#planlab'); if(p&&d.plan) p.innerHTML=`${esc(d.plan.name)} ${I.chev}`; }).catch(()=>{});
 };
@@ -2750,7 +2800,14 @@ document.addEventListener('click', (e) => {
   if (lb){ state.lang=lb.dataset.l; localStorage.setItem('ll_lang',state.lang); renderShell(); return; }
   if (e.target.closest('[data-mini-theme]')){ cycleTheme(); return; }
 });
-window.addEventListener('popstate', () => { const v=viewFromPath(); if(v!==state.view){ state.view=v; renderShell(); } });
+window.addEventListener('popstate', (e) => {
+  // phone back button / swipe-back: close an open panel first, then step back inside the app
+  const sh=document.getElementById('sheet'); const cd=document.querySelector('.cd-back');
+  if(cd){ cd.querySelector('.cd-acts button')?.click(); return; }
+  if(sh){ closeSheet(); return; }
+  if(e.state && e.state.ll && nav[state.view] && nav[state.view].length>1){ nav[state.view].pop(); routeRender(); return; }
+  if(nav[state.view] && nav[state.view].length>1){ nav[state.view].pop(); routeRender(); return; }
+  const v=viewFromPath(); if(v!==state.view){ state.view=v; renderShell(); } });
 
 async function boot(){
   try{
