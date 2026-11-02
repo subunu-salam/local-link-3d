@@ -19,11 +19,11 @@ In **Admin → Locations**, every area (Kunnamangalam, Inapura, Chelavur, Nadakk
 
 ---
 
-## 🎨 v22 — VoiceBite UI/UX (in Local Link colours)
-All three apps now follow the VoiceBite design language, kept in Local Link's teal + coral palette (`public/vb.css`, loaded last):
-- **Customer** — aurora stage + device frame, frosted rounded header with location pill and pill search + mic, swipeable promo cards (Ask by voice / Deals / Near you), greeting, mood chips, rounded category tiles, floating pill dock with a raised centre **Ask** button, and a full-screen **voice screen** (orb, live listening state, captions, EN/മ toggle).
-- **Partner** — same frame and dock; the raised centre button is **Add product**; greeting header, brand-coloured stat tiles, rounded quick actions.
-- **Admin** — bento console: one canvas with even gaps, rounded dark-teal sidebar with a coral sliding highlight, KPI tiles with sparklines, side-sheet forms and a two-panel bento sign-in.
+## 🎨 v23 — Rebuilt on VoiceBite's UI/UX
+The old styling (`styles.css`, `fx.css`, `fx.js` and the 3D globe) is gone. All three apps now run on one VoiceBite-based design system in Local Link's teal + coral:
+- `public/vb.css` — the whole design system: aurora stage + phone frame, frosted header that tightens on scroll, big italic display type, soft cards, pill controls, floating dock with a raised centre button, voice screen, bento admin console.
+- `public/vbfx.js` — VoiceBite's background motion: drifting aurora, bokeh lights, flowing silk ribbon waves, slow rings, scroll parallax; the voice screen has its own ripples + wave line.
+- Customer, partner and admin keep every feature; only the look and feel changed. Partner/admin now default to the light theme (dark is still one tap away).
 
 ## ✨ What's inside
 

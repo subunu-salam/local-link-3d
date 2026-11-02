@@ -8,7 +8,7 @@ let me = safeParse(localStorage.getItem('ll_user'));
 const state = {
   view: 'customer',
   lang: localStorage.getItem('ll_lang') || 'en',
-  theme: localStorage.getItem('ll_theme') || 'dark',
+  theme: localStorage.getItem('ll_theme') || 'light',
   custTheme: localStorage.getItem('ll_ctheme') || 'light',   // customer app: light (default) / dark
   areaId: Number(localStorage.getItem('ll_area')) || 1,
   areaName: localStorage.getItem('ll_area_name') || 'Kunnamangalam',
@@ -651,7 +651,7 @@ SCREENS.splash = (el) => {
   el.innerHTML = `<div class="splash splash-anim">
     <div class="splash-rings"><span></span><span></span><span></span></div>
     <div class="splash-logo">${logoMark(104)}</div>
-    <h1 class="splash-title">Local Link</h1><p class="splash-tag">Everything Local. One Place.</p>
+    <h1 class="splash-title"><span class="w1">Local</span> <span class="w2">Link</span></h1><p class="splash-tag">Everything Local. One Place.</p>
     <div class="splash-load"><span></span></div></div>`;
   const next = state.onboarded && state.introSeen ? 'home' : (!state.onboarded ? 'location' : 'intro');
   setTimeout(()=>{ if(stack()[stack().length-1].name==='splash'){ nav.customer=[{name: next}]; routeRender(); } }, 2000);
@@ -1442,7 +1442,7 @@ function openAsk(prefill, opts={}){
   const phone = $('.phone') || document.body;
   const aiOn = state.aiStatus.openai;
   const chips = [t('chipPlumber'),t('chipBiriyani'),t('chipAuto'),t('chipGrocery'),t('chipAC')];
-  const panel = h(`<div class="sheet vvoice-wrap" id="sheet"><div class="ai-panel vvoice">
+  const panel = h(`<div class="sheet vvoice-wrap" id="sheet"><div class="ai-panel vvoice"><div class="vbg" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><span class="rip"></span><span class="rip r2"></span><span class="rip r3"></span><span class="vwave"></span></div>
     <div class="ai-head">
       <div class="row" style="gap:9px"><span class="ai-badge">${logoMark(26)}</span><b style="font-size:16px">${t('askTitle')}</b>
         <span class="badge ${aiOn?'primary':'neutral'}" style="font-size:10px">${aiOn?'AI':'Offline'}</span></div>
