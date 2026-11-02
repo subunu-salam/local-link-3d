@@ -488,3 +488,21 @@ body .bnav.vdock .vtalk{flex:0 0 72px !important; width:72px !important; height:
 body .bnav.vdock .vtalk.boing{animation:vbBoing .45s var(--vb-spring)}
 body .bnav.vdock .vtalk > span{grid-area:1/1}
 body .bnav.vdock .vtalk .t-lab{position:absolute; bottom:-16px; left:0; right:0; text-align:center}
+
+/* ---------- compact promo carousel (VoiceBite sizing) ---------- */
+.vpromos{gap:10px; margin-top:12px; padding:4px 16px 6px}
+.vpromo{width:calc(100% - 44px); min-height:0; height:166px; padding:13px 15px; border-radius:22px}
+.vpromo small{font-size:9.5px; padding:3px 8px}
+.vpromo h2{font-size:19.5px; line-height:.95; margin-top:6px; max-width:11.5ch}
+.vpromo > p{display:none}
+.vchips{margin-top:7px; gap:5px; flex-wrap:nowrap}
+.vchips span{font-size:9.5px; font-weight:600; padding:3px 7px 3px 5px; border:1px solid rgba(255,255,255,.25); white-space:nowrap}
+.p-near .vchips span{border-color:rgba(30,23,0,.12)}
+.vchips svg{width:11px; height:11px}
+.vchips + .vpromo-btn,.vchips ~ .vpromo-btn,.vpromo-btn{margin-top:auto; padding:6px 11px 6px 9px; font-size:11.5px}
+.p-voice .vpromo-btn svg{width:20px; height:20px; padding:4px}
+.vpromo-btn svg{width:14px; height:14px}
+.p-voice .wave{right:12px; bottom:14px; height:28px; gap:3px; opacity:.65}
+.p-voice .wave i{width:3px}
+.p-deal::after{font-size:120px; bottom:-26px}
+.p-near::after{width:64px; height:64px; box-shadow:inset 0 0 0 15px rgba(255,255,255,.25)}
