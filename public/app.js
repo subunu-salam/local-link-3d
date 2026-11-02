@@ -8,7 +8,7 @@ let me = safeParse(localStorage.getItem('ll_user'));
 const state = {
   view: 'customer',
   lang: localStorage.getItem('ll_lang') || 'en',
-  theme: localStorage.getItem('ll_theme') || 'dark',
+  theme: localStorage.getItem('ll_theme') || 'light',
   custTheme: localStorage.getItem('ll_ctheme') || 'light',   // customer app: light (default) / dark
   areaId: Number(localStorage.getItem('ll_area')) || 1,
   areaName: localStorage.getItem('ll_area_name') || 'Kunnamangalam',
@@ -106,15 +106,19 @@ function toast(msg){ const t = h(`<div class="toast">${esc(msg)}</div>`); $('#to
 async function api(pathname, opts={}) {
   const headers = { 'Content-Type':'application/json', ...(opts.headers||{}) };
   if (token) headers.Authorization = 'Bearer ' + token;
-  const res = await fetch('/api' + pathname, { ...opts, headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const isGet = !opts.method || opts.method==='GET'; const ck='llc:'+pathname;
+  let res;
+  try{ res = await fetch('/api' + pathname, { ...opts, headers, body: opts.body ? JSON.stringify(opts.body) : undefined }); }
+  catch(netErr){ const c = isGet && safeParse(localStorage.getItem(ck)); if(c){ if(!api._offlineToast){ api._offlineToast=1; toast('You\'re offline — showing saved results'); setTimeout(()=>api._offlineToast=0,8000); } return c; } throw new Error('You\'re offline. Check your connection and try again.'); }
   const data = await res.json().catch(()=>({}));
+  if(res.ok && isGet && /^\/(bootstrap|offers|businesses|products|services|news|events|places|categories)/.test(pathname)){ try{ localStorage.setItem(ck, JSON.stringify(data)); }catch(e){} }
   if (!res.ok) throw Object.assign(new Error(data.error || 'Request failed'), { status: res.status, data });
   return data;
 }
 
 /* ---------------- i18n ---------------- */
 const DICT = {
-  en: { greetM:'Good morning', greetA:'Good afternoon', greetE:'Good evening', search:'Search businesses, products, services…',
+  en: { shopByCat:'Shop by category', openNear:'Open near you', topOffers:'Top offers', voiceT:'Just say what you need', voiceS:'English or Malayalam — I\'ll find it', yourCart:'Your cart', needsAction:'Needs action today', newOrders:'new orders', unreadChats:'unread chats', outStock:'out of stock', recent:'Recent searches', trending:'Trending near you', introT:'New to Local Link?', introS:'Shops, food, services and rides near you — order, chat or call in a tap.', gotIt:'Got it', viewAll:'View all', greetM:'Good morning', greetA:'Good afternoon', greetE:'Good evening', search:'Search businesses, products, services…',
     nearYou:'Near You', offersNear:'Offers Near You', popularServices:'Popular Services', localUpdates:"What's Happening Locally",
     seeAll:'See all', explore:'Explore Local', categories:'Categories', home:'Home', orders:'Orders', notifications:'Alerts', profile:'Profile',
     call:'Call', whatsapp:'WhatsApp', directions:'Directions', share:'Share', about:'About', products:'Products', services:'Services',
@@ -124,7 +128,7 @@ const DICT = {
     askHi:'Hi! Ask me to find local businesses, services, workers or rides — type or tap the mic to speak in English or Malayalam.',
     askOffline:'(Offline smart-search — add an OpenAI key on the server for full AI.)',
     chipPlumber:'Find a plumber', chipBiriyani:'Biriyani under ₹250', chipAuto:'Auto to the station', chipGrocery:'Grocery near me', chipAC:'AC repair today' },
-  ml: { greetM:'സുപ്രഭാതം', greetA:'ഉച്ചവന്ദനം', greetE:'ശുഭ സന്ധ്യ', search:'സ്ഥാപനങ്ങൾ, ഉൽപ്പന്നങ്ങൾ, സേവനങ്ങൾ തിരയുക…',
+  ml: { shopByCat:'വിഭാഗങ്ങൾ', openNear:'സമീപത്ത് തുറന്നവ', topOffers:'മികച്ച ഓഫറുകൾ', voiceT:'വേണ്ടത് പറഞ്ഞാൽ മതി', voiceS:'ഇംഗ്ലീഷിലോ മലയാളത്തിലോ — ഞാൻ കണ്ടെത്താം', yourCart:'നിങ്ങളുടെ കാർട്ട്', needsAction:'ഇന്ന് ശ്രദ്ധിക്കേണ്ടത്', newOrders:'പുതിയ ഓർഡറുകൾ', unreadChats:'വായിക്കാത്ത ചാറ്റുകൾ', outStock:'സ്റ്റോക്കില്ല', recent:'സമീപകാല തിരയലുകൾ', trending:'സമീപത്ത് ട്രെൻഡിംഗ്', introT:'ലോക്കൽ ലിങ്കിൽ പുതിയതാണോ?', introS:'സമീപത്തെ കടകൾ, ഭക്ഷണം, സേവനങ്ങൾ — ഒറ്റ ടാപ്പിൽ ഓർഡർ ചെയ്യൂ, ചാറ്റ് ചെയ്യൂ.', gotIt:'ശരി', viewAll:'എല്ലാം', greetM:'സുപ്രഭാതം', greetA:'ഉച്ചവന്ദനം', greetE:'ശുഭ സന്ധ്യ', search:'സ്ഥാപനങ്ങൾ, ഉൽപ്പന്നങ്ങൾ, സേവനങ്ങൾ തിരയുക…',
     nearYou:'അടുത്തുള്ളവ', offersNear:'അടുത്തുള്ള ഓഫറുകൾ', popularServices:'ജനപ്രിയ സേവനങ്ങൾ', localUpdates:'പ്രാദേശിക വാർത്തകൾ',
     seeAll:'എല്ലാം', explore:'പ്രാദേശികം കണ്ടെത്തുക', categories:'വിഭാഗങ്ങൾ', home:'ഹോം', orders:'ഓർഡറുകൾ', notifications:'അറിയിപ്പുകൾ', profile:'പ്രൊഫൈൽ',
     call:'വിളിക്കുക', whatsapp:'വാട്ട്‌സ്ആപ്പ്', directions:'വഴി', share:'പങ്കിടുക', about:'വിവരം', products:'ഉൽപ്പന്നങ്ങൾ', services:'സേവനങ്ങൾ',
@@ -293,10 +297,32 @@ async function addToCart(item){
     cart = []; // clear the old store's cart
   }
   const ex=cart.find(i=>i.id===item.id); if(ex) ex.qty++; else cart.push({...item,qty:1});
-  saveCart(); toast(item.name+' added to cart'); updateCartBadge(); return true;
+  saveCart(); track('add_to_cart',{id:item.id}); updateCartBadge(); return true;
 }
-function setQty(id,d){ const it=cart.find(i=>i.id===id); if(!it)return; it.qty+=d; if(it.qty<=0) cart=cart.filter(i=>i.id!==id); saveCart(); }
-function updateCartBadge(){ const b=document.querySelector('.bnav .cartbadge:not(.pchatbadge)'); const n=cartCount(); if(b){ b.textContent=n; b.hidden=!n; } }
+function setQty(id,d){ const it=cart.find(i=>i.id===id); if(!it)return; it.qty+=d; if(it.qty<=0) cart=cart.filter(i=>i.id!==id); saveCart(); updateCartBadge(); }
+function syncCartUI(){
+  document.querySelectorAll('[data-ctl-pid]').forEach(el=>{ const pid=Number(el.dataset.ctlPid); const it=cart.find(i=>i.id===pid);
+    if(it && el.classList.contains('qc-step')){ el.querySelector('b').textContent=it.qty; return; }
+    if(!!it === el.classList.contains('qc-step')) return;
+    const p={ id:pid, name:el.dataset.pname||(it&&it.name)||'', price:Number(el.dataset.pprice||(it&&it.price)||0), mrp:Number(el.dataset.pmrp||(it&&it.mrp)||0), unit:el.dataset.punit||(it&&it.unit)||'', business:el.dataset.pbiz||(it&&it.biz)||'', business_id:Number(el.dataset.pbizid||(it&&it.bizId)||0) };
+    const keep={pname:p.name,pprice:p.price,pmrp:p.mrp,punit:p.unit,pbiz:p.business,pbizid:p.business_id,pimg:el.dataset.pimg||(it&&it.image)||''};
+    const n=h(addCtl(p, keep.pimg)); Object.entries(keep).forEach(([k,v])=>{ if(!n.dataset[k]) n.dataset[k]=v; }); el.replaceWith(n); });
+  renderCartBar();
+}
+function renderCartBar(){
+  const host=document.getElementById('qcCartBar'); if(!host) return;
+  const n=cartCount(), tot=cartTotal(), FREE=499;
+  if(!n){ host.innerHTML=''; host.hidden=true; return; }
+  host.hidden=false;
+  const left=Math.max(0,FREE-tot), pct=Math.min(100,Math.round(tot/FREE*100));
+  host.innerHTML=`<button class="qc-cartbar" id="qcGoCart" aria-label="View cart, ${n} items, ${money(tot)}">
+    <span class="qc-thumbs">${cart.slice(-3).map(i=>`<i>${i.image?`<img src="${esc(i.image)}" alt="" onerror="this.remove()">`:''}</i>`).join('')}</span>
+    <span class="qc-cbt"><b>${n} item${n>1?'s':''} · ${money(tot)}</b><small>${left?`Add ${money(left)} for FREE delivery`:'🎉 FREE delivery unlocked'}</small></span>
+    <span class="qc-cgo">View cart ${I.chev}</span><span class="qc-prog" style="--p:${pct}%"></span></button>`;
+  $('#qcGoCart').onclick=()=>{ track('view_cart'); go('cart'); };
+}
+function track(evt, data){ try{ let sid=sessionStorage.getItem('ll_sid'); if(!sid){ sid=Math.random().toString(36).slice(2,12); sessionStorage.setItem('ll_sid',sid); } fetch('/api/track',{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({name:evt,session:sid,meta:data||null})}).catch(()=>{}); }catch(e){} try{ const k='ll_events'; const a=safeParse(localStorage.getItem(k))||[]; a.push({e:evt,d:data||null,t:Date.now(),v:state.view}); localStorage.setItem(k,JSON.stringify(a.slice(-200))); }catch(e){} }
+function updateCartBadge(){ const b=document.querySelector('.bnav .cartbadge:not(.pchatbadge)'); const n=cartCount(); if(b){ b.textContent=n; b.hidden=!n; } syncCartUI(); }
 function setPartnerChatBadge(n){ const b=document.querySelector('.pchatbadge'); if(b){ b.textContent=n||0; b.hidden=!n; } }
 
 /* ---------------- wishlist / saved items (persisted) ---------------- */
@@ -342,7 +368,7 @@ function renderShell(){
   // customer / partner render as a standalone full-screen mobile app
   stage.innerHTML = `<div class="appwrap vb-stage"><div class="atmo" aria-hidden="true"><i></i><i></i><i></i></div><div class="phone vb-app"><div class="atmo" aria-hidden="true"><i></i><i></i><i></i></div><div class="screen" id="screen"></div><div id="navholder"></div></div></div>`;
   if (!nav[state.view].length) nav[state.view].push(state.view==='customer'
-    ? {name:'splash'}   // always show the branded opening animation on launch
+    ? {name: localStorage.getItem('ll_seen') ? 'home' : 'splash'}   // branded opening only on the very first visit
     : {name: token && me && me.role==='business_partner' ? 'p_dash' : 'p_login'});
   routeRender();
 }
@@ -370,7 +396,7 @@ function renderLauncher(stage){
 }
 
 function wordmark(){ return `<span class="vb-word"><span class="w1">Local</span><span class="w2">Link</span></span>`; }
-function greetWord(){ const h=new Date().getHours(); return h<12?'Good morning':h<17?'Good afternoon':'Good evening'; }
+function greetWord(){ const h=new Date().getHours(); return h<12?t('greetM'):h<17?t('greetA'):t('greetE'); }
 function logoMark(size=26){
   return `<svg width="${size}" height="${size}" viewBox="0 0 40 44" fill="none" aria-hidden="true">
     <path d="M20 2c8 0 14 6.5 14 14.5C34 27 24 37 20 42 16 37 6 27 6 16.5 6 8.5 12 2 20 2Z" fill="url(#lg${size})"/>
@@ -420,7 +446,8 @@ function businessCard(b){
       <span class="fav ${isSaved('business',b.id)?'on':''}" data-fav data-ftype="business" data-fid="${b.id}" data-fname="${esc(b.name)}" data-fsub="${esc(b.subcategory||b.category_name||'')}" data-fimg="${esc(cover)}">${I.heart}</span></div>
     <div class="body"><h4>${esc(b.name)}</h4>
       <div class="meta">${stars(b.rating)}<span class="dot"></span><span>${esc(b.subcategory||b.category_name||'')}</span></div>
-      <div class="meta"><span class="badge ${b.is_open?'open':'closed'}">${b.is_open?'Open':'Closed'}</span><span class="dot"></span><span>${esc(b.area_name||'')}</span></div>
+      <div class="meta"><span class="badge ${b.is_open?'open':'closed'}">${b.is_open?'Open now':'Closed'}</span>${b.hours_label?`<span class="bc-hrs">${esc(b.hours_label)}</span>`:''}</div>
+      <div class="meta bc-foot"><span>${I.pin}${esc(b.area_name||'')}</span>${b.phone?`<span class="bc-call" role="button" tabindex="0" data-callbiz="${esc(b.phone)}" aria-label="Call ${esc(b.name)}">${I.phone}</span>`:''}</div>
     </div></button>`;
 }
 function catCard(c){ return `<button class="cat" data-nav="category" data-slug="${c.slug}">
@@ -429,21 +456,24 @@ function offerCard(o){ return `<button class="ocard" data-nav="business" data-id
   <span class="badge tag">${esc(o.discount_label||'OFFER')}</span>
   <div><h4>${esc(o.title)}</h4><div class="biz">${esc(o.business||'')}</div></div>
   <span class="disc">%</span></button>`; }
+function addCtl(p, src, biz){
+  const inCart = cart.find(i=>i.id===p.id);
+  if(inCart) return `<span class="qc-step" data-ctl-pid="${p.id}" role="group" aria-label="Quantity of ${esc(p.name)}"><button data-qdec="${p.id}" aria-label="Remove one">−</button><b aria-live="polite">${inCart.qty}</b><button data-qinc="${p.id}" aria-label="Add one">+</button></span>`;
+  return `<button class="qc-add" data-ctl-pid="${p.id}" data-add="1" data-pid="${p.id}" data-pname="${esc(p.name)}" data-pprice="${p.price}" data-pmrp="${p.mrp||''}" data-punit="${esc(p.unit||'')}" data-pimg="${esc(src)}" data-pbiz="${esc(p.business||(biz&&biz.name)||'')}" data-pbizid="${p.business_id||(biz&&biz.id)||''}" aria-label="Add ${esc(p.name)} to cart">ADD</button>`;
+}
 function productCard(p, biz, opts={}){ const disc = p.mrp && p.mrp>p.price;
   const src = p.image_url || pic((p.name||'product').toLowerCase(), 500+(p.id||0));
   const pct = disc ? Math.round((1-p.price/p.mrp)*100) : 0;
-  const badge = p.promo_label ? `<span class="poff" style="background:var(--primary)">${esc(p.promo_label)}</span>` : (opts.best ? `<span class="bestseller">Best Seller</span>` : (disc ? `<span class="poff">${pct}% OFF</span>` : ''));
   const oos = p.stock_status==='out_of_stock';
-  const rating = (p.rating || (4 + ((p.id||1)%10)/10)).toFixed(1);
-  const rc = p.review_count || (30 + (p.id||1)*7 % 900);
-  const add = oos ? '' : `<span class="add" data-add="1" data-pid="${p.id}" data-pname="${esc(p.name)}" data-pprice="${p.price}" data-pimg="${esc(src)}" data-pbiz="${esc(p.business||(biz&&biz.name)||'')}" data-pbizid="${p.business_id||(biz&&biz.id)||''}">+</span>`;
-  const fav = `<span class="fav2 ${isSaved('product',p.id)?'on':''}" data-fav data-ftype="product" data-fid="${p.id}" data-fname="${esc(p.name)}" data-fprice="${p.price}" data-fimg="${esc(src)}">${I.heart}</span>`;
-  return `<div class="pcard" data-nav="product" data-id="${p.id}"><div class="pimg">${photoLayer(src)}${badge}${fav}${dIcon({name:p.name, category_slug: biz&&biz.category_slug},'cart')}${add}</div>
-    <div class="pb"><h4>${esc(p.name)}</h4>
-      <div class="prow"><span class="prate">${I.star}${rating} <small>(${rc})</small></span></div>
-      <div class="price">${money(p.price)}${disc?`<span class="old">${money(p.mrp)}</span>`:''}</div>
-      ${p.unit?`<div class="punit">${esc(p.unit)}</div>`:''}
-      <span class="xbadge">express</span>${oos?'<span class="oos">Out of stock</span>':''}</div></div>`; }
+  const rating = p.rating ? Number(p.rating).toFixed(1) : null;
+  const rib = p.promo_label ? `<span class="qc-rib">${esc(p.promo_label)}</span>` : disc ? `<span class="qc-rib">${pct}%<br>OFF</span>` : (opts.best ? `<span class="qc-rib best">BEST<br>SELLER</span>` : '');
+  const fav = `<button class="fav2 ${isSaved('product',p.id)?'on':''}" data-fav data-ftype="product" data-fid="${p.id}" data-fname="${esc(p.name)}" data-fprice="${p.price}" data-fimg="${esc(src)}" aria-label="Save ${esc(p.name)}">${I.heart}</button>`;
+  return `<div class="pcard qc-card${oos?' oos-card':''}" data-nav="product" data-id="${p.id}" role="link" tabindex="0" aria-label="${esc(p.name)}, ${money(p.price)}">
+    <div class="pimg">${photoLayer(src)}${dIcon({name:p.name, category_slug: biz&&biz.category_slug},'cart')}${rib}${fav}${oos?'<span class="qc-oos">Out of stock</span>':addCtl(p,src,biz)}</div>
+    <div class="pb"><span class="qc-time">${gi('clock')} 15 MINS</span>
+      <h4>${esc(p.name)}</h4>
+      <div class="punit">${esc(p.unit||'1 unit')} · ${rating?`<span class="prate">${I.star}${rating}</span>`:'<span class="qc-new">New</span>'}</div>
+      <div class="price">${money(p.price)}${disc?`<span class="old">${money(p.mrp)}</span>`:''}</div></div></div>`; }
 function serviceCard(s){ return `<button class="brow" data-nav="business" data-id="${s.business_id||s.id}" style="text-align:left">
   <div class="thumb" style="background:${grad('#6366F1','#4338CA')}">${dIcon(s,'wrench')}</div>
   <div class="info"><h4>${esc(s.name)}</h4><div class="muted" style="font-size:12.5px;margin-top:2px">${esc(s.business||'')}</div>
@@ -572,12 +602,15 @@ function startCountdown(){ if(_cdTimer) clearInterval(_cdTimer);
 const VERTICALS=[['all','store','All'],['food','fork','Food'],['grocery','cart','Grocery'],['services','wrench','Services'],['quick','bolt','Quick'],['workers','helmet','Workers'],['transport','car','Transport']];
 function vpillsHtml(active){ return `<div class="vbar"><div class="vpills">${VERTICALS.map(([k,icn,lab])=>`<button class="vpill ${active===k?'on':''}" data-vert="${k}"><span class="gi">${GI[icn]}</span>${esc(lab)}</button>`).join('')}</div></div>`; }
 function wireVerticals(el){ el.querySelectorAll('[data-vert]').forEach(b=>b.onclick=()=>{ const k=b.dataset.vert;
+  const hd=b.closest('.qc-head'); if(hd && k!=='all'){ hd.style.setProperty('--tone',QC_TONES[k]); el.querySelectorAll('.qc-tab').forEach(x=>{ x.classList.toggle('on',x===b); x.setAttribute('aria-selected',x===b); }); return setTimeout(()=>vertGo(k),220); }
+  vertGo(k); }); }
+function vertGo(k){
   if(k==='all'){ setTab('home'); return; }
   if(k==='food'){ go('category',{slug:'food-grocery',vfilter:'food',vlabel:'Food & Dining'}); return; }
   if(k==='grocery'){ go('category',{slug:'food-grocery',vfilter:'grocery',vlabel:'Grocery & Essentials'}); return; }
   if(k==='quick'){ go('category',{slug:'food-grocery',vfilter:'quick',vlabel:'Quick delivery'}); return; }
   const map={services:'services',workers:'workers',transport:'transport'};
-  go('category',{slug:map[k]||'food-grocery'}); }); }
+  go('category',{slug:map[k]||'food-grocery'}); }
 // which subcategories belong to each vertical filter
 const VFILTERS={
   food:/restaurant|hotel|bakery|cake|meat|seafood|fish|cafe|biriyani|biryani|juice|dining|food/i,
@@ -596,8 +629,20 @@ function wireCustControls(el){ const th=el.querySelector('[data-ctheme]'); if(th
 document.addEventListener('click', (e) => {
   const ab = e.target.closest('[data-add]'); if(!ab) return;
   e.stopPropagation(); e.preventDefault();
-  addToCart({ id:Number(ab.dataset.pid), name:ab.dataset.pname, price:Number(ab.dataset.pprice), image:ab.dataset.pimg||'', biz:ab.dataset.pbiz||'', bizId:Number(ab.dataset.pbizid)||1 });
+  addToCart({ id:Number(ab.dataset.pid), name:ab.dataset.pname, price:Number(ab.dataset.pprice), mrp:Number(ab.dataset.pmrp)||0, unit:ab.dataset.punit||'', image:ab.dataset.pimg||'', biz:ab.dataset.pbiz||'', bizId:Number(ab.dataset.pbizid)||1 });
 });
+/* delegate inline steppers on product cards */
+document.addEventListener('click', (e) => {
+  const d=e.target.closest('[data-qdec],[data-qinc]'); if(!d) return;
+  e.stopPropagation(); e.preventDefault();
+  if(d.dataset.qinc) setQty(Number(d.dataset.qinc),1); else setQty(Number(d.dataset.qdec),-1);
+  const cur=stack()[stack().length-1]; if(cur && cur.name==='cart') routeRender();
+});
+/* keyboard: Enter/Space opens role=link cards */
+document.addEventListener('keydown', (e) => { if((e.key==='Enter'||e.key===' ') && e.target.matches && e.target.matches('[role="link"][data-nav]')){ e.preventDefault(); e.target.click(); } });
+/* call button on business cards (login-gated like the store page) */
+document.addEventListener('click', (e) => { const c=e.target.closest('[data-callbiz]'); if(!c) return; e.stopPropagation(); e.preventDefault(); e.stopImmediatePropagation();
+  gateAction('call this business',()=>{ window.location.href='tel:'+c.dataset.callbiz; }); }, true);
 /* delegate wishlist (heart) clicks */
 document.addEventListener('click', (e) => {
   const fb = e.target.closest('[data-fav]'); if(!fb) return;
@@ -607,7 +652,7 @@ document.addEventListener('click', (e) => {
 });
 /* delegate nav clicks */
 document.addEventListener('click', (e) => {
-  if (e.target.closest('[data-add]')) return;
+  if (e.target.closest('[data-add],[data-qdec],[data-qinc],[data-fav]')) return;
   const nb = e.target.closest('[data-nav]'); if (!nb) return;
   const r = nb.dataset.nav;
   if (r==='business') go('business',{id:Number(nb.dataset.id)});
@@ -627,9 +672,12 @@ function renderBottomNav(){
   const tab=(r,icon,lab,extra='')=>`<button class="vtab ${cur===r?'on':''}" data-tabnav="${r}" ${cur===r?'aria-current="page"':''}><span class="vico">${icon}${extra}</span><span>${esc(lab)}</span></button>`;
   const talk=(lab,icon)=>`<button class="vtalk" data-tabnav="__talk" aria-label="${esc(lab)}"><span class="t-glow"></span><span class="t-ring"></span><span class="t-core">${icon}</span><span class="t-lab">${esc(lab)}</span></button>`;
   if (state.view==='customer'){
-    if (['splash','location','intro','register','login'].includes(cur)){ holder.innerHTML=''; return; }
+    if (['splash','location','intro','register','login','cart','checkout'].includes(cur)){ holder.innerHTML=''; return; }
     const cb=`<span class="cartbadge" ${cartCount()?'':'hidden'}>${cartCount()}</span>`;
-    holder.innerHTML = `<nav class="bnav vdock">${tab('home',I.home,'Home')}${tab('categories',I.grid,'Explore')}${talk('Ask',GI.mic)}${tab('cart',I.bag,'Cart',cb)}${tab('account',I.user,'Account')}</nav>`;
+    if (cur==='product'){ holder.innerHTML='<div id="qcCartBar" class="qc-cartwrap onpd" aria-live="polite" hidden></div>'; renderCartBar(); return; }
+    const hideBar=['cart','checkout','chat'].includes(cur);
+    holder.innerHTML = `${hideBar?'':'<div id="qcCartBar" class="qc-cartwrap" aria-live="polite" hidden></div>'}<nav class="bnav vdock qc-dock" aria-label="Main">${tab('home',I.home,'Home')}${tab('categories',I.grid,'Categories')}${talk('Ask',GI.mic)}${tab('orders',GI.package,'Orders')}${tab('account',I.user,'Account')}</nav>`;
+    renderCartBar();
   } else if (state.view==='partner'){
     if (cur==='p_login'){ holder.innerHTML=''; return; }
     holder.innerHTML = `<nav class="bnav vdock">${tab('p_dash',I.home,'Home')}${tab('p_products',I.store,'Products')}${talk('Add',I.plus)}${tab('p_orders',I.bag,'Orders')}${tab('p_chats',GI.chat,'Chats','<span class="cartbadge pchatbadge" hidden></span>')}</nav>`;
@@ -651,10 +699,16 @@ SCREENS.splash = (el) => {
   el.innerHTML = `<div class="splash splash-anim">
     <div class="splash-rings"><span></span><span></span><span></span></div>
     <div class="splash-logo">${logoMark(104)}</div>
-    <h1 class="splash-title">Local Link</h1><p class="splash-tag">Everything Local. One Place.</p>
+    <h1 class="splash-title"><span class="w1">Local</span> <span class="w2">Link</span></h1><p class="splash-tag">Everything Local. One Place.</p>
     <div class="splash-load"><span></span></div></div>`;
-  const next = state.onboarded && state.introSeen ? 'home' : (!state.onboarded ? 'location' : 'intro');
-  setTimeout(()=>{ if(stack()[stack().length-1].name==='splash'){ nav.customer=[{name: next}]; routeRender(); } }, 2000);
+  localStorage.setItem('ll_seen','1');
+  if(!state.onboarded){ // default the area instead of asking; refine silently from GPS (demo maps to Kunnamangalam)
+    state.areaId=state.areaId||1; state.areaName=state.areaName||'Kunnamangalam'; state.onboarded=true;
+    localStorage.setItem('ll_area',state.areaId); localStorage.setItem('ll_area_name',state.areaName); localStorage.setItem('ll_onboarded','1');
+    try{ navigator.geolocation && navigator.geolocation.getCurrentPosition(()=>{}, ()=>{}, {timeout:4000, maximumAge:600000}); }catch(e){}
+  }
+  const next = 'home';
+  setTimeout(()=>{ if(stack()[stack().length-1].name==='splash'){ nav.customer=[{name: next}]; routeRender(); } }, 1200);
 };
 
 /* ---- onboarding flashcards (auto-advancing, skippable) ---- */
@@ -740,57 +794,59 @@ function pickArea(id,name){ state.areaId=id; state.areaName=name; state.onboarde
   const dest = state.introSeen ? 'home' : 'intro';
   nav.customer=[{name:dest}]; routeRender(); toast('Location set to '+name); }
 
+const QC_TONES={all:'#0C8F82',food:'#E0573E',grocery:'#2E9D5B',services:'#3D6FD8',quick:'#C98A00',workers:'#8A55D6',transport:'#0B7FA8'};
+function qcHeader(active){
+  return `<header class="qc-head" style="--tone:${QC_TONES[active]||QC_TONES.all}">
+    <div class="qc-top">
+      <button class="qc-eta" data-tabnav-loc aria-label="Delivering to ${esc(state.areaName)}. Change area">
+        <small>Local Link in</small><b>15 minutes</b>
+        <span>${I.pin}<em>${esc(state.areaName)}, Kozhikode</em>${I.chev.replace('m9 6 6 6-6 6','m6 9 6 6 6-6')}</span></button>
+      <div class="qc-acts">${custControls()}<button class="qc-ico" data-nav="saved" aria-label="Saved items">${I.heart}</button></div>
+    </div>
+    <div class="qc-search"><span aria-hidden="true">${I.search}</span>
+      <button class="qc-stxt" data-nav="searchScreen" aria-label="Search"><span class="sq" id="rotsq">Search "biriyani"</span></button>
+      <i class="qc-sdiv" aria-hidden="true"></i>
+      <button class="qc-smic" id="askHome" aria-label="Ask Local Link by voice">${GI.mic}</button></div>
+    <nav class="qc-tabs" role="tablist" aria-label="Browse">${VERTICALS.map(([k,icn,lab])=>`<button role="tab" aria-selected="${active===k}" class="qc-tab ${active===k?'on':''}" data-vert="${k}" style="--t:${QC_TONES[k]}"><span class="gi">${GI[icn]}</span>${esc(lab)}</button>`).join('')}</nav>
+  </header>`;
+}
 SCREENS.home = async (el) => {
   el.innerHTML = `
-    <header class="vhd">
-      <div class="vhd-brand"><span class="cbrand-logo">${logoMark(30)}</span>${wordmark()}<span class="vhd-tag">Everything local</span>
-        <div style="flex:1"></div>${custControls()}</div>
-      <div class="vhd-row">
-        <button class="vloc" data-tabnav-loc><span class="vloc-ico">${I.pin}</span>
-          <span class="vloc-t"><small>Delivering to <em class="opennow">Open now</em></small><b>${esc(state.areaName)} · Kozhikode</b></span></button>
-        <button class="vround" data-nav="saved" aria-label="Saved">${I.heart}</button>
-      </div>
-      <div class="vsrch"><span class="vsrch-ic">${I.search}</span>
-        <button class="vsrch-txt" data-nav="searchScreen"><span class="sq" id="rotsq">Search local shops & products…</span></button>
-        <button class="vsrch-mic" id="askHome" aria-label="Ask Local Link by voice">${GI.mic}</button></div>
-    </header>
-    <div class="vpromos" id="vpromos">
-      <div class="vpromo p-voice"><small>Ask Local Link</small><h2>Just say what you need</h2><p>English · മലയാളം</p>
-        <span class="vchips"><span>${GI.sparkles}<b>AI search</b></span><span>${GI.bolt}<b>Instant</b></span></span>
-        <span class="wave" aria-hidden="true">${Array.from({length:14},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span>
-        <button class="vpromo-btn" data-talk>${GI.mic}<span>Start talking</span></button></div>
-      <div class="vpromo p-deal" id="vpDeal"><small>Today's deal</small><h2>Mega deals near you</h2><p>Fresh local discounts — ending at midnight</p>
-        <span class="vchips"><span>${GI.percent}<b>Up to 50% off</b></span><span>${GI.clock}<b>Today only</b></span></span>
-        <button class="vpromo-btn" data-nav="deals"><span>Shop deals</span>${I.chev}</button></div>
-      <div class="vpromo p-near"><small>Near you</small><h2>Your whole neighbourhood</h2><p>Shops, services, workers & rides</p>
-        <span class="vchips"><span>${GI.store}<b>Local shops</b></span><span>${GI.car}<b>Rides</b></span></span>
-        <button class="vpromo-btn" data-nav="categories"><span>Explore</span>${I.chev}</button></div>
-    </div>
-    <div class="vdots" id="vdots"><i class="on"></i><i></i><i></i></div>
-    <div class="vgreet"><b>${greetWord()}${token&&me?', '+esc(me.name.split(' ')[0]):''}</b><span>What are you looking for in ${esc(state.areaName)} today?</span></div>
-    <div class="vmoods">${VERTICALS.map(([k,icn,lab],i)=>`<button class="vmood ${k==='all'?'on':''}" data-vert="${k}" style="--n:${i}"><i>${GI[icn]}</i>${esc(lab)}</button>`).join('')}</div>
-    <div class="nsec"><h3>${esc(t('categories'))}</h3><button class="viewall" data-nav="categories">${t('seeAll')} ${I.chev}</button></div>
-    <div class="vcats">${(ref.categories||[]).slice(0,10).map(c=>`<button class="vcat" data-nav="category" data-slug="${c.slug}"><span class="vcat-pic">${catIcon(c.slug)}</span><b>${esc(catLabel(c))}</b></button>`).join('')}</div>
-    <div class="nsec"><h3>Top offers</h3><button class="viewall" data-nav="offers">${t('seeAll')} ${I.chev}</button></div>
+    ${qcHeader('all')}
+    <div id="orderPill"></div>
+    ${state.introSeen?'':`<div class="qc-intro" id="introCard"><span class="qc-ii">${logoMark(34)}</span><div><b>${t('introT')}</b><small>${t('introS')}</small></div><button id="introOk" class="btn sm">${t('gotIt')}</button></div>`}
+    <div id="near"></div>
+    <div class="qc-greet"><b>${greetWord()}${token&&me?', '+esc(me.name.split(' ')[0]):''} 👋</b><span>Shops, food & services around ${esc(state.areaName)} — delivered fast.</span></div>
+    <div class="qc-voice" role="button" tabindex="0" data-talk aria-label="Ask Local Link by voice">
+      <span class="qc-vorb">${GI.mic}</span><span><b>${t('voiceT')}</b><small>${t('voiceS')}</small></span>
+      <span class="wave" aria-hidden="true">${Array.from({length:7},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span></div>
+    <div class="nsec"><h3>${t('shopByCat')}</h3><button class="viewall" data-nav="categories">${t('seeAll')} ${I.chev}</button></div>
+    <div class="qc-catgrid">${(ref.categories||[]).slice(0,8).map((c,i)=>`<button class="qc-cat" data-nav="category" data-slug="${c.slug}" style="--n:${i}"><span class="qc-catpic">${catIcon(c.slug)}</span><b>${esc(catLabel(c))}</b></button>`).join('')}</div>
+    <div class="nsec"><h3>${t('topOffers')}</h3><button class="viewall" data-nav="offers">${t('seeAll')} ${I.chev}</button></div>
     <div class="hero" id="hero">${skeletonCards(1)}</div><div class="dots" id="dots"></div>
     <div id="promo"></div>
     <div id="deals"></div>
-    <div id="near"></div>
+    
     <div id="prodsecs"></div>
     <div id="svcs"></div>
     <div id="updates"></div>
     <div style="height:96px"></div>`;
   wireVerticals(el); wireCustControls(el);
   const ask=$('#askHome'); if(ask) ask.onclick=()=>openAsk('', {voice:true});
+  el.querySelectorAll('[data-talk]').forEach(b=>b.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openAsk('',{voice:true}); } }));
   el.querySelectorAll('[data-talk]').forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); openAsk('', {voice:true}); });
-  const vp=$('#vpromos'); if(vp){ vp.addEventListener('scroll',()=>{ const i=Math.round(vp.scrollLeft/(vp.clientWidth*0.9)); el.querySelectorAll('#vdots i').forEach((d,x)=>d.classList.toggle('on',x===i)); [...vp.children].forEach((c,x)=>c.classList.toggle('on',x===i)); },{passive:true}); vp.firstElementChild.classList.add('on'); autoAdvanceRow(vp,3); }
   const loc=el.querySelector('[data-tabnav-loc]'); if(loc) loc.onclick=()=>go('location');
   // rotating search placeholder
   const rot=$('#rotsq'); let ri=0; if(rot){ setInterval(()=>{ ri=(ri+1)%ROTATE.length; rot.textContent=ROTATE[ri]; },2600); }
   // skeleton section frames
   $('#promo').innerHTML = nsecHead('Offers for you','offers') + `<div id="promow"><div class="ostack">${skeletonCards(1)}</div></div>`;
   $('#deals').innerHTML = `<div class="nsec"><h3>Mega deals</h3><span class="countdown" id="megacd">${gi('clock')} --:--:--</span></div><div class="dealrow" id="dealw">${skeletonCards(3)}</div>`;
-  $('#near').innerHTML = nsecHead(t('nearYou'),'categories') + `<div class="hero" style="padding-top:2px" id="nearw">${skeletonCards(2)}</div>`;
+  $('#near').innerHTML = nsecHead(t('openNear'),'categories') + `<div class="hero" style="padding-top:2px" id="nearw">${skeletonCards(2)}</div>`;
+  const iok=$('#introOk'); if(iok) iok.onclick=()=>{ state.introSeen=true; localStorage.setItem('ll_intro','1'); const c=$('#introCard'); c.classList.add('bye'); setTimeout(()=>c.remove(),350); };
+  if(token) api('/orders').then(os=>{ const live=(os||[]).find(o=>!['completed','rejected','cancelled'].includes(o.status)); const el2=$('#orderPill'); if(!live||!el2) return;
+    const MSG={pending:'is waiting for the store to accept',accepted:'was accepted',preparing:'is being prepared',ready:'is ready',out_for_delivery:'is on the way'};
+    el2.innerHTML=`<button class="qc-pill" id="opGo"><span class="qc-pdot"></span><span><b>Your order from ${esc(live.business)}</b> ${MSG[live.status]||live.status.replace(/_/g,' ')}</span>${I.chev}</button>`;
+    $('#opGo').onclick=()=>setTab('orders'); }).catch(()=>{});
   $('#svcs').innerHTML = nsecHead(t('popularServices'),'categories','services') + `<div class="px stack" id="svcw" style="gap:10px">${skeletonRow(2)}</div>`;
   $('#updates').innerHTML = nsecHead(t('localUpdates'),'news') + `<div class="hero" style="padding-top:2px" id="newsw">${skeletonCards(2)}</div><div class="px stack" id="evw" style="gap:10px;margin-top:8px"></div>`;
   const [offers, biz, deals, svcs, news, events, grocery, places] = await Promise.all([
@@ -812,6 +868,7 @@ SCREENS.home = async (el) => {
   if(deals.length) wireRowArrows($('#dealw'));
   startCountdown();
   // near you (real + seeded)
+  near.sort((a,b)=>(b.is_open?1:0)-(a.is_open?1:0));
   $('#nearw').innerHTML = near.slice(0,10).map(businessCard).join('');
   // a category product row (grocery)
   if(grocery && grocery.length){ $('#prodsecs').innerHTML = nsecHead('Grocery & essentials','categories','food-grocery') + `<div class="dealrow" id="grocw">${grocery.slice(0,10).map(p=>productCard(p)).join('')}</div>`; wireRowArrows($('#grocw')); }
@@ -846,37 +903,50 @@ SCREENS.deals = async (el) => {
 
 SCREENS.cart = async (el) => {
   if(!cart.length){
-    el.innerHTML = `<div class="addrbar" style="padding-top:16px"><div class="atext"><div class="atop">Cart</div></div></div>
+    el.innerHTML = `${topbarBack('Your cart')}
       <div class="cart-empty"><div class="ce-ic">${GI.cart}</div>
         <h3>Your cart is empty</h3><p>What are you waiting for? Start adding local products.</p>
         <button class="btn" data-tabnav="home">Start shopping</button>
         <div class="promo" style="margin-top:20px;width:100%;max-width:320px;background:${grad('#12A594','#0C6E64')}"><h4>New here?</h4><div class="psub">Use code below on your first order</div><span class="pcode">${gi('tag')} COMBO249</span></div>
       </div>
       <div id="best"></div><div style="height:96px"></div>`;
-    el.querySelector('[data-tabnav="home"]').onclick=()=>setTab('home');
+    backWire(el); el.querySelector('[data-tabnav="home"]').onclick=()=>setTab('home');
     const biz = await api('/products?limit=8');
     $('#best').innerHTML = nsecHead('Bestsellers for you') + `<div class="dealrow">${biz.slice(0,8).map((p,i)=>productCard(p,null,{best:i<2})).join('')}</div>`;
     return;
   }
-  const rows = cart.map(it=>`<div class="cart-item"><div class="cimg">${photoLayer(it.image||pic((it.name||'x').toLowerCase(),500+it.id,120,120))}</div>
-    <div class="cinfo"><h4>${esc(it.name)}</h4><div class="muted" style="font-size:11.5px;margin:2px 0 6px">${esc(it.biz||'')}</div>
-      <div class="row" style="justify-content:space-between;align-items:center"><b class="price">${money(it.price)}</b>
-        <div class="qty"><button data-dec="${it.id}">−</button><span>${it.qty}</span><button data-inc="${it.id}">+</button></div></div></div></div>`).join('');
-  const delivery = cartTotal()>=499?0:29;
-  el.innerHTML = `<div class="addrbar" style="padding-top:16px"><div class="atext"><div class="atop">Cart · ${cartCount()} item${cartCount()>1?'s':''}</div></div></div>
-    <div style="margin-top:6px">${rows}</div>
-    <div class="px"><div class="bill">
-      <div class="bill-row"><span>Item total</span><span>${money(cartTotal())}</span></div>
-      <div class="bill-row"><span>Delivery ${delivery===0?'<b style="color:var(--primary)">(FREE)</b>':''}</span><span>${delivery===0?'₹0':money(delivery)}</span></div>
-      <div class="bill-row total"><span>To pay</span><span>${money(cartTotal()+delivery)}</span></div>
-      ${delivery>0?`<div class="faint" style="font-size:11.5px;margin-top:6px">Add ${money(499-cartTotal())} more for free delivery</div>`:''}
-    </div></div>
+  const FREE=499, sub=cartTotal(), delivery = sub>=FREE?0:29, handling=0;
+  const mrpSave = cart.reduce((t,i)=>t+(i.mrp&&i.mrp>i.price?(i.mrp-i.price)*i.qty:0),0);
+  const saved = mrpSave + (delivery===0?29:0);
+  const rows = cart.map(it=>`<div class="qc-line"><div class="cimg">${photoLayer(it.image||pic((it.name||'x').toLowerCase(),500+it.id,120,120))}</div>
+    <div class="cinfo"><h4>${esc(it.name)}</h4><small>${esc(it.unit||'1 unit')}</small></div>
+    <span class="qc-step sm" role="group" aria-label="Quantity of ${esc(it.name)}"><button data-dec="${it.id}" aria-label="Remove one">−</button><b>${it.qty}</b><button data-inc="${it.id}" aria-label="Add one">+</button></span>
+    <div class="qc-lp"><b>${money(it.price*it.qty)}</b>${it.mrp&&it.mrp>it.price?`<s>${money(it.mrp*it.qty)}</s>`:''}</div></div>`).join('');
+  el.innerHTML = `${topbarBack('Your cart')}
+    <div class="qc-cart px">
+      ${saved>0?`<div class="qc-save" role="status">${gi('percent')}<span>You're saving <b>${money(saved)}</b> on this order</span></div>`:''}
+      <section class="qc-ship"><div class="qc-shiph"><span class="qc-clock">${gi('clock')}</span><div><b>Delivery in 15 minutes</b><small>Shipment of ${cartCount()} item${cartCount()>1?'s':''} from ${esc(cart[0].biz||'your store')}</small></div></div>
+        ${rows}
+        <button class="qc-more" data-nav="business" data-id="${cartBizId()||1}">${I.plus} Add more items</button></section>
+      <div id="qcSugg"></div>
+      <section class="qc-billc"><h4>Bill details</h4>
+        <div class="bill-row"><span>${gi('news')} Items total ${mrpSave?`<em class="qc-savetag">Saved ${money(mrpSave)}</em>`:''}</span><span>${mrpSave?`<s>${money(sub+mrpSave)}</s> `:''}${money(sub)}</span></div>
+        <div class="bill-row"><span>${GI.car} Delivery charge</span><span>${delivery===0?`<s>₹29</s> <b class="qc-free">FREE</b>`:money(delivery)}</span></div>
+        <div class="bill-row"><span>${gi('package')} Handling charge</span><span><b class="qc-free">FREE</b></span></div>
+        <div class="bill-row total"><span>Grand total</span><span>${money(sub+delivery+handling)}</span></div>
+        ${delivery>0?`<div class="qc-freebar"><span>Add <b>${money(FREE-sub)}</b> more for FREE delivery</span><i style="--p:${Math.min(100,Math.round(sub/FREE*100))}%"></i></div>`:''}</section>
+      <section class="qc-policy"><b>Cancellation policy</b><p>Orders can't be cancelled once the store starts packing. Refunds for missing or damaged items go back to your original payment method.</p></section>
+    </div>
     <div style="height:150px"></div>
-    <div class="cartbar"><div class="ct"><div class="lbl">To pay</div><div class="tot">${money(cartTotal()+delivery)}</div></div>
-      <button class="btn" id="checkout">Checkout ${I.chev}</button></div>`;
+    <div class="qc-paybar"><div class="qc-addr">${I.pin}<span>Delivering to <b>${esc(state.areaName)}</b></span><button data-tabnav-loc2 aria-label="Change area">Change</button></div>
+      <button class="qc-pay" id="checkout"><span><b>${money(sub+delivery)}</b><small>TOTAL</small></span><span>Proceed to pay ${I.chev}</span></button></div>`;
+  backWire(el);
   el.querySelectorAll('[data-inc]').forEach(b=>b.onclick=()=>{ setQty(Number(b.dataset.inc),1); routeRender(); });
   el.querySelectorAll('[data-dec]').forEach(b=>b.onclick=()=>{ setQty(Number(b.dataset.dec),-1); routeRender(); });
-  $('#checkout').onclick=()=>gateAction('place your order',()=>go('checkout'));
+  const ch=el.querySelector('[data-tabnav-loc2]'); if(ch) ch.onclick=()=>go('location');
+  $('#checkout').onclick=()=>{ track('checkout_start'); gateAction('place your order',()=>go('checkout')); };
+  api('/products?limit=10').then(ps=>{ const s=$('#qcSugg'); if(!s) return; const ids=new Set(cart.map(i=>i.id)); const list=(ps||[]).filter(p=>!ids.has(p.id)).slice(0,8);
+    if(list.length) s.innerHTML=`<div class="qc-ph" style="margin-top:6px"><h3>You might also like</h3></div><div class="dealrow qc-sugg">${list.map(p=>productCard(p)).join('')}</div>`; }).catch(()=>{});
 };
 
 SCREENS.checkout = async (el) => {
@@ -928,7 +998,7 @@ SCREENS.checkout = async (el) => {
           item_summary:items.map(i=>`${i.qty}× ${i.name}`).join(', '),payment_method:payMethod,
           items_json:items.map(i=>({id:i.id,name:i.name,price:i.price,qty:i.qty,image:i.image||''}))}}).catch(()=>{});
       }
-      cart=[]; saveCart(); toast('Order placed! 🎉'); nav.customer=[{name:'orders'}]; routeRender();
+      track('order_placed',{total:pay}); cart=[]; saveCart(); toast('Order placed! 🎉'); nav.customer=[{name:'orders'}]; routeRender();
     }catch(e){ toast(e.message); }
   };
 };
@@ -939,6 +1009,7 @@ SCREENS.account = async (el) => {
     <div class="acard"><h4>${loggedIn?esc(nm):'Welcome to Local Link'}</h4>
       <div class="asub">${loggedIn?esc(me.email||me.phone||''):'Log in to order, save favourites, enquire & review'}</div>
       ${loggedIn?'':`<span class="abtn" id="lg">Log in / Sign up</span>`}</div>
+    <div class="qc-tiles"><button data-tabnav="orders"><span>${GI.package}</span>Orders</button><button data-nav="saved"><span>${I.heart}</span>Saved</button><button data-nav="offers"><span>${GI.percent}</span>Offers</button><button id="helpTile"><span>${GI.chat}</span>Help</button></div>
     <button class="btn block" id="installapp" style="margin:0 0 14px;display:${window.__llInstall?'inline-flex':'none'};gap:8px;align-items:center;justify-content:center">${GI.download||I.plus} Install Local Link app</button>
     <div class="acct-list">
       <button data-tabnav="orders"><span class="ic">${GI.package}</span> My Orders <span class="rt">${I.chev}</span></button>
@@ -969,6 +1040,7 @@ SCREENS.account = async (el) => {
     inst.onclick=async()=>{ const p=window.__llInstall; if(!p){ toast('Open the browser menu → “Add to Home screen”'); return; }
       p.prompt(); try{ await p.userChoice; }catch(e){} window.__llInstall=null; inst.style.display='none'; }; }
   const lg=$('#lg'); if(lg) lg.onclick=()=>go('login');
+  const ht=$('#helpTile'); if(ht) ht.onclick=()=>openAsk('');
   const br=$('#bulkreq'); if(br) br.onclick=()=>{ if(!token){ toast('Please log in to post a requirement'); return go('login'); } openBulkEnquiry(); };
   const out=$('#out'); if(out) out.onclick=()=>{ token=null; me=null; localStorage.removeItem('ll_token'); localStorage.removeItem('ll_user'); toast('Logged out'); routeRender(); };
   const lang=$('#langrow'); if(lang) lang.onclick=()=>{ state.lang=state.lang==='en'?'ml':'en'; localStorage.setItem('ll_lang',state.lang); renderShell(); };
@@ -989,31 +1061,33 @@ SCREENS.saved = async (el) => {
 };
 
 SCREENS.product = async (el, {id}) => {
-  el.innerHTML = `<div class="sk" style="height:300px;border-radius:0"></div>`;
+  el.innerHTML = `<div class="sk" style="height:340px;border-radius:0 0 30px 30px"></div>`;
   let p; try{ p = await api('/products/'+id); }catch(e){ el.innerHTML=`${topbarBack('Product')}<div class="px">${emptyState('bag','Product unavailable','')}</div>`; backWire(el); return; }
   const src = p.image_url || pic((p.name||'product').toLowerCase(), 500+(p.id||0), 800, 800);
   const disc = p.mrp && p.mrp>p.price; const pct = disc?Math.round((1-p.price/p.mrp)*100):0;
-  const rating = (p.rating || (4 + ((p.id||1)%10)/10)).toFixed(1);
+  const rating = p.rating ? Number(p.rating).toFixed(1) : null;
   const oos = p.stock_status==='out_of_stock';
+  const prod = {...p, business:p.business, business_id:p.business_id};
   el.innerHTML = `
-    <div class="pdp-cover">${photoLayer(src)}<button class="back" id="bk">${I.back}</button>
-      <span class="fav-float ${isSaved('product',p.id)?'on':''}" data-fav data-ftype="product" data-fid="${p.id}" data-fname="${esc(p.name)}" data-fprice="${p.price}" data-fimg="${esc(src)}">${I.heart}</span>
-      ${p.promo_label?`<span class="pdp-promo">${esc(p.promo_label)}</span>`:(disc?`<span class="pdp-promo">${pct}% OFF</span>`:'')}</div>
-    <div class="px" style="margin-top:14px">
-      <div class="row" style="gap:8px"><span class="badge primary">${esc(p.category_name||'')}</span>${oos?'<span class="badge closed">Out of stock</span>':'<span class="badge open">In stock</span>'}<span class="xbadge">express</span></div>
-      <h1 style="font-size:22px;margin-top:10px;line-height:1.25">${esc(p.name)}</h1>
-      <button class="row" data-nav="business" data-id="${p.business_id}" style="gap:6px;margin-top:6px;background:none"><span class="gi" style="color:var(--primary)">${GI.store}</span><span class="muted" style="font-size:13px">${esc(p.business)}</span>${I.chev.replace('width','style="width:14px;height:14px;stroke:var(--faint)" data-x width')}</button>
-      <div class="row" style="gap:10px;margin-top:12px;align-items:baseline"><b style="font-size:26px">${money(p.price)}</b>${disc?`<span class="old" style="font-size:15px">${money(p.mrp)}</span><span class="badge accent">Save ${money(p.mrp-p.price)}</span>`:''}${p.unit?`<span class="muted" style="font-size:13px">/ ${esc(p.unit)}</span>`:''}</div>
-      <div class="row" style="gap:7px;margin-top:8px">${stars(rating)}<span class="muted" style="font-size:12.5px">${p.review_count||120} ratings</span></div>
-      ${p.description?`<p style="color:var(--body);font-size:14px;line-height:1.6;margin-top:14px">${esc(p.description)}</p>`:''}
-      <div id="related"></div>
-      <div style="height:110px"></div>
-    </div>
-    <div class="cartbar">${oos?`<button class="btn block" disabled style="opacity:.6">Out of stock</button>`:`
-      <div class="ct"><div class="lbl">Price</div><div class="tot">${money(p.price)}</div></div>
-      <button class="btn" id="addbtn" data-add="1" data-pid="${p.id}" data-pname="${esc(p.name)}" data-pprice="${p.price}" data-pimg="${esc(src)}" data-pbiz="${esc(p.business)}" data-pbizid="${p.business_id}">${GI.cart} Add to cart</button>`}</div>`;
+    <div class="pd-hero">${photoLayer(src)}${dIcon({name:p.name},'cart')}
+      <div class="st-bar"><button class="st-ib" id="bk" aria-label="Back">${I.back}</button><span style="flex:1"></span>
+        <button class="st-ib fav ${isSaved('product',p.id)?'on':''}" data-fav data-ftype="product" data-fid="${p.id}" data-fname="${esc(p.name)}" data-fprice="${p.price}" data-fimg="${esc(src)}" aria-label="Save">${I.heart}</button></div>
+      ${p.promo_label?`<span class="pd-tag">${esc(p.promo_label)}</span>`:(disc?`<span class="pd-tag">${pct}% OFF</span>`:'')}</div>
+    <section class="pd-sheet">
+      <span class="qc-time">${gi('clock')} 15 MINS</span>
+      <h1>${esc(p.name)}</h1>
+      <p class="pd-unit">${esc(p.unit||'1 unit')} · ${rating?`<span class="prate">${I.star}${rating}</span>${p.review_count?` <small>(${p.review_count})</small>`:''}`:'<span class="qc-new">New</span>'}</p>
+      <div class="pd-price"><b>${money(p.price)}</b>${disc?`<s>MRP ${money(p.mrp)}</s><em>Save ${money(p.mrp-p.price)}</em>`:''}</div>
+      <p class="pd-tax">Inclusive of all taxes</p>
+      <button class="pd-store" data-nav="business" data-id="${p.business_id}"><span>${GI.store}</span><div><small>Sold by</small><b>${esc(p.business)}</b></div>${I.chev}</button>
+      <div class="pd-perks"><div>${gi('bolt')}<b>Fast delivery</b><small>from a store near you</small></div><div>${gi('shield')}<b>${oos?'Out of stock':'In stock'}</b><small>${esc(p.category_name||'Local')}</small></div><div>${gi('chat')}<b>Ask the store</b><small>chat or call</small></div></div>
+      ${p.description?`<h3 class="pd-h">About this item</h3><p class="pd-desc">${esc(p.description)}</p>`:''}
+      <div id="related"></div><div style="height:120px"></div></section>
+    <div class="pd-bar">${oos?`<button class="btn block" disabled style="opacity:.6">Out of stock</button>`:`
+      <div><b>${money(p.price)}</b>${disc?`<s>${money(p.mrp)}</s>`:''}<small>${esc(p.unit||'1 unit')}</small></div>
+      <span class="pd-ctl">${addCtl(prod,src)}</span>`}</div>`;
   $('#bk').onclick=back;
-  if(p.related && p.related.length){ $('#related').innerHTML = nsecHead('You may also like') + `<div class="dealrow" style="padding-left:0;padding-right:0">${p.related.map(r=>productCard(r)).join('')}</div>`; }
+  if(p.related && p.related.length){ $('#related').innerHTML = `<h3 class="pd-h">You may also like</h3><div class="dealrow" style="margin:0 -16px">${p.related.map(r=>productCard(r)).join('')}</div>`; }
 };
 
 SCREENS.category = async (el, {slug, vfilter, vlabel}) => {
@@ -1034,13 +1108,15 @@ SCREENS.category = async (el, {slug, vfilter, vlabel}) => {
   // Business categories → rich Noon-style landing page
   const kw = vfilter ? vfilter : coverKw({subcategory:cat.name, category_name:cat.name});
   el.innerHTML = `${topbarBack(pageTitle)}
-    <div class="cathero">${photoLayer(pic(kw,900+(cat.id||0),900,360))}<h2>${esc(pageTitle)}</h2></div>
-    <div class="subchips" id="subchips"></div>
-    <div id="catoffers"></div>
-    <div id="cattop"></div>
-    <div id="catitems"></div>
-    <div class="nsec"><h3>All ${esc(catLabel(cat))}</h3></div>
-    <div class="px stack" id="list" style="gap:11px">${skeletonRow(4)}</div><div style="height:90px"></div>`;
+    <div class="qc-split">
+      <aside class="qc-rail subchips" id="subchips" role="tablist" aria-label="Sub-categories"></aside>
+      <main class="qc-pane">
+        <div class="cathero">${photoLayer(pic(kw,900+(cat.id||0),900,360))}<h2>${esc(pageTitle)}</h2></div>
+        <div id="catitems"></div>
+        <div id="catoffers"></div>
+        <div id="cattop"></div>
+        <div class="qc-ph"><h3>All ${esc(catLabel(cat))}</h3><span class="muted" id="qcCount"></span></div>
+        <div class="stack" id="list" style="gap:10px">${skeletonRow(4)}</div></main></div><div style="height:90px"></div>`;
   backWire(el);
   const [biz, prods, offers, places] = await Promise.all([
     api(`/businesses?category=${slug}`), api(`/products?category=${slug}&limit=12`),
@@ -1055,22 +1131,23 @@ SCREENS.category = async (el, {slug, vfilter, vlabel}) => {
   if(vre){ merged = merged.filter(b=>vre.test((b.subcategory||'')+' '+(b.name||''))); }
   // sub-category chips
   const subs=[...new Set(merged.map(b=>b.subcategory).filter(Boolean))].slice(0,10);
-  $('#subchips').innerHTML = `<button class="subchip on" data-sub="">All</button>` + subs.map(s=>`<button class="subchip" data-sub="${esc(s)}">${esc(s)}</button>`).join('');
+  const subIc=(t)=>`<i>${GI[iconKeyFor({subcategory:t,name:t},'store')]||GI.store}</i>`;
+  $('#subchips').innerHTML = `<button class="subchip on" role="tab" aria-selected="true" data-sub=""><i>${catIcon(slug)}</i><span>All</span></button>` + subs.map(s=>`<button class="subchip" role="tab" aria-selected="false" data-sub="${esc(s)}">${subIc(s)}<span>${esc(s)}</span></button>`).join('');
   // category offers
   const catBizIds=new Set(biz.map(b=>b.id));
   const catOffers=(offers||[]).filter(o=>catBizIds.has(o.business_id));
-  if(catOffers.length) $('#catoffers').innerHTML = nsecHead('Offers') + `<div class="promorow">${catOffers.map(promoCard).join('')}</div>`;
+  if(catOffers.length) $('#catoffers').innerHTML = `<div class="qc-ph"><h3>Offers</h3></div><div class="promorow">${catOffers.map(promoCard).join('')}</div>`;
   // top rated
   const top=[...merged].sort((a,b)=>(b.rating||0)-(a.rating||0)).slice(0,8);
-  if(top.length) $('#cattop').innerHTML = nsecHead(slug==='food-grocery'?'Top restaurants & stores':'Top rated') + `<div class="hero" style="padding-top:2px">${top.map(businessCard).join('')}</div>`;
+  if(top.length) $('#cattop').innerHTML = `<div class="qc-ph"><h3>${slug==='food-grocery'?'Top restaurants & stores':'Top rated'}</h3></div><div class="hero qc-toprail">${top.map(b=>`<button class="qc-store" data-nav="${b.source==='google'?'place':'business'}" data-id="${b.id}"><span class="qc-sl" style="background:${grad(b.color1||'#0EA5A4',b.color2||'#0B5A55')}">${dIcon(b)}</span><b>${esc(b.name)}</b><small>${I.star}${Number(b.rating||4.2).toFixed(1)}</small></button>`).join('')}</div>`;
   // popular items / dishes (respect the vertical filter)
   if(vre){ const ids=new Set(merged.map(b=>b.id)); prodsF=(prods||[]).filter(p=>ids.has(p.business_id)); }
-  if(prodsF && prodsF.length) $('#catitems').innerHTML = nsecHead(vfilter==='grocery'?'Popular products':'Popular items') + `<div class="dealrow">${prodsF.map(p=>productCard(p)).join('')}</div>`;
+  if(prodsF && prodsF.length) $('#catitems').innerHTML = `<div class="qc-ph"><h3>${vfilter==='grocery'?'Popular products':'Popular items'}</h3></div><div class="pgrid2 qc-grid">${prodsF.map((p,i)=>productCard(p,null,{best:i<1})).join('')}</div>`;
   // full list + subcategory filter
-  const draw=(items)=> $('#list').innerHTML = items.length? items.map(b=>bizRow(b)).join('') : emptyState('search','Nothing here yet','Try another area.');
+  const draw=(items)=>{ const c=$('#qcCount'); if(c) c.textContent=items.length+' places'; $('#list').innerHTML = items.length? items.map(b=>bizRow(b)).join('') : emptyState('search','Nothing here yet','Try another area.'); };
   draw(merged);
   $('#subchips').addEventListener('click', e=>{ const b=e.target.closest('.subchip'); if(!b)return;
-    el.querySelectorAll('#subchips .subchip').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+    el.querySelectorAll('#subchips .subchip').forEach(x=>{ x.classList.remove('on'); x.setAttribute('aria-selected','false'); }); b.classList.add('on'); b.setAttribute('aria-selected','true');
     const s=b.dataset.sub; draw(s? merged.filter(x=>x.subcategory===s) : merged); });
 };
 function bizRow(b){ const navr=b.source==='google'?'place':'business';
@@ -1137,84 +1214,90 @@ function renderLocalInfo(elm,data){ const groups={}; data.forEach(i=>(groups[i.c
       <a class="btn sm" style="align-self:center" href="tel:${i.phone}">${I.phone}</a></div>`).join('')}`).join(''); }
 
 SCREENS.business = async (el, {id}) => {
-  el.innerHTML = `<div class="sk" style="height:190px;border-radius:0"></div><div class="px" style="margin-top:14px">${skeletonRow(2)}</div>`;
-  const b = await api(`/businesses/${id}`);
+  el.innerHTML = `<div class="sk" style="height:220px;border-radius:0 0 30px 30px"></div><div class="px" style="margin-top:14px">${skeletonRow(3)}</div>`;
+  const b = await api(`/businesses/${id}`); track('shop_view',{id});
   const wa = (b.whatsapp||'').replace(/[^0-9]/g,'');
+  const cover = b.cover_url || pic(coverKw(b), b.id, 900, 480);
+  const first = b.products.length ? 'products' : b.services.length ? 'services' : 'about';
   el.innerHTML = `
-    <div class="detail-cover" style="background:${grad(b.color1,b.color2)}">${photoLayer(b.cover_url || pic(coverKw(b), b.id, 900, 480))}
-      <button class="back" id="bk">${I.back}</button><span class="logo">${dIcon(b)}</span></div>
-    <div class="px" style="margin-top:-26px;position:relative">
-      <div class="card" style="padding:15px">
-        <div class="row" style="justify-content:space-between;align-items:flex-start">
-          <div><h2 style="font-size:20px">${esc(b.name)}</h2>
-            <div class="muted" style="font-size:13px;margin-top:3px">${esc(b.subcategory||'')} · ${esc(b.area_name||'')}</div></div>
-          ${stars(b.rating)}</div>
-        <div class="row" style="gap:8px;margin-top:10px"><span class="badge ${b.is_open?'open':'closed'}">${b.is_open?'Open now':'Closed'}</span>
-          <span class="muted" style="font-size:12px">${esc(b.hours_label||'')}</span><span class="dot" style="width:3px;height:3px;background:var(--faint);border-radius:50%"></span>
-          <span class="muted" style="font-size:12px">${b.review_count} reviews</span></div>
-        <div class="muted" style="font-size:12.5px;margin-top:8px;display:flex;gap:6px">${I.pin.replace('fill="currentColor"','fill="var(--faint)" style="width:14px;height:14px;flex:0 0 auto"')} ${esc(b.address||'')}</div>
-        <div class="actionbar">
-          <button id="callb">${I.phone}${t('call')}</button>
-          <button id="wab">${I.wa}${t('whatsapp')}</button>
-          <a href="https://maps.google.com/?q=${encodeURIComponent(b.name+' '+(b.address||''))}" target="_blank" rel="noopener">${I.dir}${t('directions')}</a>
-          <a href="#" id="shareb">${I.share}${t('share')}</a>
-        </div>
-        ${b.can_chat?`<button class="btn block" id="chatbtn" style="margin-top:12px;gap:8px;align-items:center;justify-content:center">${GI.chat} Chat with ${esc(b.name.split(' ')[0])}</button>`:''}
-      </div>
-      <div class="tabs" id="tabs">
-        <button class="on" data-t="about">${t('about')}</button>
-        ${b.products.length?`<button data-t="products">${t('products')}</button>`:''}
-        ${b.services.length?`<button data-t="services">${t('services')}</button>`:''}
-        ${b.offers.length?`<button data-t="offers">${t('offers')}</button>`:''}
-        <button data-t="reviews">${t('reviews')} (${b.reviews.length})</button>
-      </div>
-      <div id="tabbody" style="margin-top:14px"></div>
-      <div style="height:90px"></div>
-    </div>`;
+    <div class="st-hero" style="--c1:${b.color1||'#0C8F82'};--c2:${b.color2||'#0A5C55'}">${photoLayer(cover)}<span class="st-shade"></span>
+      <div class="st-bar"><button class="st-ib" id="bk" aria-label="Back">${I.back}</button><span style="flex:1"></span>
+        <button class="st-ib" data-nav="searchScreen" aria-label="Search">${I.search}</button><button class="st-ib" id="shareb" aria-label="Share">${I.share}</button>
+        <button class="st-ib fav ${isSaved('business',b.id)?'on':''}" data-fav data-ftype="business" data-fid="${b.id}" data-fname="${esc(b.name)}" data-fsub="${esc(b.subcategory||'')}" data-fimg="${esc(cover)}" aria-label="Save store">${I.heart}</button></div></div>
+    <section class="st-card">
+      <div class="st-logo" style="background:${grad(b.color1||'#0EA5A4',b.color2||'#0B5A55')}">${dIcon(b)}</div>
+      <h1>${esc(b.name)}</h1>
+      <p class="st-sub">${esc(b.subcategory||b.category_name||'')} · ${esc(b.area_name||'')}</p>
+      <div class="st-meta">
+        <span class="st-rate">${I.star}${Number(b.rating||0).toFixed(1)}<small>${b.review_count} ratings</small></span>
+        <span class="st-open ${b.is_open?'on':''}">${b.is_open?'Open now':'Closed'}<small>${esc(b.hours_label||'')}</small></span>
+        <span class="st-cat">${dIcon(b)}<small>${esc(b.category_name||'')}</small></span></div>
+      <p class="st-addr">${I.pin}<span>${esc(b.address||'')}</span></p>
+      <div class="st-acts">
+        <button id="callb">${I.phone}<span>${t('call')}</span></button>
+        <button id="wab">${I.wa}<span>${t('whatsapp')}</span></button>
+        <a href="https://maps.google.com/?q=${encodeURIComponent(b.name+' '+(b.address||''))}" target="_blank" rel="noopener">${I.dir}<span>${t('directions')}</span></a>
+        ${b.can_chat?`<button id="chatbtn" class="hot">${GI.chat}<span>Chat</span></button>`:`<button id="enqtop">${GI.megaphone}<span>${t('enquire')}</span></button>`}</div>
+    </section>
+    ${b.offers.length?`<div class="st-coupons">${b.offers.map(o=>`<div class="st-coupon"><span class="st-cpi">${GI.percent}</span><div><b>${esc(o.discount_label)}</b><small>${esc(o.title)}</small></div></div>`).join('')}</div>`:''}
+    <nav class="st-tabs" id="tabs" role="tablist">
+      ${b.products.length?`<button role="tab" data-t="products">${t('products')} <i>${b.products.length}</i></button>`:''}
+      ${b.services.length?`<button role="tab" data-t="services">${t('services')} <i>${b.services.length}</i></button>`:''}
+      ${b.offers.length?`<button role="tab" data-t="offers">${t('offers')}</button>`:''}
+      <button role="tab" data-t="about">${t('about')}</button>
+      <button role="tab" data-t="reviews">${t('reviews')} <i>${b.reviews.length}</i></button></nav>
+    <div id="tabbody" class="st-body"></div><div style="height:110px"></div>`;
   $('#bk').onclick=back; $('#shareb').onclick=(e)=>{e.preventDefault(); toast('Link copied to share');};
   const chatb=$('#chatbtn'); if(chatb) chatb.onclick=()=>gateAction('chat with this store',()=>go('chat',{id:b.id,name:b.name}));
+  const enqt=$('#enqtop'); if(enqt) enqt.onclick=()=>openEnquiry(b);
   const callb=$('#callb'); if(callb) callb.onclick=()=>gateAction('call this business',()=>{ window.location.href='tel:'+b.phone; });
   const wab=$('#wab'); if(wab) wab.onclick=()=>gateAction('message this business on WhatsApp',()=>{ window.open('https://wa.me/'+wa,'_blank','noopener'); });
+  const avg = b.reviews.length ? b.reviews.reduce((a,r)=>a+(r.rating||0),0)/b.reviews.length : (b.rating||0);
   const bodies = {
-    about: ()=>`<p style="color:var(--body);font-size:14px;line-height:1.6">${esc(b.description||'')}</p>
-      <div class="card" style="padding:14px;margin-top:14px">
-        <div class="row" style="justify-content:space-between;font-size:13px;margin-bottom:8px"><span class="muted">Category</span><b>${esc(b.category_name)}</b></div>
-        <div class="row" style="justify-content:space-between;font-size:13px;margin-bottom:8px"><span class="muted">Hours</span><b>${esc(b.hours_label)}</b></div>
-        <div class="row" style="justify-content:space-between;font-size:13px"><span class="muted">Phone</span>${token?`<b>${esc(b.phone)}</b>`:`<button id="revealph" style="color:var(--primary);font-weight:700;font-size:13px">Sign up to view</button>`}</div></div>
+    products: ()=>`<div class="st-menu">${b.products.map(p=>{ const src=p.image_url||pic((p.name||'product').toLowerCase(),500+(p.id||0)); const disc=p.mrp&&p.mrp>p.price;
+      return `<article class="st-item" data-nav="product" data-id="${p.id}" role="link" tabindex="0">
+        <div class="st-it"><span class="st-veg"></span><h4>${esc(p.name)}</h4>
+          <div class="st-price"><b>${money(p.price)}</b>${disc?`<s>${money(p.mrp)}</s><em>${Math.round((1-p.price/p.mrp)*100)}% off</em>`:''}</div>
+          ${p.unit?`<small>${esc(p.unit)}</small>`:''}${p.description?`<p>${esc(p.description)}</p>`:''}</div>
+        <div class="st-ip">${photoLayer(src)}${dIcon({name:p.name},'cart')}${p.stock_status==='out_of_stock'?'<span class="qc-oos">Out of stock</span>':addCtl({...p,business:b.name,business_id:b.id},src,b)}</div></article>`; }).join('')}</div>`,
+    services: ()=>`<div class="st-menu">${b.services.map(sv=>`<article class="st-item svc"><div class="st-it"><h4>${esc(sv.name)}</h4>
+        <div class="st-price"><b>from ${money(sv.starting_price)}</b></div>${sv.description?`<p>${esc(sv.description)}</p>`:''}</div>
+        <div class="st-ip svc">${dIcon(sv,'wrench')}<button class="qc-add" data-req="${esc(sv.name)}">REQUEST</button></div></article>`).join('')}</div>`,
+    offers: ()=>`<div class="stack" style="gap:11px">${b.offers.map(o=>`<div class="ocard" style="width:auto;background:${grad(o.color1,o.color2)}"><span class="badge tag">${esc(o.discount_label)}</span><div><h4>${esc(o.title)}</h4><div class="biz">${esc(o.description||'')}</div></div><span class="disc">%</span></div>`).join('')}</div>`,
+    about: ()=>`<p class="st-desc">${esc(b.description||'')}</p>
+      <div class="st-info"><div><span>Category</span><b>${esc(b.category_name)}</b></div><div><span>Hours</span><b>${esc(b.hours_label)}</b></div>
+        <div><span>Phone</span>${token?`<b>${esc(b.phone)}</b>`:`<button id="revealph">Sign up to view</button>`}</div></div>
       <button class="btn block" style="margin-top:14px" id="enqbtn">${t('enquire')}</button>`,
-    products: ()=>`<div class="grid2">${b.products.map(p=>productCard(p,b)).join('')}</div>`,
-    services: ()=>`<div class="stack" style="gap:11px">${b.services.map(s=>`<div class="brow"><div class="thumb" style="background:${grad('#6366F1','#4338CA')}">${dIcon(s,'wrench')}</div>
-      <div class="info"><h4 style="font-size:14.5px">${esc(s.name)}</h4><div class="muted" style="font-size:12.5px;margin-top:3px">${esc(s.description||'')}</div>
-      <span class="badge primary" style="margin-top:7px">from ${money(s.starting_price)}</span></div>
-      <button class="btn sm" style="align-self:center" data-req="${esc(s.name)}">Request</button></div>`).join('')}</div>`,
-    offers: ()=>`<div class="stack" style="gap:11px">${b.offers.map(o=>`<div class="ocard" style="width:auto;background:${grad(o.color1,o.color2)}"><span class="badge tag">${esc(o.discount_label)}</span><div><h4>${esc(o.title)}</h4><div class="biz">${esc(o.description||'')}</div></div></div>`).join('')}</div>`,
-    reviews: ()=>`<button class="btn ghost block sm" id="addrev" style="margin-bottom:12px">${I.star} Write a review</button>
-      <div class="stack" style="gap:11px">${b.reviews.length?b.reviews.map(r=>`<div class="card" style="padding:13px">
-        <div class="row" style="justify-content:space-between"><b style="font-size:13.5px">${esc(r.author_name)}</b>${stars(r.rating)}</div>
-        <p style="font-size:13px;color:var(--body);margin:7px 0 0;line-height:1.5">${esc(r.comment)}</p></div>`).join(''):emptyState('star','No reviews yet','Be the first to review.')}</div>`,
+    reviews: ()=>`<div class="st-rsum"><div><b>${Number(avg).toFixed(1)}</b>${stars(avg)}<small>${b.reviews.length} review${b.reviews.length===1?'':'s'}</small></div>
+        <div class="st-bars">${[5,4,3,2,1].map(n=>{ const c=b.reviews.filter(r=>Math.round(r.rating)===n).length; return `<p><span>${n}★</span><i style="--w:${b.reviews.length?Math.round(c/b.reviews.length*100):0}%"></i><span>${c}</span></p>`; }).join('')}</div></div>
+      <button class="btn ghost block sm" id="addrev" style="margin:12px 0">${I.star} Write a review</button>
+      <div class="stack" style="gap:10px">${b.reviews.length?b.reviews.map(r=>`<div class="st-rev"><div class="row" style="justify-content:space-between"><b>${esc(r.author_name)}</b>${stars(r.rating)}</div><p>${esc(r.comment)}</p></div>`).join(''):emptyState('star','No reviews yet','Be the first to review.')}</div>`,
   };
-  const showTab = (name)=>{ $('#tabbody').innerHTML = bodies[name](); wireTabBody(b); };
-  showTab('about');
-  $('#tabs').addEventListener('click', e=>{ const btn=e.target.closest('button'); if(!btn)return;
-    $('#tabs').querySelectorAll('button').forEach(x=>x.classList.remove('on')); btn.classList.add('on'); showTab(btn.dataset.t); });
+  const showTab = (name)=>{ $('#tabbody').innerHTML = bodies[name](); wireTabBody(b);
+    $('#tabs').querySelectorAll('button').forEach(x=>{ const on=x.dataset.t===name; x.classList.toggle('on',on); x.setAttribute('aria-selected',on); }); };
+  showTab(first);
+  $('#tabs').addEventListener('click', e=>{ const btn=e.target.closest('button'); if(btn) showTab(btn.dataset.t); });
 };
 function wireTabBody(b){
   const enq=$('#enqbtn'); if(enq) enq.onclick=()=>openEnquiry(b);
   const rev=$('#addrev'); if(rev) rev.onclick=()=>openReview(b);
   const rp=$('#revealph'); if(rp) rp.onclick=()=>gateAction('view contact details',()=>{});
   document.querySelectorAll('[data-req]').forEach(x=>x.onclick=()=>{ if(!token) return openLoginPrompt(); toast('Service request sent to '+b.name); });
-  document.querySelectorAll('[data-add]').forEach(x=>x.onclick=()=>toast('Added to cart'));
 }
 
 SCREENS.searchScreen = async (el) => {
-  el.innerHTML = `${topbarBack('')}
-    <div class="px"><div class="searchbar" style="width:100%"><span style="color:var(--muted)">${I.search}</span>
-      <input id="sq" placeholder="${t('search')}" autofocus /></div></div>
-    <div class="px" style="margin-top:12px"><div class="hscroll" style="padding:0" id="pop">
-      ${['Biriyani','Plumber','Grocery','AC repair','Auto','Salon','Pharmacy'].map(x=>`<button class="chip" data-q="${x}">${x}</button>`).join('')}</div></div>
-    <div class="px" id="sres" style="margin-top:14px"><p class="muted" style="font-size:13px">Popular searches — or ask the assistant for anything.</p>
-      <button class="btn ghost block" style="margin-top:12px" id="askfromsearch">${I.ai} ${t('askTitle')}</button></div><div style="height:90px"></div>`;
+  const recent = safeParse(localStorage.getItem('ll_recent'))||[];
+  el.innerHTML = `<div class="sr-top"><button class="st-ib flat" id="__back" aria-label="Back">${I.back}</button>
+      <div class="sr-box">${I.search}<input id="sq" placeholder="${t('search')}" autofocus aria-label="Search"/><button class="qc-smic" id="srMic" aria-label="Ask by voice">${GI.mic}</button></div></div>
+    <div class="px" id="sres">
+      ${recent.length?`<div class="sr-h"><b>Recent searches</b><button id="srClr">Clear</button></div><div class="sr-chips">${recent.map(x=>`<button class="sr-chip" data-q="${esc(x)}">${I.search}${esc(x)}</button>`).join('')}</div>`:''}
+      <div class="sr-h"><b>Trending near you</b></div>
+      <div class="sr-trend" id="pop">${[['Biriyani','fork'],['Plumber','wrench'],['Grocery','cart'],['AC repair','snow'],['Auto','car'],['Salon','scissors'],['Pharmacy','cross'],['Cake','bread']].map(([x,ic],i)=>`<button data-q="${x}" style="--n:${i}"><span>${GI[ic]||GI.store}</span>${x}</button>`).join('')}</div>
+      <button class="qc-voice sr-ask" id="askfromsearch" role="button"><span class="qc-vorb">${GI.mic}</span><span><b>${t('askTitle')}</b><small>Describe what you need — we'll find it</small></span></button>
+    </div><div style="height:90px"></div>`;
   backWire(el);
+  const clr=$('#srClr'); if(clr) clr.onclick=()=>{ localStorage.removeItem('ll_recent'); routeRender(); };
+  $('#srMic').onclick=()=>openAsk('',{voice:true});
   const input=$('#sq'); let tmr; let last=null;
   const state2={sort:'relevance', openNow:false};
   const filterBar=()=>`<div class="hscroll srchfilt" style="padding:0;margin-bottom:12px">
@@ -1237,7 +1320,8 @@ SCREENS.searchScreen = async (el) => {
   const wireFilters=()=>{ document.querySelectorAll('[data-sort]').forEach(b=>b.onclick=()=>{state2.sort=b.dataset.sort;draw();});
     const o=document.querySelector('[data-open]'); if(o) o.onclick=()=>{state2.openNow=!state2.openNow;draw();}; };
   const run=async(q)=>{ if(!q.trim()){ return; } $('#sres').innerHTML=skeletonRow(3);
-    last=await api('/search?q='+encodeURIComponent(q)); draw();
+    try{ const rc=(safeParse(localStorage.getItem('ll_recent'))||[]).filter(x=>x.toLowerCase()!==q.trim().toLowerCase()); rc.unshift(q.trim()); localStorage.setItem('ll_recent',JSON.stringify(rc.slice(0,6))); }catch(e){}
+    last=await api('/search?q='+encodeURIComponent(q)); draw(); track('search');
     // a logged-in customer's search becomes a lead for Premium businesses (server de-dupes)
     if(token && q.trim().length>=3){ api('/leads/search',{method:'POST',body:{query:q.trim(),area_id:state.areaId||null}}).catch(()=>{}); }
   };
@@ -1299,7 +1383,7 @@ SCREENS.orders = async (el) => {
   el.querySelectorAll('[data-reorder]').forEach(b=>b.onclick=()=>{
     let d={}; try{ d=JSON.parse(b.dataset.reorder); }catch(e){}
     const items = d.items ? (typeof d.items==='string'?safeParse(d.items):d.items) : null;
-    if(items && items.length){ cart=[]; items.forEach(it=>{ for(let n=0;n<(it.qty||1);n++){ const ex=cart.find(x=>x.id===it.id); if(ex)ex.qty++; else cart.push({id:it.id,name:it.name,price:it.price,image:it.image||'',biz:d.biz,bizId:Number(d.bizId),qty:1}); } }); saveCart(); updateCartBadge(); toast('Added to cart'); setTab('cart'); }
+    if(items && items.length){ cart=[]; items.forEach(it=>{ for(let n=0;n<(it.qty||1);n++){ const ex=cart.find(x=>x.id===it.id); if(ex)ex.qty++; else cart.push({id:it.id,name:it.name,price:it.price,image:it.image||'',biz:d.biz,bizId:Number(d.bizId),qty:1}); } }); saveCart(); updateCartBadge(); toast('Added to cart'); go('cart'); }
     else if(d.bizId){ go('business',{id:d.bizId}); }
     else toast('Nothing to reorder');
   });
@@ -1442,10 +1526,10 @@ function openAsk(prefill, opts={}){
   const phone = $('.phone') || document.body;
   const aiOn = state.aiStatus.openai;
   const chips = [t('chipPlumber'),t('chipBiriyani'),t('chipAuto'),t('chipGrocery'),t('chipAC')];
-  const panel = h(`<div class="sheet vvoice-wrap" id="sheet"><div class="ai-panel vvoice">
+  const panel = h(`<div class="sheet vvoice-wrap" id="sheet"><div class="ai-panel vvoice"><div class="vbg" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><span class="rip"></span><span class="rip r2"></span><span class="rip r3"></span><span class="vwave"></span></div>
     <div class="ai-head">
       <div class="row" style="gap:9px"><span class="ai-badge">${logoMark(26)}</span><b style="font-size:16px">${t('askTitle')}</b>
-        <span class="badge ${aiOn?'primary':'neutral'}" style="font-size:10px">${aiOn?'AI':'Offline'}</span></div>
+        <span class="badge ${aiOn?'primary':'warn'}" style="font-size:10px">${aiOn?'AI':'Basic search'}</span></div>
       <button class="tb-btn" id="ai-close" aria-label="Close">✕</button>
     </div>
     <div class="vorb-zone">
@@ -1454,7 +1538,7 @@ function openAsk(prefill, opts={}){
       <div class="vbars" aria-hidden="true">${Array.from({length:18},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</div>
     </div>
     <div class="ai-msgs" id="ai-msgs">
-      <div class="ai-bubble bot">${t('askHi')} ${aiOn?'':`<span class="faint">${t('askOffline')}</span>`}</div>
+      <div class="ai-bubble bot">${t('askHi')} ${aiOn?'':`<span class="ai-limit">I'm in basic mode: I match keywords like “plumber”, “biriyani” or “auto”. Short phrases work best.</span>`}</div>
       <div class="ai-chips" id="ai-chips">${chips.map(x=>`<button class="chip" data-aq="${esc(x)}">${esc(x)}</button>`).join('')}</div>
     </div>
     <div class="ai-inputbar">
@@ -1477,9 +1561,9 @@ function openAsk(prefill, opts={}){
     const loading=addBot(`<div class="ai-bubble bot"><span class="ai-typing"><i></i><i></i><i></i></span></div>`);
     panel.classList.add('thinking'); const vs0=$('#vstate'); if(vs0) vs0.textContent='Finding the best local match…';
     try{
-      const r=await api('/ask',{method:'POST',body:{query:q, lang: state.lang}});
+      const r=await api('/ask',{method:'POST',body:{query:q, lang: state.lang}}); track('ask_used');
       loading.innerHTML = `<div class="ai-bubble bot">${esc(r.answer)}</div>` + (r.results||[]).map(x=>aiResultRow(x)).join('');
-      loading.querySelectorAll('[data-go-biz]').forEach(b=>b.onclick=()=>{ closeSheet(); go('business',{id:Number(b.dataset.goBiz)}); });
+      loading.querySelectorAll('[data-go-biz]').forEach(b=>b.onclick=(e)=>{ if(e.target.closest('.ai-acts')) return; track('ask_result_tap'); closeSheet(); go('business',{id:Number(b.dataset.goBiz)}); });
       scrollDown();
     }catch(e){ loading.innerHTML=`<div class="ai-bubble bot">${esc(e.message)}</div>`; }
     panel.classList.remove('thinking'); panel.classList.add('answered'); const vs1=$('#vstate'); if(vs1) vs1.textContent='Here’s what I found';
@@ -1505,26 +1589,42 @@ function setupVoice(micBtn, input, run){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(!SR){ micBtn.classList.add('disabled'); micBtn.title='Voice not supported on this device'; micBtn.onclick=()=>toast('Voice input isn’t supported on this browser'); return; }
   let listening=false;
-  micBtn.onclick=()=>{
+  micBtn.onclick=async()=>{
     if(listening){ try{_recog.stop();}catch(e){} return; }
+    if(!localStorage.getItem('ll_micok')){
+      const ok=await confirmDialog({title:'Use your microphone?',message:'Local Link listens only while the orb is active, to turn what you say into a search. Nothing is recorded or stored. Your browser will ask for permission next.',ok:'Allow mic',cancel:'Type instead',icon:GI.mic});
+      if(!ok){ input.focus(); return; } localStorage.setItem('ll_micok','1'); }
     try{ _recog = new SR(); }catch(e){ toast('Voice unavailable'); return; }
     _recog.lang = aiVoiceLang; _recog.interimResults = true; _recog.maxAlternatives = 1; _recog.continuous=false;
     listening=true; micBtn.classList.add('listening'); input.placeholder = aiVoiceLang==='ml-IN'?'കേൾക്കുന്നു…':'Listening…';
     let finalText='';
     _recog.onresult=(ev)=>{ let interim=''; for(let i=ev.resultIndex;i<ev.results.length;i++){ const tr=ev.results[i]; if(tr.isFinal) finalText+=tr[0].transcript; else interim+=tr[0].transcript; } input.value = (finalText+interim).trim(); };
-    _recog.onerror=(ev)=>{ toast(ev.error==='not-allowed'?'Mic permission denied':'Voice error: '+ev.error); };
-    _recog.onend=()=>{ listening=false; micBtn.classList.remove('listening'); input.placeholder=t('askPh'); if(finalText.trim()) run(finalText.trim()); };
+    _recog.onerror=(ev)=>{ if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){ localStorage.removeItem('ll_micok'); toast('Mic is blocked — you can type your question instead'); input.focus(); } else if(ev.error!=='no-speech' && ev.error!=='aborted') toast('Didn\'t catch that — try again or type'); };
+    _recog.onend=()=>{ listening=false; micBtn.classList.remove('listening'); input.placeholder=t('askPh');
+      const said=finalText.trim(); if(!said) return;
+      input.value=said; const bar=input.closest('.ai-inputbar'); if(bar) bar.classList.add('heard');
+      const hint=document.createElement('div'); hint.className='ai-heard'; hint.innerHTML=`Heard: “<b>${esc(said)}</b>” — sending… <button>Edit</button>`;
+      bar && bar.parentNode.insertBefore(hint, bar);
+      let tm=setTimeout(()=>{ hint.remove(); bar&&bar.classList.remove('heard'); run(input.value.trim()); }, 1800);
+      const cancel=()=>{ clearTimeout(tm); hint.innerHTML='Fix any word, then press send'; bar&&bar.classList.remove('heard'); input.focus(); input.select(); };
+      hint.querySelector('button').onclick=cancel; input.addEventListener('focus', cancel, {once:true}); };
     try{ _recog.start(); }catch(e){ listening=false; micBtn.classList.remove('listening'); }
   };
 }
 function aiResultRow(x){
   const map={business:['store','#0EA5A4','Business',x.id],service:['wrench','#6366F1','Service',x.business_id],product:['cart','#F97362','Product',x.business_id],worker:['helmet','#F59E0B','Worker',null],driver:['car','#0EA5E9','Ride',null]};
   const [emoji,color,label,bizId]=map[x.type]||['pin','#0D9488','Result',null];
-  const sub = x.type==='business'?`${esc(x.subcategory||'')} · ★ ${x.rating||''}`: x.type==='product'?`${money(x.price)} · ${esc(x.business||'')}`: x.type==='service'?`from ${money(x.starting_price)} · ${esc(x.business||'')}`: x.type==='worker'?esc(x.skills||''):esc(x.fare_note||x.service_type||'');
-  return `<div class="airow" ${bizId?`data-go-biz="${bizId}" role="button"`:''}>
+  const sub = x.type==='business'?`${esc(x.subcategory||'')}${x.rating?` · ★ ${x.rating}`:''}`: x.type==='product'?`${money(x.price)} · ${esc(x.business||'')}`: x.type==='service'?`from ${money(x.starting_price)} · ${esc(x.business||'')}`: x.type==='worker'?esc(x.skills||''):esc(x.fare_note||x.service_type||'');
+  const dir = (x.type==='business'||x.type==='service'||x.type==='product') ? `https://maps.google.com/?q=${encodeURIComponent((x.type==='business'?x.name:(x.business||x.name))+' Kozhikode')}` : null;
+  const acts = [
+    x.phone?`<a class="ai-act" href="tel:${esc(x.phone)}" onclick="event.stopPropagation()">${I.phone}Call</a>`:'',
+    dir?`<a class="ai-act" href="${dir}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${I.dir}Directions</a>`:'',
+    x.type==='product'?`<button class="ai-act hot" data-add="1" data-pid="${x.id}" data-pname="${esc(x.name)}" data-pprice="${x.price}" data-pmrp="${x.mrp||''}" data-pimg="${esc(x.image_url||'')}" data-pbiz="${esc(x.business||'')}" data-pbizid="${x.business_id||''}">${I.plus}Add to cart</button>`:'',
+    bizId?`<span class="ai-act ghost">${I.chev}Open</span>`:''].join('');
+  return `<div class="airow" ${bizId?`data-go-biz="${bizId}" role="button" tabindex="0"`:''}>
     <div class="ai-ic" style="background:${grad(color,color)}">${gi(emoji)}</div>
-    <div style="flex:1;min-width:0"><div class="rt">${label}</div><b style="font-size:14px">${esc(x.name)}</b><div class="muted" style="font-size:12px">${sub}</div></div>
-    ${x.phone?`<a class="btn sm" href="tel:${x.phone}" onclick="event.stopPropagation()">${I.phone}</a>`:bizId?`<span class="chev" style="color:var(--faint);width:18px">${I.chev}</span>`:''}</div>`;
+    <div style="flex:1;min-width:0"><div class="rt">${label}</div><b style="font-size:14px">${esc(x.name)}</b><div class="muted" style="font-size:12px">${sub}</div>
+      ${acts?`<div class="ai-acts">${acts}</div>`:''}</div></div>`;
 }
 
 /* ---------------- bottom sheet ---------------- */
@@ -1622,12 +1722,139 @@ function barChartSVG(data){
   return `<div style="overflow-x:auto;margin-top:10px"><svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:${W}px;max-width:${Math.max(W,320)}px;display:block">
     <line x1="${pad}" y1="${base+1}" x2="${W-pad}" y2="${base+1}" stroke="var(--border-strong)" stroke-width="1"/>${bars}</svg></div>`;
 }
+
+/* ==================== AI DEMAND FORECAST (DevX Nexus logic) ==================== */
+const FC_STEPS = ['Reading 6 months of orders','Weighting recent demand & trend','Applying the Kerala festival calendar','Scoring confidence & best / worst range'];
+function fcCount(el, to, fmt){ if(!el) return; const t0=performance.now(), dur=900; const f=fmt||(v=>Math.round(v).toLocaleString('en-IN'));
+  (function tick(now){ const k=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-k,3); el.textContent=f(to*e); if(k<1) requestAnimationFrame(tick); })(t0); }
+function fcConfLabel(c){ return c>=85?'High':c>=70?'Good':'Low'; }
+function fcSpark(vals, w=84, hgt=26){ const mx=Math.max(...vals,1), mn=Math.min(...vals,0);
+  const pts=vals.map((v,i)=>[ (i/(vals.length-1||1))*w, hgt-2-((v-mn)/((mx-mn)||1))*(hgt-4) ]);
+  const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  return `<svg class="fc-spark" viewBox="0 0 ${w} ${hgt}" preserveAspectRatio="none"><path d="${d} L${w} ${hgt} L0 ${hgt}Z" class="a"/><path d="${d}" class="l"/></svg>`; }
+function fcChart(r){
+  const hist=r.history, fut=r.months, all=[...hist.map(x=>x.units),...fut.map(x=>x.units)], mx=Math.max(...all,1);
+  const W=320, H=150, n=all.length, bw=W/n;
+  const bars=hist.map((x,i)=>{ const hh=(x.units/mx)*(H-34); return `<rect class="fc-hb" x="${(i*bw+4).toFixed(1)}" y="${(H-18-hh).toFixed(1)}" width="${(bw-8).toFixed(1)}" height="${hh.toFixed(1)}" rx="5" style="--d:${i*60}ms"/>`; }).join('');
+  const pts=fut.map((x,i)=>{ const j=hist.length+i; return [j*bw+bw/2, H-18-(x.units/mx)*(H-34)]; });
+  const lastH=[(hist.length-1)*bw+bw/2, H-18-(hist[hist.length-1].units/mx)*(H-34)];
+  const line=[lastH,...pts].map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const area=line+` L${pts[pts.length-1][0].toFixed(1)} ${H-18} L${lastH[0].toFixed(1)} ${H-18}Z`;
+  const dots=pts.map((p,i)=>`<g class="fc-pt" style="--d:${700+i*90}ms"><circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${fut[i].events.length?5:3.6}" class="${fut[i].events.length?'ev':''}"/>${fut[i].events.length?`<text x="${p[0].toFixed(1)}" y="${(p[1]-10).toFixed(1)}" text-anchor="middle" class="evl">${esc(fut[i].events[0].split(' ')[0])}</text>`:''}</g>`).join('');
+  const labels=[...hist,...fut].map((x,i)=>`<text x="${(i*bw+bw/2).toFixed(1)}" y="${H-3}" text-anchor="middle" class="${i>=hist.length?'f':''}">${x.label}</text>`).join('');
+  const split=hist.length*bw;
+  return `<svg class="fc-chart" viewBox="0 0 ${W} ${H}"><rect x="${split}" y="0" width="${W-split}" height="${H-16}" rx="10" class="fc-zone"/>
+    <text x="${split+8}" y="13" class="fc-zl">FORECAST</text><text x="6" y="13" class="fc-zl h">LAST 6 MONTHS</text>
+    ${bars}<path d="${area}" class="fc-area"/><path d="${line}" class="fc-line" pathLength="1"/>${dots}${labels}</svg>`;
+}
+async function renderForecastHub(host){
+  host.innerHTML = `<section class="fc-hub">
+    <div class="fc-hero"><div class="fc-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="fc-eyebrow"><span class="fc-live"></span>AI Demand Forecast · Nexus engine</div>
+      <h2 class="fc-title">Know what sells<br>before it sells</h2>
+      <div class="fc-sum" id="fcSum"><div class="sk" style="height:66px;border-radius:18px;background:rgba(255,255,255,.12)"></div></div></div>
+    <div class="fc-pickh"><b>Select a product</b><span class="muted">Forecast generates instantly</span></div>
+    <div class="fc-picks" id="fcPicks">${skeletonCards(3)}</div>
+    <div id="fcOut"></div></section>`;
+  let data; try{ data = await api('/partner/forecast'); }catch(e){ host.innerHTML=''; return; }
+  const S=data.summary, P=data.products||[];
+  if(!P.length){ $('#fcSum').innerHTML=`<p class="fc-empty">Add your first product and its forecast appears here automatically.</p>`; $('#fcPicks').innerHTML=''; return; }
+  $('#fcSum').innerHTML = `<div class="fc-kpi"><b id="fcU">0</b><span>units · next 30 days</span></div>
+    <div class="fc-kpi"><b id="fcR">₹0</b><span>expected revenue</span></div>
+    <div class="fc-ring" style="--p:${S.confidence}"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" class="t"/><circle cx="22" cy="22" r="18" class="v" pathLength="100"/></svg><b>${S.confidence}%</b><span>confidence</span></div>
+    ${S.events.length?`<div class="fc-evs">${S.events.slice(0,3).map(e=>`<span>${GI.calendar}${esc(e)}</span>`).join('')}</div>`:''}`;
+  fcCount($('#fcU'), S.units); fcCount($('#fcR'), S.revenue, v=>money(Math.round(v)));
+  $('#fcPicks').innerHTML = P.map((p,i)=>`<button class="fc-pick" data-fp="${p.id}" style="--n:${i}">
+      <span class="fc-pimg">${photoLayer(p.image_url||pic((p.name||'product').toLowerCase(),500+p.id,160,160))}</span>
+      <span class="fc-pn">${esc(p.name)}</span>
+      <span class="fc-pq"><b>${p.qty}</b> units ${p.trendPct>=5?'<em class="up">▲</em>':p.trendPct<=-5?'<em class="dn">▼</em>':''}</span>
+      ${fcSpark(p.spark)}
+      <span class="fc-pc c-${fcConfLabel(p.confidence).toLowerCase()}">${Math.round(p.confidence)}% conf.</span></button>`).join('');
+  const pick = async (id, auto) => {
+    host.querySelectorAll('.fc-pick').forEach(b=>b.classList.toggle('on', Number(b.dataset.fp)===id));
+    const out=$('#fcOut');
+    out.innerHTML = `<div class="fc-scan"><div class="fc-radar"><i></i><i></i><span>${GI.sparkles}</span></div>
+      <ol>${FC_STEPS.map((t,i)=>`<li style="--d:${i*260}ms">${t}</li>`).join('')}</ol></div>`;
+    if(!auto) setTimeout(()=>{ const sc=$('#screen'); const top=out.offsetTop-90; if(sc) sc.scrollTo({top, behavior:'smooth'}); },60);
+    const t0=Date.now(); let r;
+    try{ r = await api('/partner/forecast/'+id); }catch(e){ out.innerHTML=errorState(e.message,()=>pick(id)); return; }
+    await new Promise(ok=>setTimeout(ok, Math.max(0, 1150-(Date.now()-t0))));
+    renderReport(out, r, id);
+  };
+  const renderReport = (out, r, id, quiet) => {
+    const f=r.forecast, cl=fcConfLabel(f.confidence), po=r.po;
+    const lo=Math.min(f.worst,f.qty), span=Math.max(1,f.best-lo);
+    out.innerHTML = `<article class="fc-rep${quiet?' quiet':''}">
+      <header class="fc-rh"><span class="fc-rimg">${photoLayer(r.product.image_url||pic((r.product.name||'p').toLowerCase(),500+r.product.id,160,160))}</span>
+        <div><small>${esc(r.product.business||'')}</small><h3>${esc(r.product.name)}</h3>
+        <span class="fc-basis ${r.basis}">${r.basis==='orders'?'Learned from your orders':'Modelled baseline'} · ${esc(f.model)}</span></div></header>
+      <div class="fc-main">
+        <div class="fc-big"><small>Forecast · next 30 days</small><b id="fcBig">0</b><span>units · ≈ ${f.perDay}/day</span>
+          <div class="fc-band"><i style="left:${((f.worst-lo)/span*100).toFixed(0)}%;width:${((f.best-f.worst)/span*100).toFixed(0)}%"></i><em style="left:${((f.qty-lo)/span*100).toFixed(0)}%"></em></div>
+          <div class="fc-bandl"><span>Worst ${f.worst}</span><span>Best ${f.best}</span></div></div>
+        <div class="fc-gauge c-${cl.toLowerCase()}" style="--p:${f.confidence}"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" class="t"/><circle cx="60" cy="60" r="50" class="v" pathLength="100"/></svg>
+          <div><b id="fcConf">0%</b><span>${cl} confidence</span></div></div></div>
+      <div class="fc-why"><span>${f.depthMonths} months of data</span><span>Volatility ${Math.round(f.cv*100)}%</span><span>${f.trendPct>=0?'+':''}${f.trendPct}% trend</span><span>Season ×${f.seasonFactor}</span></div>
+      <div class="fc-card"><div class="fc-ch"><b>6-month outlook</b><span class="muted">${r.units6} units · ${money(Math.round(r.revenue6))}</span></div>${fcChart(r)}
+        <div class="fc-mrow">${r.months.map((m,i)=>`<div style="--d:${i*70}ms"><small>${m.label}</small><b>${m.units}</b><i style="--c:${m.confidence}">${Math.round(m.confidence)}%</i></div>`).join('')}</div></div>
+      <div class="fc-card fc-stock"><div class="fc-ch"><b>Restock plan</b><span class="muted">forecast + safety − stock</span></div>
+        <div class="fc-sin"><label for="fcStock">Units in stock now</label><div class="input"><input id="fcStock" type="number" min="0" inputmode="numeric" placeholder="e.g. 20" value="${r.stock==null?'':r.stock}"/></div></div>
+        <div class="fc-po">
+          <div><small>Restock</small><b>${r.stock==null? f.qty+po.safety : po.poQty}</b><span>units</span></div>
+          <div><small>${r.stock==null?'Keep ready':'Order by'}</small><b>${r.stock==null?'30 days':(po.orderBy?new Date(po.orderBy).toLocaleDateString('en-IN',{day:'numeric',month:'short'}):'—')}</b><span>${r.stock==null?'incl. '+po.safety+' safety':(po.coverDays!=null?po.coverDays+' days cover':'')}</span></div>
+          <div><small>Revenue</small><b>${money(Math.round(po.revenue))}</b><span>${po.marginPct}% margin</span></div></div>
+        ${r.stock!=null?`<span class="fc-urg u-${po.urgency}">${{critical:'Out of stock — restock now',urgent:'Runs out before restock arrives',plan:'Plan this restock',ok:'Stock covers demand'}[po.urgency]}</span>`:''}</div>
+      <div class="fc-ins">${r.insights.map((x,i)=>`<p class="t-${x.tone}" style="--d:${i*110}ms"><i></i>${esc(x.text)}</p>`).join('')}</div>
+    </article>`;
+    if(quiet){ $('#fcBig').textContent=f.qty; $('#fcConf').textContent=Math.round(f.confidence)+'%'; } else { fcCount($('#fcBig'), f.qty); fcCount($('#fcConf'), f.confidence, v=>Math.round(v)+'%'); }
+    const si=$('#fcStock'); let tm=null;
+    si.addEventListener('input',()=>{ clearTimeout(tm); tm=setTimeout(async()=>{ try{ const v=si.value.trim(); const r2=await api('/partner/forecast/'+id+(v!==''?'?stock='+encodeURIComponent(v):'')); const pos=si.selectionStart; renderReport(out,r2,id,true); const n=$('#fcStock'); n.focus(); try{n.setSelectionRange(pos,pos);}catch(e){} }catch(e){ toast(e.message); } },450); });
+  };
+  host.querySelectorAll('[data-fp]').forEach(b=>b.onclick=()=>pick(Number(b.dataset.fp)));
+  pick(P[0].id, true);
+}
+/* ---- partner: what needs action today + new-order alerts ---- */
+async function renderPartnerToday(host){
+  if(!host) return;
+  try{
+    const [orders, prods, ov] = await Promise.all([api('/partner/orders'), api('/partner/products'), api('/partner/overview')]);
+    const pending=orders.filter(o=>o.status==='pending'), active=orders.filter(o=>['accepted','preparing','ready','out_for_delivery'].includes(o.status));
+    const oos=prods.filter(p=>p.stock_status==='out_of_stock'), unread=(ov.usage&&ov.usage.unreadChats)||0;
+    const canAlert = 'Notification' in window && Notification.permission==='default';
+    const item=(n,label,ic,tab,tone)=>`<button class="pt-do ${n?tone:'zero'}" data-tabnav="${tab}"><span>${ic}</span><b>${n}</b><small>${label}</small></button>`;
+    host.innerHTML=`<div class="pt-th"><b>${t('needsAction')}</b>${canAlert?`<button id="alertOn">${I.bell} Turn on order alerts</button>`:''}</div>
+      <div class="pt-dos">${item(pending.length,t('newOrders'),GI.package,'p_orders','hot')}${item(active.length,'in progress',GI.clock,'p_orders','sun')}${item(unread,t('unreadChats'),GI.chat,'p_chats','brand')}${item(oos.length,t('outStock'),GI.warning,'p_products','warn')}</div>
+      ${pending.length?`<div class="pt-quick">${pending.slice(0,3).map(o=>`<div class="pt-q"><div><b>#${1000+o.id}</b><small>${esc(o.item_summary)}</small></div><b>${money(o.total)}</b><button class="btn sm" data-qacc="${o.id}">Accept</button></div>`).join('')}</div>`:''}`;
+    host.querySelectorAll('[data-tabnav]').forEach(b=>b.onclick=()=>setTab(b.dataset.tabnav));
+    host.querySelectorAll('[data-qacc]').forEach(b=>b.onclick=async()=>{ try{ await api(`/partner/orders/${b.dataset.qacc}/status`,{method:'POST',body:{status:'accepted'}}); toast('Order accepted'); renderPartnerToday(host); }catch(e){ toast(e.message); } });
+    const al=$('#alertOn'); if(al) al.onclick=async()=>{ try{ const r=await Notification.requestPermission(); toast(r==='granted'?'Order alerts on':'Alerts stay off — new orders still show here'); renderPartnerToday(host); }catch(e){} };
+    pollPartnerOrders(true);
+  }catch(e){ host.innerHTML=''; }
+}
+let _pPoll=null;
+function pollPartnerOrders(start){
+  if(start && _pPoll) return;
+  const tick=async()=>{ if(state.view!=='partner'||!token||!me||me.role!=='business_partner'){ clearInterval(_pPoll); _pPoll=null; return; }
+    try{ const orders=await api('/partner/orders'); const seen=new Set(safeParse(localStorage.getItem('ll_seen_orders'))||[]); const first=!localStorage.getItem('ll_seen_orders');
+      const fresh=orders.filter(o=>o.status==='pending' && !seen.has(o.id));
+      orders.forEach(o=>seen.add(o.id)); localStorage.setItem('ll_seen_orders', JSON.stringify([...seen].slice(-300)));
+      if(first || !fresh.length) return;
+      const msg = fresh.length===1 ? `New order #${1000+fresh[0].id} · ${money(fresh[0].total)}` : `${fresh.length} new orders`;
+      toast('🛎️ '+msg);
+      if('Notification' in window && Notification.permission==='granted' && document.hidden){ try{ new Notification('Local Link Partner', { body: msg, icon:'/icon-partner-192.png' }); }catch(e){} }
+      const td=$('#todo'); if(td) renderPartnerToday(td);
+    }catch(e){} };
+  tick(); _pPoll=setInterval(tick, 30000);
+}
 SCREENS.p_dash = async (el) => {
   if(!token || (me.role!=='business_partner')) return renderLogin(el,'partner');
   el.innerHTML = `<header class="vhd"><div class="vhd-brand"><span class="cbrand-logo">${logoMark(30)}</span>${wordmark()}<span class="vhd-tag">Partner</span><div style="flex:1"></div>${miniControls()}
       <button class="avatar vav" data-tabnav="p_profile" aria-label="Profile" style="background:${grad(me.avatar_color,'#0B5A55')}">${me.name[0]}</button></div>
     <div class="vgreet" style="margin:12px 2px 0"><b>${greetWord()}, ${esc(me.name.split(' ')[0])}</b><span>Here’s how your shop is doing today</span></div></header>
+    <section class="pt-today" id="todo" aria-live="polite"></section>
+    <div id="fcHub"></div>
     <div class="px" id="body" style="margin-top:12px">${skeletonRow(2)}</div><div style="height:90px"></div>`;
+  renderForecastHub($('#fcHub')); renderPartnerToday($('#todo'));
   const [d, an] = await Promise.all([api('/partner/overview'), api('/partner/analytics').catch(()=>null)]);
   const stat=(lab,val,emoji)=>`<div class="stat vstat"><span class="ic">${gi(emoji)}</span><div class="lab">${lab}</div><div class="num">${val}</div></div>`;
   $('#body').innerHTML = `
@@ -1741,26 +1968,41 @@ function openAddProduct(biz){
 }
 SCREENS.p_products = async (el) => {
   if(!token||me.role!=='business_partner') return renderLogin(el,'partner');
-  el.innerHTML=`<div class="chead"><div class="row" style="justify-content:space-between"><h2 style="font-size:20px">Products</h2><span id="addslot"></span></div></div><div class="px stack" id="l" style="gap:10px;margin-top:12px">${skeletonRow(3)}</div><div style="height:90px"></div>`;
+  el.innerHTML=`<header class="pt-head"><div><small>Catalogue</small><h2>Products</h2></div><span id="addslot"></span></header>
+    <div class="pt-tools"><div class="sr-box sm">${I.search}<input id="pq" placeholder="Search your products" aria-label="Search products"/></div>
+      <div class="pt-filt" id="pf"><button class="on" data-f="all">All</button><button data-f="in">In stock</button><button data-f="out">Out of stock</button><button data-f="promo">On offer</button></div></div>
+    <div class="pt-grid" id="l">${skeletonCards(2)}</div><div style="height:100px"></div>`;
   const [prods, ov] = await Promise.all([api('/partner/products'), api('/partner/overview')]);
   const canProd = ov.plan && ov.plan.products;
   const addBiz = (ov.businesses||[]).find(b=>b.plan_id>=2) || ov.businesses[0];
   if(canProd){ $('#addslot').innerHTML=`<button class="btn sm" id="add">${I.plus} Add</button>`; $('#add').onclick=()=>openAddProduct(addBiz); }
   else $('#addslot').innerHTML=`<button class="btn sm ghost" data-tabnav="p_plans">Upgrade to add</button>`;
-  $('#l').innerHTML = prods.length? prods.map(p=>{ const oos=p.stock_status==='out_of_stock';
-    return `<div class="brow pmrow"><div class="thumb pthumb" style="background:${grad('#12A594','#0C7A6E')};overflow:hidden;position:relative">${photoLayer(p.image_url||pic((p.name||'product').toLowerCase(),500+(p.id||0),160,160))}<span style="position:relative;z-index:2">${dIcon({name:p.name},'cart')}</span></div>
-    <div class="info"><h4 style="font-size:14.5px">${esc(p.name)}</h4><div class="muted" style="font-size:12px;margin-top:2px">${esc(p.business)}${p.promo_label?` · <b style="color:var(--accent)">${esc(p.promo_label)}</b>`:''}</div>
-    <div class="row" style="gap:8px;margin-top:6px"><b class="price" style="font-size:14px">${money(p.price)}</b>${p.mrp&&p.mrp>p.price?`<span class="old" style="font-size:12px">${money(p.mrp)}</span>`:''}<span class="badge ${oos?'warn':'open'}">${oos?'out of stock':'in stock'}</span></div>
-    <div class="pmacts"><button class="pmbtn" data-pedit="${p.id}">${I.edit||I.cog} Edit</button><button class="pmbtn" data-poos="${p.id}" data-cur="${p.stock_status||'in_stock'}">${oos?'Mark in stock':'Mark out of stock'}</button><button class="pmbtn danger" data-pdel="${p.id}" data-pname="${esc(p.name)}">${I.trash||''} Delete</button></div>
-    </div></div>`;}).join('')
-    : emptyState('bag','No products yet','Add your first product to start selling.', `<button class="btn sm" onclick="void 0" id="e2">${I.plus} Add product</button>`);
-  const e2=$('#e2'); if(e2) e2.onclick=()=>openAddProduct(ov.businesses[0]);
+  let f='all', q='';
+  const draw=()=>{ const list=prods.filter(p=>{ const oos=p.stock_status==='out_of_stock';
+      if(f==='in'&&oos) return false; if(f==='out'&&!oos) return false; if(f==='promo'&&!(p.promo_label||(p.mrp&&p.mrp>p.price))) return false;
+      return !q || (p.name||'').toLowerCase().includes(q); });
+    $('#l').innerHTML = !prods.length ? emptyState('bag','No products yet','Add your first product to start selling.', `<button class="btn sm" id="e2">${I.plus} Add product</button>`)
+      : !list.length ? emptyState('search','Nothing matches','Try another filter.')
+      : list.map((p,i)=>{ const oos=p.stock_status==='out_of_stock'; const src=p.image_url||pic((p.name||'product').toLowerCase(),500+(p.id||0),300,300);
+      return `<article class="pt-card ${oos?'oos':''}" style="--n:${i}">
+        <div class="pt-img">${photoLayer(src)}${dIcon({name:p.name},'cart')}${p.promo_label?`<span class="qc-rib">${esc(p.promo_label)}</span>`:(p.mrp&&p.mrp>p.price?`<span class="qc-rib">${Math.round((1-p.price/p.mrp)*100)}%<br>OFF</span>`:'')}</div>
+        <h4>${esc(p.name)}</h4><small>${esc(p.business)}${p.unit?' · '+esc(p.unit):''}</small>
+        <div class="pt-price"><b>${money(p.price)}</b>${p.mrp&&p.mrp>p.price?`<s>${money(p.mrp)}</s>`:''}</div>
+        <label class="pt-sw"><input type="checkbox" data-poos="${p.id}" data-cur="${p.stock_status||'in_stock'}" ${oos?'':'checked'} aria-label="${esc(p.name)} in stock"/><i></i><span>${oos?'Out of stock':'In stock'}</span></label>
+        <div class="pt-acts"><button class="pmbtn" data-pedit="${p.id}">${I.edit||I.cog} Edit</button><button class="pmbtn danger" data-pdel="${p.id}" data-pname="${esc(p.name)}" aria-label="Delete ${esc(p.name)}">${I.trash||'✕'}</button></div></article>`; }).join('');
+    const e2=$('#e2'); if(e2) e2.onclick=()=>openAddProduct(ov.businesses[0]);
+    wire(); };
   const refresh=()=>setTab('p_products');
-  el.querySelectorAll('[data-pedit]').forEach(b=>b.onclick=()=>{ const p=prods.find(x=>String(x.id)===b.dataset.pedit); if(p) openEditProduct(p); });
-  el.querySelectorAll('[data-poos]').forEach(b=>b.onclick=async()=>{ const next=b.dataset.cur==='out_of_stock'?'in_stock':'out_of_stock';
-    try{ await api('/partner/products/'+b.dataset.poos,{method:'PATCH',body:{stock_status:next}}); toast(next==='out_of_stock'?'Marked out of stock':'Marked in stock'); refresh(); }catch(e){toast(e.message);} });
-  el.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=async()=>{ if(!confirm('Delete "'+b.dataset.pname+'"? This cannot be undone.'))return;
-    try{ await api('/partner/products/'+b.dataset.pdel,{method:'DELETE'}); toast('Product deleted'); refresh(); }catch(e){toast(e.message);} });
+  const wire=()=>{
+    el.querySelectorAll('[data-pedit]').forEach(b=>b.onclick=()=>{ const p=prods.find(x=>String(x.id)===b.dataset.pedit); if(p) openEditProduct(p); });
+    el.querySelectorAll('[data-poos]').forEach(b=>b.onchange=async()=>{ const next=b.dataset.cur==='out_of_stock'?'in_stock':'out_of_stock';
+      try{ await api('/partner/products/'+b.dataset.poos,{method:'PATCH',body:{stock_status:next}}); toast(next==='out_of_stock'?'Marked out of stock':'Marked in stock'); refresh(); }catch(e){toast(e.message); b.checked=!b.checked;} });
+    el.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=async()=>{ const ok=await confirmDialog({title:'Delete product?',message:'Delete "'+b.dataset.pname+'"? This cannot be undone.',ok:'Delete',cancel:'Keep',icon:I.trash||GI.warning,danger:true}); if(!ok)return;
+      try{ await api('/partner/products/'+b.dataset.pdel,{method:'DELETE'}); toast('Product deleted'); refresh(); }catch(e){toast(e.message);} });
+  };
+  $('#pf').onclick=e=>{ const b=e.target.closest('[data-f]'); if(!b) return; f=b.dataset.f; $('#pf').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); draw(); };
+  $('#pq').oninput=e=>{ q=e.target.value.trim().toLowerCase(); draw(); };
+  draw();
 };
 function openEditProduct(p){
   let uploaded=null; const cur=p.image_url||'';
@@ -1797,17 +2039,25 @@ function openEditProduct(p){
 }
 SCREENS.p_orders = async (el) => {
   if(!token||me.role!=='business_partner') return renderLogin(el,'partner');
-  el.innerHTML=`<div class="chead"><h2 style="font-size:20px">Orders</h2></div><div class="px stack" id="l" style="gap:10px;margin-top:12px">${skeletonRow(3)}</div><div style="height:90px"></div>`;
+  el.innerHTML=`<header class="pt-head"><div><small>Live</small><h2>Orders</h2></div><button class="pt-live" id="oref" aria-label="Refresh orders">${I.dir} Refresh</button></header>
+    <div class="pt-filt lanes" id="of"></div><div class="px stack" id="l" style="gap:12px;margin-top:6px">${skeletonRow(3)}</div><div style="height:100px"></div>`;
+  const LANES=[['new','New',['pending']],['active','In progress',['accepted','preparing','ready','out_for_delivery']],['done','Completed',['completed']],['closed','Rejected',['rejected','cancelled']]];
+  const nextActs={pending:[['accepted','Accept'],['rejected','Reject']],accepted:[['preparing','Start preparing']],preparing:[['ready','Mark ready']],ready:[['completed','Complete']],out_for_delivery:[['completed','Complete']]};
+  let lane=null;
   const draw = async()=>{ const orders=await api('/partner/orders');
-    const nextActs={pending:[['accepted','Accept'],['rejected','Reject']],accepted:[['preparing','Start preparing']],preparing:[['ready','Mark ready']],ready:[['completed','Complete']],out_for_delivery:[['completed','Complete']]};
-    $('#l').innerHTML = orders.length? orders.map(o=>`<div class="card" style="padding:13px">
-      <div class="row" style="justify-content:space-between"><b style="font-size:14px">#${1000+o.id} · ${esc(o.customer||'Customer')}</b><span class="badge ${o.status==='completed'?'open':o.status==='rejected'?'closed':'warn'}">${o.status.replace('_',' ')}</span></div>
-      <div class="muted" style="font-size:12.5px;margin-top:7px">${esc(o.item_summary)}</div>
-      <div class="row" style="justify-content:space-between;margin-top:9px"><b class="price">${money(o.total)}</b>
-        <div class="row" style="gap:7px">${(nextActs[o.status]||[]).map(([s,l])=>`<button class="btn sm ${s==='rejected'?'ghost':''}" data-oid="${o.id}" data-st="${s}">${l}</button>`).join('')}</div></div></div>`).join('')
-      : emptyState('package','No orders yet','');
+    if(lane===null) lane = orders.some(o=>o.status==='pending') ? 'new' : 'active';
+    $('#of').innerHTML = LANES.map(([k,l,st])=>{ const n=orders.filter(o=>st.includes(o.status)).length; return `<button class="${lane===k?'on':''}" data-lane="${k}">${l}<i>${n}</i></button>`; }).join('');
+    const cur=LANES.find(x=>x[0]===lane)[2]; const list=orders.filter(o=>cur.includes(o.status));
+    $('#l').innerHTML = list.length? list.map((o,i)=>`<article class="pt-ticket s-${o.status}" style="--n:${i}">
+      <header><div><b>#${1000+o.id}</b><small>${esc(o.customer||'Customer')} · ${o.created_at?new Date(String(o.created_at).replace(' ','T')+'Z').toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'}):''}</small></div><span class="badge ${o.status==='completed'?'open':o.status==='rejected'?'closed':'warn'}">${o.status.replace(/_/g,' ')}</span></header>
+      <p class="pt-items">${esc(o.item_summary)}</p>
+      ${['rejected','cancelled'].includes(o.status)?'':orderTimeline(o.status)}
+      <footer><b>${money(o.total)}</b><div class="row" style="gap:7px">${(nextActs[o.status]||[]).map(([s,l])=>`<button class="btn sm ${s==='rejected'?'ghost':''}" data-oid="${o.id}" data-st="${s}">${l}</button>`).join('')}</div></footer></article>`).join('')
+      : emptyState('package','Nothing here','Orders in this stage will show up here.');
     $('#l').querySelectorAll('[data-oid]').forEach(b=>b.onclick=async()=>{ try{ await api(`/partner/orders/${b.dataset.oid}/status`,{method:'POST',body:{status:b.dataset.st}}); toast('Order updated'); draw(); }catch(e){toast(e.message);} });
+    $('#of').querySelectorAll('[data-lane]').forEach(b=>b.onclick=()=>{ lane=b.dataset.lane; draw(); });
   };
+  $('#oref').onclick=()=>draw();
   draw();
 };
 SCREENS.p_enquiries = async (el) => {
@@ -2021,6 +2271,20 @@ function renderAdmin(body){
       <div class="avatar" style="width:36px;height:36px;font-size:14px;background:${grad(me.avatar_color,'#0B5A55')}">${me.name[0]}</div></div>
       <div class="adbody" id="adbody"></div></main></div>`;
   const am=$('#a-menu'); if(am) am.onclick=()=>body.querySelector('.side').classList.toggle('show');
+  const sbar=body.querySelector('.adtop .searchbar'); const sin=sbar&&sbar.querySelector('input');
+  if(sin){ sin.setAttribute('aria-label','Search businesses, users and orders'); sin.placeholder='Search businesses, users, orders…'; sbar.style.position='relative';
+    const dd=document.createElement('div'); dd.className='ad-sdd'; dd.hidden=true; sbar.appendChild(dd); let tm=null;
+    sin.oninput=()=>{ clearTimeout(tm); const q=sin.value.trim(); if(q.length<2){ dd.hidden=true; return; } tm=setTimeout(async()=>{ try{ const r=await api('/admin/search?q='+encodeURIComponent(q));
+      const sec=(title,items,fn)=>items.length?`<div class="ad-sh">${title}</div>`+items.map(fn).join(''):'';
+      const html=sec('Businesses',r.businesses,b=>`<button data-go="biz" data-id="${b.id}"><b>${esc(b.name)}</b><small>${esc(b.subcategory||'')} · ${esc(b.status)}</small></button>`)
+        + sec('Users',r.users,u=>`<button data-go="users"><b>${esc(u.name)}</b><small>${esc(u.email||u.phone||'')} · ${esc(u.role)}</small></button>`)
+        + sec('Orders',r.orders,o=>`<button data-go="orders"><b>#${1000+o.id} · ${esc(o.business)}</b><small>${money(o.total)} · ${esc(o.status)}</small></button>`);
+      dd.innerHTML = html || '<p class="ad-sh">No matches</p>'; dd.hidden=false;
+      dd.querySelectorAll('[data-go]').forEach(x=>x.onclick=()=>{ dd.hidden=true; sin.value=''; if(x.dataset.go==='biz'){ adminRoute='businesses'; adminBiz=Number(x.dataset.id); } else { adminRoute=x.dataset.go; adminBiz=null; } renderAdmin(body); });
+    }catch(e){} },220); };
+    sin.onkeydown=e=>{ if(e.key==='Escape'){ dd.hidden=true; sin.blur(); } };
+    document.addEventListener('click',e=>{ if(!sbar.contains(e.target)) dd.hidden=true; });
+  }
   body.querySelectorAll('.side a[data-r]').forEach(a=>a.onclick=()=>{ adminRoute=a.dataset.r; adminBiz=null; renderAdmin(body); });
   $('#a-out').onclick=()=>{ token=null;me=null;localStorage.removeItem('ll_token');localStorage.removeItem('ll_user'); openView('customer'); };
   renderAdminRoute();
@@ -2190,10 +2454,27 @@ async function renderAdminDashboard(el){
       <div class="panel"><div class="ph"><h3>Businesses by category</h3></div><div style="padding:18px;display:flex;gap:20px;align-items:center" id="donut"></div></div>
       <div class="panel"><div class="ph"><h3>Orders by status</h3></div><div style="padding:18px" id="bars"></div></div>
     </div>
-    <div class="panel" style="margin-top:16px"><div class="ph"><h3>Top rated businesses</h3></div>
+    <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:14px;margin-top:14px" class="ad-row2">
+      <div class="panel"><div class="ph"><h3>Approvals queue</h3><span class="badge ${d.pendingList&&d.pendingList.length?'warn':'open'}">${(d.pendingList||[]).length} waiting</span></div>
+        <div id="apq" class="ad-apq">${(d.pendingList||[]).length? d.pendingList.map(b=>`<div class="ad-ap" data-apid="${b.id}"><label><input type="checkbox" value="${b.id}" aria-label="Select ${esc(b.name)}"/></label><div><b>${esc(b.name)}</b><small>${esc(b.subcategory||'')}${b.area?' · '+esc(b.area):''}</small></div>
+          <button class="btn sm" data-apst="approved">Approve</button><button class="btn sm ghost" data-apst="rejected">Reject</button></div>`).join('')
+          + `<div class="ad-bulk"><label><input type="checkbox" id="apAll"/> Select all</label><button class="btn sm" data-bulk="approved">Approve selected</button><button class="btn sm ghost" data-bulk="rejected">Reject selected</button></div>`
+          : `<div class="empty" style="padding:26px"><div class="eic">${gi('shield')}</div><p>Nothing waiting — all businesses reviewed.</p></div>`}</div></div>
+      <div class="panel"><div class="ph"><h3>Customer funnel</h3><span class="muted" style="font-size:12px">last 30 days · sessions</span></div><div id="funnel" class="ad-fun">${skeletonRow(2)}</div></div>
+    </div>
+    <div class="panel" style="margin-top:14px"><div class="ph"><h3>Top rated businesses</h3></div>
       <table><thead><tr><th>Business</th><th>Rating</th><th>Reviews</th></tr></thead><tbody>
       ${d.topRated.map(b=>`<tr><td><b>${esc(b.name)}</b></td><td>${stars(b.rating)}</td><td class="tabnums">${b.review_count}</td></tr>`).join('')}
       </tbody></table></div>`;
+  // approvals queue
+  const setSt=async(ids,st)=>{ try{ for(const id of ids) await api(`/admin/businesses/${id}/status`,{method:'POST',body:{status:st}}); toast(`${ids.length} business${ids.length>1?'es':''} ${st}`); renderAdminRoute(); }catch(e){ toast(e.message); } };
+  el.querySelectorAll('[data-apst]').forEach(b=>b.onclick=()=>setSt([b.closest('[data-apid]').dataset.apid], b.dataset.apst));
+  const apAll=$('#apAll'); if(apAll) apAll.onchange=()=>el.querySelectorAll('#apq .ad-ap input').forEach(c=>c.checked=apAll.checked);
+  el.querySelectorAll('[data-bulk]').forEach(b=>b.onclick=()=>{ const ids=[...el.querySelectorAll('#apq .ad-ap input:checked')].map(c=>c.value); if(!ids.length) return toast('Select at least one'); setSt(ids,b.dataset.bulk); });
+  // funnel
+  api('/admin/funnel').then(f=>{ const draw=(steps)=>{ const top=Math.max(1,steps[0].sessions); return steps.map((x,i)=>{ const pct=Math.round(x.sessions/top*100); const drop=i?Math.round(100-(x.sessions/Math.max(1,steps[i-1].sessions))*100):0;
+      return `<div class="ad-fs"><span>${esc(x.label)}</span><div class="ad-fb"><i style="width:${Math.max(2,pct)}%"></i></div><b>${x.sessions}</b>${i&&steps[i-1].sessions?`<em>${drop>0?'−'+drop+'%':'—'}</em>`:'<em></em>'}</div>`; }).join(''); };
+    const fn=$('#funnel'); if(fn) fn.innerHTML = draw(f.shopping) + `<div class="ad-fsep">Ask Local Link</div>` + draw(f.ask) + `<p class="muted" style="font-size:11.5px;margin-top:8px">Counts unique app sessions. Fills in as people use the customer app.</p>`; }).catch(()=>{ const fn=$('#funnel'); if(fn) fn.innerHTML='<p class="muted">Funnel unavailable.</p>'; });
   // donut
   const total=d.byCategory.reduce((s,x)=>s+x.value,0)||1; let acc=0; const R=54,C=2*Math.PI*R;
   const segs=d.byCategory.map((x,i)=>{ const frac=x.value/total; const dash=frac*C; const seg=`<circle cx="70" cy="70" r="${R}" fill="none" stroke="${donutColors[i%donutColors.length]}" stroke-width="20" stroke-dasharray="${dash} ${C-dash}" stroke-dashoffset="${-acc*C}" transform="rotate(-90 70 70)"/>`; acc+=frac; return seg; }).join('');
