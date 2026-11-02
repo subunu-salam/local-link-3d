@@ -19,11 +19,11 @@ In **Admin → Locations**, every area (Kunnamangalam, Inapura, Chelavur, Nadakk
 
 ---
 
-## 🎨 v22 — VoiceBite UI/UX (in Local Link colours)
-All three apps now follow the VoiceBite design language, kept in Local Link's teal + coral palette (`public/vb.css`, loaded last):
-- **Customer** — aurora stage + device frame, frosted rounded header with location pill and pill search + mic, swipeable promo cards (Ask by voice / Deals / Near you), greeting, mood chips, rounded category tiles, floating pill dock with a raised centre **Ask** button, and a full-screen **voice screen** (orb, live listening state, captions, EN/മ toggle).
-- **Partner** — same frame and dock; the raised centre button is **Add product**; greeting header, brand-coloured stat tiles, rounded quick actions.
-- **Admin** — bento console: one canvas with even gaps, rounded dark-teal sidebar with a coral sliding highlight, KPI tiles with sparklines, side-sheet forms and a two-panel bento sign-in.
+## 🎨 v25 — Premium UI (all 3 apps)
+Every feature, screen, tab and flow is unchanged; only the look and motion are new, taking cues from Instamart, Zepto and VoiceBite in Local Link's teal + coral.
+- `public/premium.css` replaces `styles.css` + `fx.css`: Zepto-style colour band on the customer home, Instamart product cards with an ADD pill, glass floating dock with a sliding pill, bento admin console, light + dark themes.
+- `public/motion.js` adds VoiceBite's background motion (aurora, bokeh lights, silk ribbon waves, voice-screen ripples). `fx.js` is kept for its behaviours (password eye, unread-chat alerts, count-ups, ripples, "/" search shortcut).
+- Partner dashboard opens with the AI demand forecast (DevX Nexus logic, `src/forecast.js`).
 
 ## ✨ What's inside
 
