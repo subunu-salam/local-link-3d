@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { db, seed } from './src/db.js';
 import { login, signToken, publicUser, attachUser, requireAuth, requireRole } from './src/auth.js';
 import { ask } from './src/assistant.js';
+import { demandBoard, productReport } from './src/forecast.js';
 import bcrypt from 'bcryptjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -327,6 +328,33 @@ app.get('/api/partner/analytics', partnerOnly, (req, res) => {
   const topProducts = prods.map(p=>({ name: p.name, count: all.filter(o=>(o.item_summary||'').toLowerCase().includes(p.name.toLowerCase())).length }))
     .filter(p=>p.count>0).sort((a,b)=>b.count-a.count).slice(0,5);
   res.json({ revenue7: days, byStatus, totalRevenue, orderCount: all.length, avgOrder: all.length?Math.round(totalRevenue/all.length):0, topProducts });
+});
+/* ── AI demand forecasting (DevX Nexus logic, src/forecast.js) ── */
+function partnerForecastData(userId) {
+  const ids = ownerBusinessIds(userId); if (!ids.length) return { products: [], orders: [] };
+  const ph = ids.map(()=>'?').join(',');
+  const products = db.prepare(`SELECT p.id, p.name, p.price, p.unit, p.image_url, p.business_id, b.name business, b.subcategory, c.name category_name
+    FROM products p JOIN businesses b ON b.id=p.business_id JOIN categories c ON c.id=b.category_id WHERE p.business_id IN (${ph}) ORDER BY p.sort`).all(...ids);
+  const orders = db.prepare(`SELECT * FROM orders WHERE business_id IN (${ph}) AND created_at >= datetime('now','-7 months')`).all(...ids);
+  return { products, orders };
+}
+app.get('/api/partner/forecast', partnerOnly, (req, res) => {
+  try {
+    const { products, orders } = partnerForecastData(req.user.id);
+    const board = demandBoard(products, orders);
+    res.json({ products: board,
+      summary: { units: board.reduce((s,p)=>s+p.qty,0), revenue: Math.round(board.reduce((s,p)=>s+p.revenue,0)),
+        confidence: board.length ? Math.round(board.reduce((s,p)=>s+p.confidence,0)/board.length) : 0,
+        rising: board.filter(p=>p.trendPct>=5).length, events: [...new Set(board.flatMap(p=>p.events))] } });
+  } catch (e) { console.error('[forecast]', e.message); res.status(500).json({ error: 'Forecast failed' }); }
+});
+app.get('/api/partner/forecast/:productId', partnerOnly, (req, res) => {
+  try {
+    const { products, orders } = partnerForecastData(req.user.id);
+    const p = products.find(x => x.id === Number(req.params.productId));
+    if (!p) return res.status(404).json({ error: 'Product not found' });
+    res.json(productReport(p, orders, { stock: req.query.stock }));
+  } catch (e) { console.error('[forecast]', e.message); res.status(500).json({ error: 'Forecast failed' }); }
 });
 app.get('/api/partner/products', partnerOnly, (req, res) => {
   const ids = ownerBusinessIds(req.user.id); if (!ids.length) return res.json([]);
