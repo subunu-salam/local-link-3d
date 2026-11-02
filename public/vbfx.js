@@ -3,7 +3,11 @@
    gentle scroll parallax, and the home header that tightens on scroll.
    Transforms and opacity only, so it stays smooth on cheap phones. */
 (() => {
-  const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* Lite mode for cheap phones / data saver: no bokeh, ribbons, blur or grain. */
+  const nav = navigator, conn = nav.connection || {};
+  const LITE = !!(conn.saveData || /2g/.test(conn.effectiveType || '') || (nav.deviceMemory && nav.deviceMemory <= 3) || (nav.hardwareConcurrency && nav.hardwareConcurrency <= 4));
+  if (LITE) document.documentElement.classList.add('lite');
+  const RM = LITE || matchMedia('(prefers-reduced-motion: reduce)').matches;
   const rnd = (a, b) => a + Math.random() * (b - a);
   const HUES = ['95,211,196', '255,190,90', '255,150,120', '255,255,255'];
   const RIB = `<svg class="silk" viewBox="0 0 1200 400" preserveAspectRatio="none"><defs>

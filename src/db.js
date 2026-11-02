@@ -109,6 +109,9 @@ function schema() {
   CREATE TABLE IF NOT EXISTS subscription_plans(
     id INTEGER PRIMARY KEY, name TEXT, price REAL, period TEXT, tagline TEXT, features TEXT, sort INTEGER, popular INTEGER DEFAULT 0 );
 
+  CREATE TABLE IF NOT EXISTS ux_events(
+    id INTEGER PRIMARY KEY, name TEXT, session TEXT, user_id INTEGER, meta TEXT, created_at TEXT DEFAULT (datetime('now')) );
+
   CREATE TABLE IF NOT EXISTS notifications(
     id INTEGER PRIMARY KEY, user_id INTEGER, type TEXT, title TEXT, body TEXT, read INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')) );

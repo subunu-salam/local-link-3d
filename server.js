@@ -557,7 +557,35 @@ app.get('/api/admin/overview', adminOnly, (_req, res) => {
   const byCategory = db.prepare(`SELECT c.name label, COUNT(b.id) value FROM categories c LEFT JOIN businesses b ON b.category_id=c.id WHERE c.kind='business' GROUP BY c.id HAVING value>0 ORDER BY value DESC`).all();
   const ordersByStatus = db.prepare('SELECT status label, COUNT(*) value FROM orders GROUP BY status').all();
   const topRated = db.prepare("SELECT name, rating, review_count FROM businesses WHERE status='approved' ORDER BY rating DESC LIMIT 5").all();
-  res.json({ stats, byCategory, ordersByStatus, topRated });
+  const pendingList = db.prepare(`SELECT b.id, b.name, b.subcategory, a.name area, b.created_at FROM businesses b LEFT JOIN areas a ON a.id=b.area_id WHERE b.status='pending' ORDER BY b.created_at DESC LIMIT 20`).all();
+  res.json({ stats, byCategory, ordersByStatus, topRated, pendingList });
+});
+/* ── UX funnel tracking (anonymous, a handful of event names) ── */
+const UX_EVENTS = new Set(['app_open','search','shop_view','add_to_cart','view_cart','checkout_start','order_placed','ask_used','ask_result_tap']);
+app.post('/api/track', (req, res) => {
+  const { name, session, meta } = req.body || {};
+  if (!UX_EVENTS.has(name)) return res.status(400).json({ error: 'Unknown event' });
+  try { db.prepare('INSERT INTO ux_events(name,session,user_id,meta) VALUES (?,?,?,?)').run(name, String(session||'').slice(0,40), req.user ? req.user.id : null, meta ? JSON.stringify(meta).slice(0,300) : null); } catch (e) {}
+  res.json({ ok: true });
+});
+app.get('/api/admin/funnel', adminOnly, (req, res) => {
+  const days = Math.min(90, Number(req.query.days) || 30);
+  const rows = db.prepare(`SELECT name, COUNT(DISTINCT session) sessions, COUNT(*) events FROM ux_events WHERE created_at >= datetime('now', ?) GROUP BY name`).all(`-${days} days`);
+  const by = Object.fromEntries(rows.map(r => [r.name, r]));
+  const step = (k, label) => ({ key: k, label, sessions: by[k] ? by[k].sessions : 0 });
+  res.json({ days,
+    shopping: [step('app_open','Opened app'), step('search','Searched'), step('shop_view','Viewed a shop'), step('add_to_cart','Added to cart'), step('checkout_start','Started checkout'), step('order_placed','Placed order')],
+    ask: [step('ask_used','Used Ask'), step('ask_result_tap','Tapped a result')] });
+});
+/* ── Admin global search ── */
+app.get('/api/admin/search', adminOnly, (req, res) => {
+  const q = String(req.query.q || '').trim(); if (q.length < 2) return res.json({ businesses: [], users: [], orders: [] });
+  const like = '%' + q + '%';
+  res.json({
+    businesses: db.prepare(`SELECT id, name, subcategory, status FROM businesses WHERE name LIKE ? OR subcategory LIKE ? LIMIT 6`).all(like, like),
+    users: db.prepare(`SELECT id, name, email, phone, role FROM users WHERE name LIKE ? OR email LIKE ? OR phone LIKE ? LIMIT 6`).all(like, like, like),
+    orders: db.prepare(`SELECT o.id, b.name business, o.total, o.status FROM orders o JOIN businesses b ON b.id=o.business_id WHERE CAST(o.id+1000 AS TEXT) LIKE ? OR o.item_summary LIKE ? OR b.name LIKE ? ORDER BY o.id DESC LIMIT 6`).all(like, like, like),
+  });
 });
 const ADMIN_TABLES = {
   businesses: `SELECT b.id, b.name, c.name category, a.name area, b.rating, b.verification_status, b.status FROM businesses b JOIN categories c ON c.id=b.category_id LEFT JOIN areas a ON a.id=b.area_id`,

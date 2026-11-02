@@ -106,15 +106,19 @@ function toast(msg){ const t = h(`<div class="toast">${esc(msg)}</div>`); $('#to
 async function api(pathname, opts={}) {
   const headers = { 'Content-Type':'application/json', ...(opts.headers||{}) };
   if (token) headers.Authorization = 'Bearer ' + token;
-  const res = await fetch('/api' + pathname, { ...opts, headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const isGet = !opts.method || opts.method==='GET'; const ck='llc:'+pathname;
+  let res;
+  try{ res = await fetch('/api' + pathname, { ...opts, headers, body: opts.body ? JSON.stringify(opts.body) : undefined }); }
+  catch(netErr){ const c = isGet && safeParse(localStorage.getItem(ck)); if(c){ if(!api._offlineToast){ api._offlineToast=1; toast('You\'re offline — showing saved results'); setTimeout(()=>api._offlineToast=0,8000); } return c; } throw new Error('You\'re offline. Check your connection and try again.'); }
   const data = await res.json().catch(()=>({}));
+  if(res.ok && isGet && /^\/(bootstrap|offers|businesses|products|services|news|events|places|categories)/.test(pathname)){ try{ localStorage.setItem(ck, JSON.stringify(data)); }catch(e){} }
   if (!res.ok) throw Object.assign(new Error(data.error || 'Request failed'), { status: res.status, data });
   return data;
 }
 
 /* ---------------- i18n ---------------- */
 const DICT = {
-  en: { greetM:'Good morning', greetA:'Good afternoon', greetE:'Good evening', search:'Search businesses, products, services…',
+  en: { shopByCat:'Shop by category', openNear:'Open near you', topOffers:'Top offers', voiceT:'Just say what you need', voiceS:'English or Malayalam — I\'ll find it', yourCart:'Your cart', needsAction:'Needs action today', newOrders:'new orders', unreadChats:'unread chats', outStock:'out of stock', recent:'Recent searches', trending:'Trending near you', introT:'New to Local Link?', introS:'Shops, food, services and rides near you — order, chat or call in a tap.', gotIt:'Got it', viewAll:'View all', greetM:'Good morning', greetA:'Good afternoon', greetE:'Good evening', search:'Search businesses, products, services…',
     nearYou:'Near You', offersNear:'Offers Near You', popularServices:'Popular Services', localUpdates:"What's Happening Locally",
     seeAll:'See all', explore:'Explore Local', categories:'Categories', home:'Home', orders:'Orders', notifications:'Alerts', profile:'Profile',
     call:'Call', whatsapp:'WhatsApp', directions:'Directions', share:'Share', about:'About', products:'Products', services:'Services',
@@ -124,7 +128,7 @@ const DICT = {
     askHi:'Hi! Ask me to find local businesses, services, workers or rides — type or tap the mic to speak in English or Malayalam.',
     askOffline:'(Offline smart-search — add an OpenAI key on the server for full AI.)',
     chipPlumber:'Find a plumber', chipBiriyani:'Biriyani under ₹250', chipAuto:'Auto to the station', chipGrocery:'Grocery near me', chipAC:'AC repair today' },
-  ml: { greetM:'സുപ്രഭാതം', greetA:'ഉച്ചവന്ദനം', greetE:'ശുഭ സന്ധ്യ', search:'സ്ഥാപനങ്ങൾ, ഉൽപ്പന്നങ്ങൾ, സേവനങ്ങൾ തിരയുക…',
+  ml: { shopByCat:'വിഭാഗങ്ങൾ', openNear:'സമീപത്ത് തുറന്നവ', topOffers:'മികച്ച ഓഫറുകൾ', voiceT:'വേണ്ടത് പറഞ്ഞാൽ മതി', voiceS:'ഇംഗ്ലീഷിലോ മലയാളത്തിലോ — ഞാൻ കണ്ടെത്താം', yourCart:'നിങ്ങളുടെ കാർട്ട്', needsAction:'ഇന്ന് ശ്രദ്ധിക്കേണ്ടത്', newOrders:'പുതിയ ഓർഡറുകൾ', unreadChats:'വായിക്കാത്ത ചാറ്റുകൾ', outStock:'സ്റ്റോക്കില്ല', recent:'സമീപകാല തിരയലുകൾ', trending:'സമീപത്ത് ട്രെൻഡിംഗ്', introT:'ലോക്കൽ ലിങ്കിൽ പുതിയതാണോ?', introS:'സമീപത്തെ കടകൾ, ഭക്ഷണം, സേവനങ്ങൾ — ഒറ്റ ടാപ്പിൽ ഓർഡർ ചെയ്യൂ, ചാറ്റ് ചെയ്യൂ.', gotIt:'ശരി', viewAll:'എല്ലാം', greetM:'സുപ്രഭാതം', greetA:'ഉച്ചവന്ദനം', greetE:'ശുഭ സന്ധ്യ', search:'സ്ഥാപനങ്ങൾ, ഉൽപ്പന്നങ്ങൾ, സേവനങ്ങൾ തിരയുക…',
     nearYou:'അടുത്തുള്ളവ', offersNear:'അടുത്തുള്ള ഓഫറുകൾ', popularServices:'ജനപ്രിയ സേവനങ്ങൾ', localUpdates:'പ്രാദേശിക വാർത്തകൾ',
     seeAll:'എല്ലാം', explore:'പ്രാദേശികം കണ്ടെത്തുക', categories:'വിഭാഗങ്ങൾ', home:'ഹോം', orders:'ഓർഡറുകൾ', notifications:'അറിയിപ്പുകൾ', profile:'പ്രൊഫൈൽ',
     call:'വിളിക്കുക', whatsapp:'വാട്ട്‌സ്ആപ്പ്', directions:'വഴി', share:'പങ്കിടുക', about:'വിവരം', products:'ഉൽപ്പന്നങ്ങൾ', services:'സേവനങ്ങൾ',
@@ -317,7 +321,7 @@ function renderCartBar(){
     <span class="qc-cgo">View cart ${I.chev}</span><span class="qc-prog" style="--p:${pct}%"></span></button>`;
   $('#qcGoCart').onclick=()=>{ track('view_cart'); go('cart'); };
 }
-function track(evt, data){ try{ const k='ll_events'; const a=safeParse(localStorage.getItem(k))||[]; a.push({e:evt,d:data||null,t:Date.now(),v:state.view}); localStorage.setItem(k,JSON.stringify(a.slice(-200))); }catch(e){} }
+function track(evt, data){ try{ let sid=sessionStorage.getItem('ll_sid'); if(!sid){ sid=Math.random().toString(36).slice(2,12); sessionStorage.setItem('ll_sid',sid); } fetch('/api/track',{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({name:evt,session:sid,meta:data||null})}).catch(()=>{}); }catch(e){} try{ const k='ll_events'; const a=safeParse(localStorage.getItem(k))||[]; a.push({e:evt,d:data||null,t:Date.now(),v:state.view}); localStorage.setItem(k,JSON.stringify(a.slice(-200))); }catch(e){} }
 function updateCartBadge(){ const b=document.querySelector('.bnav .cartbadge:not(.pchatbadge)'); const n=cartCount(); if(b){ b.textContent=n; b.hidden=!n; } syncCartUI(); }
 function setPartnerChatBadge(n){ const b=document.querySelector('.pchatbadge'); if(b){ b.textContent=n||0; b.hidden=!n; } }
 
@@ -364,7 +368,7 @@ function renderShell(){
   // customer / partner render as a standalone full-screen mobile app
   stage.innerHTML = `<div class="appwrap vb-stage"><div class="atmo" aria-hidden="true"><i></i><i></i><i></i></div><div class="phone vb-app"><div class="atmo" aria-hidden="true"><i></i><i></i><i></i></div><div class="screen" id="screen"></div><div id="navholder"></div></div></div>`;
   if (!nav[state.view].length) nav[state.view].push(state.view==='customer'
-    ? {name:'splash'}   // always show the branded opening animation on launch
+    ? {name: localStorage.getItem('ll_seen') ? 'home' : 'splash'}   // branded opening only on the very first visit
     : {name: token && me && me.role==='business_partner' ? 'p_dash' : 'p_login'});
   routeRender();
 }
@@ -392,7 +396,7 @@ function renderLauncher(stage){
 }
 
 function wordmark(){ return `<span class="vb-word"><span class="w1">Local</span><span class="w2">Link</span></span>`; }
-function greetWord(){ const h=new Date().getHours(); return h<12?'Good morning':h<17?'Good afternoon':'Good evening'; }
+function greetWord(){ const h=new Date().getHours(); return h<12?t('greetM'):h<17?t('greetA'):t('greetE'); }
 function logoMark(size=26){
   return `<svg width="${size}" height="${size}" viewBox="0 0 40 44" fill="none" aria-hidden="true">
     <path d="M20 2c8 0 14 6.5 14 14.5C34 27 24 37 20 42 16 37 6 27 6 16.5 6 8.5 12 2 20 2Z" fill="url(#lg${size})"/>
@@ -442,7 +446,8 @@ function businessCard(b){
       <span class="fav ${isSaved('business',b.id)?'on':''}" data-fav data-ftype="business" data-fid="${b.id}" data-fname="${esc(b.name)}" data-fsub="${esc(b.subcategory||b.category_name||'')}" data-fimg="${esc(cover)}">${I.heart}</span></div>
     <div class="body"><h4>${esc(b.name)}</h4>
       <div class="meta">${stars(b.rating)}<span class="dot"></span><span>${esc(b.subcategory||b.category_name||'')}</span></div>
-      <div class="meta"><span class="badge ${b.is_open?'open':'closed'}">${b.is_open?'Open':'Closed'}</span><span class="dot"></span><span>${esc(b.area_name||'')}</span></div>
+      <div class="meta"><span class="badge ${b.is_open?'open':'closed'}">${b.is_open?'Open now':'Closed'}</span>${b.hours_label?`<span class="bc-hrs">${esc(b.hours_label)}</span>`:''}</div>
+      <div class="meta bc-foot"><span>${I.pin}${esc(b.area_name||'')}</span>${b.phone?`<span class="bc-call" role="button" tabindex="0" data-callbiz="${esc(b.phone)}" aria-label="Call ${esc(b.name)}">${I.phone}</span>`:''}</div>
     </div></button>`;
 }
 function catCard(c){ return `<button class="cat" data-nav="category" data-slug="${c.slug}">
@@ -460,14 +465,14 @@ function productCard(p, biz, opts={}){ const disc = p.mrp && p.mrp>p.price;
   const src = p.image_url || pic((p.name||'product').toLowerCase(), 500+(p.id||0));
   const pct = disc ? Math.round((1-p.price/p.mrp)*100) : 0;
   const oos = p.stock_status==='out_of_stock';
-  const rating = (p.rating || (4 + ((p.id||1)%10)/10)).toFixed(1);
+  const rating = p.rating ? Number(p.rating).toFixed(1) : null;
   const rib = p.promo_label ? `<span class="qc-rib">${esc(p.promo_label)}</span>` : disc ? `<span class="qc-rib">${pct}%<br>OFF</span>` : (opts.best ? `<span class="qc-rib best">BEST<br>SELLER</span>` : '');
   const fav = `<button class="fav2 ${isSaved('product',p.id)?'on':''}" data-fav data-ftype="product" data-fid="${p.id}" data-fname="${esc(p.name)}" data-fprice="${p.price}" data-fimg="${esc(src)}" aria-label="Save ${esc(p.name)}">${I.heart}</button>`;
   return `<div class="pcard qc-card${oos?' oos-card':''}" data-nav="product" data-id="${p.id}" role="link" tabindex="0" aria-label="${esc(p.name)}, ${money(p.price)}">
     <div class="pimg">${photoLayer(src)}${dIcon({name:p.name, category_slug: biz&&biz.category_slug},'cart')}${rib}${fav}${oos?'<span class="qc-oos">Out of stock</span>':addCtl(p,src,biz)}</div>
     <div class="pb"><span class="qc-time">${gi('clock')} 15 MINS</span>
       <h4>${esc(p.name)}</h4>
-      <div class="punit">${esc(p.unit||'1 unit')} · <span class="prate">${I.star}${rating}</span></div>
+      <div class="punit">${esc(p.unit||'1 unit')} · ${rating?`<span class="prate">${I.star}${rating}</span>`:'<span class="qc-new">New</span>'}</div>
       <div class="price">${money(p.price)}${disc?`<span class="old">${money(p.mrp)}</span>`:''}</div></div></div>`; }
 function serviceCard(s){ return `<button class="brow" data-nav="business" data-id="${s.business_id||s.id}" style="text-align:left">
   <div class="thumb" style="background:${grad('#6366F1','#4338CA')}">${dIcon(s,'wrench')}</div>
@@ -635,6 +640,9 @@ document.addEventListener('click', (e) => {
 });
 /* keyboard: Enter/Space opens role=link cards */
 document.addEventListener('keydown', (e) => { if((e.key==='Enter'||e.key===' ') && e.target.matches && e.target.matches('[role="link"][data-nav]')){ e.preventDefault(); e.target.click(); } });
+/* call button on business cards (login-gated like the store page) */
+document.addEventListener('click', (e) => { const c=e.target.closest('[data-callbiz]'); if(!c) return; e.stopPropagation(); e.preventDefault(); e.stopImmediatePropagation();
+  gateAction('call this business',()=>{ window.location.href='tel:'+c.dataset.callbiz; }); }, true);
 /* delegate wishlist (heart) clicks */
 document.addEventListener('click', (e) => {
   const fb = e.target.closest('[data-fav]'); if(!fb) return;
@@ -693,8 +701,14 @@ SCREENS.splash = (el) => {
     <div class="splash-logo">${logoMark(104)}</div>
     <h1 class="splash-title"><span class="w1">Local</span> <span class="w2">Link</span></h1><p class="splash-tag">Everything Local. One Place.</p>
     <div class="splash-load"><span></span></div></div>`;
-  const next = state.onboarded && state.introSeen ? 'home' : (!state.onboarded ? 'location' : 'intro');
-  setTimeout(()=>{ if(stack()[stack().length-1].name==='splash'){ nav.customer=[{name: next}]; routeRender(); } }, 2000);
+  localStorage.setItem('ll_seen','1');
+  if(!state.onboarded){ // default the area instead of asking; refine silently from GPS (demo maps to Kunnamangalam)
+    state.areaId=state.areaId||1; state.areaName=state.areaName||'Kunnamangalam'; state.onboarded=true;
+    localStorage.setItem('ll_area',state.areaId); localStorage.setItem('ll_area_name',state.areaName); localStorage.setItem('ll_onboarded','1');
+    try{ navigator.geolocation && navigator.geolocation.getCurrentPosition(()=>{}, ()=>{}, {timeout:4000, maximumAge:600000}); }catch(e){}
+  }
+  const next = 'home';
+  setTimeout(()=>{ if(stack()[stack().length-1].name==='splash'){ nav.customer=[{name: next}]; routeRender(); } }, 1200);
 };
 
 /* ---- onboarding flashcards (auto-advancing, skippable) ---- */
@@ -799,17 +813,20 @@ function qcHeader(active){
 SCREENS.home = async (el) => {
   el.innerHTML = `
     ${qcHeader('all')}
+    <div id="orderPill"></div>
+    ${state.introSeen?'':`<div class="qc-intro" id="introCard"><span class="qc-ii">${logoMark(34)}</span><div><b>${t('introT')}</b><small>${t('introS')}</small></div><button id="introOk" class="btn sm">${t('gotIt')}</button></div>`}
+    <div id="near"></div>
     <div class="qc-greet"><b>${greetWord()}${token&&me?', '+esc(me.name.split(' ')[0]):''} 👋</b><span>Shops, food & services around ${esc(state.areaName)} — delivered fast.</span></div>
     <div class="qc-voice" role="button" tabindex="0" data-talk aria-label="Ask Local Link by voice">
-      <span class="qc-vorb">${GI.mic}</span><span><b>Just say what you need</b><small>“Biriyani under ₹250” · “Plumber today” · English or മലയാളം</small></span>
+      <span class="qc-vorb">${GI.mic}</span><span><b>${t('voiceT')}</b><small>${t('voiceS')}</small></span>
       <span class="wave" aria-hidden="true">${Array.from({length:7},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span></div>
-    <div class="nsec"><h3>Shop by category</h3><button class="viewall" data-nav="categories">${t('seeAll')} ${I.chev}</button></div>
+    <div class="nsec"><h3>${t('shopByCat')}</h3><button class="viewall" data-nav="categories">${t('seeAll')} ${I.chev}</button></div>
     <div class="qc-catgrid">${(ref.categories||[]).slice(0,8).map((c,i)=>`<button class="qc-cat" data-nav="category" data-slug="${c.slug}" style="--n:${i}"><span class="qc-catpic">${catIcon(c.slug)}</span><b>${esc(catLabel(c))}</b></button>`).join('')}</div>
-    <div class="nsec"><h3>Top offers</h3><button class="viewall" data-nav="offers">${t('seeAll')} ${I.chev}</button></div>
+    <div class="nsec"><h3>${t('topOffers')}</h3><button class="viewall" data-nav="offers">${t('seeAll')} ${I.chev}</button></div>
     <div class="hero" id="hero">${skeletonCards(1)}</div><div class="dots" id="dots"></div>
     <div id="promo"></div>
     <div id="deals"></div>
-    <div id="near"></div>
+    
     <div id="prodsecs"></div>
     <div id="svcs"></div>
     <div id="updates"></div>
@@ -824,7 +841,12 @@ SCREENS.home = async (el) => {
   // skeleton section frames
   $('#promo').innerHTML = nsecHead('Offers for you','offers') + `<div id="promow"><div class="ostack">${skeletonCards(1)}</div></div>`;
   $('#deals').innerHTML = `<div class="nsec"><h3>Mega deals</h3><span class="countdown" id="megacd">${gi('clock')} --:--:--</span></div><div class="dealrow" id="dealw">${skeletonCards(3)}</div>`;
-  $('#near').innerHTML = nsecHead(t('nearYou'),'categories') + `<div class="hero" style="padding-top:2px" id="nearw">${skeletonCards(2)}</div>`;
+  $('#near').innerHTML = nsecHead(t('openNear'),'categories') + `<div class="hero" style="padding-top:2px" id="nearw">${skeletonCards(2)}</div>`;
+  const iok=$('#introOk'); if(iok) iok.onclick=()=>{ state.introSeen=true; localStorage.setItem('ll_intro','1'); const c=$('#introCard'); c.classList.add('bye'); setTimeout(()=>c.remove(),350); };
+  if(token) api('/orders').then(os=>{ const live=(os||[]).find(o=>!['completed','rejected','cancelled'].includes(o.status)); const el2=$('#orderPill'); if(!live||!el2) return;
+    const MSG={pending:'is waiting for the store to accept',accepted:'was accepted',preparing:'is being prepared',ready:'is ready',out_for_delivery:'is on the way'};
+    el2.innerHTML=`<button class="qc-pill" id="opGo"><span class="qc-pdot"></span><span><b>Your order from ${esc(live.business)}</b> ${MSG[live.status]||live.status.replace(/_/g,' ')}</span>${I.chev}</button>`;
+    $('#opGo').onclick=()=>setTab('orders'); }).catch(()=>{});
   $('#svcs').innerHTML = nsecHead(t('popularServices'),'categories','services') + `<div class="px stack" id="svcw" style="gap:10px">${skeletonRow(2)}</div>`;
   $('#updates').innerHTML = nsecHead(t('localUpdates'),'news') + `<div class="hero" style="padding-top:2px" id="newsw">${skeletonCards(2)}</div><div class="px stack" id="evw" style="gap:10px;margin-top:8px"></div>`;
   const [offers, biz, deals, svcs, news, events, grocery, places] = await Promise.all([
@@ -846,6 +868,7 @@ SCREENS.home = async (el) => {
   if(deals.length) wireRowArrows($('#dealw'));
   startCountdown();
   // near you (real + seeded)
+  near.sort((a,b)=>(b.is_open?1:0)-(a.is_open?1:0));
   $('#nearw').innerHTML = near.slice(0,10).map(businessCard).join('');
   // a category product row (grocery)
   if(grocery && grocery.length){ $('#prodsecs').innerHTML = nsecHead('Grocery & essentials','categories','food-grocery') + `<div class="dealrow" id="grocw">${grocery.slice(0,10).map(p=>productCard(p)).join('')}</div>`; wireRowArrows($('#grocw')); }
@@ -1042,7 +1065,7 @@ SCREENS.product = async (el, {id}) => {
   let p; try{ p = await api('/products/'+id); }catch(e){ el.innerHTML=`${topbarBack('Product')}<div class="px">${emptyState('bag','Product unavailable','')}</div>`; backWire(el); return; }
   const src = p.image_url || pic((p.name||'product').toLowerCase(), 500+(p.id||0), 800, 800);
   const disc = p.mrp && p.mrp>p.price; const pct = disc?Math.round((1-p.price/p.mrp)*100):0;
-  const rating = (p.rating || (4 + ((p.id||1)%10)/10)).toFixed(1);
+  const rating = p.rating ? Number(p.rating).toFixed(1) : null;
   const oos = p.stock_status==='out_of_stock';
   const prod = {...p, business:p.business, business_id:p.business_id};
   el.innerHTML = `
@@ -1053,7 +1076,7 @@ SCREENS.product = async (el, {id}) => {
     <section class="pd-sheet">
       <span class="qc-time">${gi('clock')} 15 MINS</span>
       <h1>${esc(p.name)}</h1>
-      <p class="pd-unit">${esc(p.unit||'1 unit')} · <span class="prate">${I.star}${rating}</span> <small>(${p.review_count||120})</small></p>
+      <p class="pd-unit">${esc(p.unit||'1 unit')} · ${rating?`<span class="prate">${I.star}${rating}</span>${p.review_count?` <small>(${p.review_count})</small>`:''}`:'<span class="qc-new">New</span>'}</p>
       <div class="pd-price"><b>${money(p.price)}</b>${disc?`<s>MRP ${money(p.mrp)}</s><em>Save ${money(p.mrp-p.price)}</em>`:''}</div>
       <p class="pd-tax">Inclusive of all taxes</p>
       <button class="pd-store" data-nav="business" data-id="${p.business_id}"><span>${GI.store}</span><div><small>Sold by</small><b>${esc(p.business)}</b></div>${I.chev}</button>
@@ -1192,7 +1215,7 @@ function renderLocalInfo(elm,data){ const groups={}; data.forEach(i=>(groups[i.c
 
 SCREENS.business = async (el, {id}) => {
   el.innerHTML = `<div class="sk" style="height:220px;border-radius:0 0 30px 30px"></div><div class="px" style="margin-top:14px">${skeletonRow(3)}</div>`;
-  const b = await api(`/businesses/${id}`);
+  const b = await api(`/businesses/${id}`); track('shop_view',{id});
   const wa = (b.whatsapp||'').replace(/[^0-9]/g,'');
   const cover = b.cover_url || pic(coverKw(b), b.id, 900, 480);
   const first = b.products.length ? 'products' : b.services.length ? 'services' : 'about';
@@ -1298,7 +1321,7 @@ SCREENS.searchScreen = async (el) => {
     const o=document.querySelector('[data-open]'); if(o) o.onclick=()=>{state2.openNow=!state2.openNow;draw();}; };
   const run=async(q)=>{ if(!q.trim()){ return; } $('#sres').innerHTML=skeletonRow(3);
     try{ const rc=(safeParse(localStorage.getItem('ll_recent'))||[]).filter(x=>x.toLowerCase()!==q.trim().toLowerCase()); rc.unshift(q.trim()); localStorage.setItem('ll_recent',JSON.stringify(rc.slice(0,6))); }catch(e){}
-    last=await api('/search?q='+encodeURIComponent(q)); draw();
+    last=await api('/search?q='+encodeURIComponent(q)); draw(); track('search');
     // a logged-in customer's search becomes a lead for Premium businesses (server de-dupes)
     if(token && q.trim().length>=3){ api('/leads/search',{method:'POST',body:{query:q.trim(),area_id:state.areaId||null}}).catch(()=>{}); }
   };
@@ -1506,7 +1529,7 @@ function openAsk(prefill, opts={}){
   const panel = h(`<div class="sheet vvoice-wrap" id="sheet"><div class="ai-panel vvoice"><div class="vbg" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><span class="rip"></span><span class="rip r2"></span><span class="rip r3"></span><span class="vwave"></span></div>
     <div class="ai-head">
       <div class="row" style="gap:9px"><span class="ai-badge">${logoMark(26)}</span><b style="font-size:16px">${t('askTitle')}</b>
-        <span class="badge ${aiOn?'primary':'neutral'}" style="font-size:10px">${aiOn?'AI':'Offline'}</span></div>
+        <span class="badge ${aiOn?'primary':'warn'}" style="font-size:10px">${aiOn?'AI':'Basic search'}</span></div>
       <button class="tb-btn" id="ai-close" aria-label="Close">✕</button>
     </div>
     <div class="vorb-zone">
@@ -1515,7 +1538,7 @@ function openAsk(prefill, opts={}){
       <div class="vbars" aria-hidden="true">${Array.from({length:18},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</div>
     </div>
     <div class="ai-msgs" id="ai-msgs">
-      <div class="ai-bubble bot">${t('askHi')} ${aiOn?'':`<span class="faint">${t('askOffline')}</span>`}</div>
+      <div class="ai-bubble bot">${t('askHi')} ${aiOn?'':`<span class="ai-limit">I'm in basic mode: I match keywords like “plumber”, “biriyani” or “auto”. Short phrases work best.</span>`}</div>
       <div class="ai-chips" id="ai-chips">${chips.map(x=>`<button class="chip" data-aq="${esc(x)}">${esc(x)}</button>`).join('')}</div>
     </div>
     <div class="ai-inputbar">
@@ -1538,9 +1561,9 @@ function openAsk(prefill, opts={}){
     const loading=addBot(`<div class="ai-bubble bot"><span class="ai-typing"><i></i><i></i><i></i></span></div>`);
     panel.classList.add('thinking'); const vs0=$('#vstate'); if(vs0) vs0.textContent='Finding the best local match…';
     try{
-      const r=await api('/ask',{method:'POST',body:{query:q, lang: state.lang}});
+      const r=await api('/ask',{method:'POST',body:{query:q, lang: state.lang}}); track('ask_used');
       loading.innerHTML = `<div class="ai-bubble bot">${esc(r.answer)}</div>` + (r.results||[]).map(x=>aiResultRow(x)).join('');
-      loading.querySelectorAll('[data-go-biz]').forEach(b=>b.onclick=()=>{ closeSheet(); go('business',{id:Number(b.dataset.goBiz)}); });
+      loading.querySelectorAll('[data-go-biz]').forEach(b=>b.onclick=(e)=>{ if(e.target.closest('.ai-acts')) return; track('ask_result_tap'); closeSheet(); go('business',{id:Number(b.dataset.goBiz)}); });
       scrollDown();
     }catch(e){ loading.innerHTML=`<div class="ai-bubble bot">${esc(e.message)}</div>`; }
     panel.classList.remove('thinking'); panel.classList.add('answered'); const vs1=$('#vstate'); if(vs1) vs1.textContent='Here’s what I found';
@@ -1566,26 +1589,42 @@ function setupVoice(micBtn, input, run){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(!SR){ micBtn.classList.add('disabled'); micBtn.title='Voice not supported on this device'; micBtn.onclick=()=>toast('Voice input isn’t supported on this browser'); return; }
   let listening=false;
-  micBtn.onclick=()=>{
+  micBtn.onclick=async()=>{
     if(listening){ try{_recog.stop();}catch(e){} return; }
+    if(!localStorage.getItem('ll_micok')){
+      const ok=await confirmDialog({title:'Use your microphone?',message:'Local Link listens only while the orb is active, to turn what you say into a search. Nothing is recorded or stored. Your browser will ask for permission next.',ok:'Allow mic',cancel:'Type instead',icon:GI.mic});
+      if(!ok){ input.focus(); return; } localStorage.setItem('ll_micok','1'); }
     try{ _recog = new SR(); }catch(e){ toast('Voice unavailable'); return; }
     _recog.lang = aiVoiceLang; _recog.interimResults = true; _recog.maxAlternatives = 1; _recog.continuous=false;
     listening=true; micBtn.classList.add('listening'); input.placeholder = aiVoiceLang==='ml-IN'?'കേൾക്കുന്നു…':'Listening…';
     let finalText='';
     _recog.onresult=(ev)=>{ let interim=''; for(let i=ev.resultIndex;i<ev.results.length;i++){ const tr=ev.results[i]; if(tr.isFinal) finalText+=tr[0].transcript; else interim+=tr[0].transcript; } input.value = (finalText+interim).trim(); };
-    _recog.onerror=(ev)=>{ toast(ev.error==='not-allowed'?'Mic permission denied':'Voice error: '+ev.error); };
-    _recog.onend=()=>{ listening=false; micBtn.classList.remove('listening'); input.placeholder=t('askPh'); if(finalText.trim()) run(finalText.trim()); };
+    _recog.onerror=(ev)=>{ if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){ localStorage.removeItem('ll_micok'); toast('Mic is blocked — you can type your question instead'); input.focus(); } else if(ev.error!=='no-speech' && ev.error!=='aborted') toast('Didn\'t catch that — try again or type'); };
+    _recog.onend=()=>{ listening=false; micBtn.classList.remove('listening'); input.placeholder=t('askPh');
+      const said=finalText.trim(); if(!said) return;
+      input.value=said; const bar=input.closest('.ai-inputbar'); if(bar) bar.classList.add('heard');
+      const hint=document.createElement('div'); hint.className='ai-heard'; hint.innerHTML=`Heard: “<b>${esc(said)}</b>” — sending… <button>Edit</button>`;
+      bar && bar.parentNode.insertBefore(hint, bar);
+      let tm=setTimeout(()=>{ hint.remove(); bar&&bar.classList.remove('heard'); run(input.value.trim()); }, 1800);
+      const cancel=()=>{ clearTimeout(tm); hint.innerHTML='Fix any word, then press send'; bar&&bar.classList.remove('heard'); input.focus(); input.select(); };
+      hint.querySelector('button').onclick=cancel; input.addEventListener('focus', cancel, {once:true}); };
     try{ _recog.start(); }catch(e){ listening=false; micBtn.classList.remove('listening'); }
   };
 }
 function aiResultRow(x){
   const map={business:['store','#0EA5A4','Business',x.id],service:['wrench','#6366F1','Service',x.business_id],product:['cart','#F97362','Product',x.business_id],worker:['helmet','#F59E0B','Worker',null],driver:['car','#0EA5E9','Ride',null]};
   const [emoji,color,label,bizId]=map[x.type]||['pin','#0D9488','Result',null];
-  const sub = x.type==='business'?`${esc(x.subcategory||'')} · ★ ${x.rating||''}`: x.type==='product'?`${money(x.price)} · ${esc(x.business||'')}`: x.type==='service'?`from ${money(x.starting_price)} · ${esc(x.business||'')}`: x.type==='worker'?esc(x.skills||''):esc(x.fare_note||x.service_type||'');
-  return `<div class="airow" ${bizId?`data-go-biz="${bizId}" role="button"`:''}>
+  const sub = x.type==='business'?`${esc(x.subcategory||'')}${x.rating?` · ★ ${x.rating}`:''}`: x.type==='product'?`${money(x.price)} · ${esc(x.business||'')}`: x.type==='service'?`from ${money(x.starting_price)} · ${esc(x.business||'')}`: x.type==='worker'?esc(x.skills||''):esc(x.fare_note||x.service_type||'');
+  const dir = (x.type==='business'||x.type==='service'||x.type==='product') ? `https://maps.google.com/?q=${encodeURIComponent((x.type==='business'?x.name:(x.business||x.name))+' Kozhikode')}` : null;
+  const acts = [
+    x.phone?`<a class="ai-act" href="tel:${esc(x.phone)}" onclick="event.stopPropagation()">${I.phone}Call</a>`:'',
+    dir?`<a class="ai-act" href="${dir}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${I.dir}Directions</a>`:'',
+    x.type==='product'?`<button class="ai-act hot" data-add="1" data-pid="${x.id}" data-pname="${esc(x.name)}" data-pprice="${x.price}" data-pmrp="${x.mrp||''}" data-pimg="${esc(x.image_url||'')}" data-pbiz="${esc(x.business||'')}" data-pbizid="${x.business_id||''}">${I.plus}Add to cart</button>`:'',
+    bizId?`<span class="ai-act ghost">${I.chev}Open</span>`:''].join('');
+  return `<div class="airow" ${bizId?`data-go-biz="${bizId}" role="button" tabindex="0"`:''}>
     <div class="ai-ic" style="background:${grad(color,color)}">${gi(emoji)}</div>
-    <div style="flex:1;min-width:0"><div class="rt">${label}</div><b style="font-size:14px">${esc(x.name)}</b><div class="muted" style="font-size:12px">${sub}</div></div>
-    ${x.phone?`<a class="btn sm" href="tel:${x.phone}" onclick="event.stopPropagation()">${I.phone}</a>`:bizId?`<span class="chev" style="color:var(--faint);width:18px">${I.chev}</span>`:''}</div>`;
+    <div style="flex:1;min-width:0"><div class="rt">${label}</div><b style="font-size:14px">${esc(x.name)}</b><div class="muted" style="font-size:12px">${sub}</div>
+      ${acts?`<div class="ai-acts">${acts}</div>`:''}</div></div>`;
 }
 
 /* ---------------- bottom sheet ---------------- */
@@ -1774,14 +1813,48 @@ async function renderForecastHub(host){
   host.querySelectorAll('[data-fp]').forEach(b=>b.onclick=()=>pick(Number(b.dataset.fp)));
   pick(P[0].id, true);
 }
+/* ---- partner: what needs action today + new-order alerts ---- */
+async function renderPartnerToday(host){
+  if(!host) return;
+  try{
+    const [orders, prods, ov] = await Promise.all([api('/partner/orders'), api('/partner/products'), api('/partner/overview')]);
+    const pending=orders.filter(o=>o.status==='pending'), active=orders.filter(o=>['accepted','preparing','ready','out_for_delivery'].includes(o.status));
+    const oos=prods.filter(p=>p.stock_status==='out_of_stock'), unread=(ov.usage&&ov.usage.unreadChats)||0;
+    const canAlert = 'Notification' in window && Notification.permission==='default';
+    const item=(n,label,ic,tab,tone)=>`<button class="pt-do ${n?tone:'zero'}" data-tabnav="${tab}"><span>${ic}</span><b>${n}</b><small>${label}</small></button>`;
+    host.innerHTML=`<div class="pt-th"><b>${t('needsAction')}</b>${canAlert?`<button id="alertOn">${I.bell} Turn on order alerts</button>`:''}</div>
+      <div class="pt-dos">${item(pending.length,t('newOrders'),GI.package,'p_orders','hot')}${item(active.length,'in progress',GI.clock,'p_orders','sun')}${item(unread,t('unreadChats'),GI.chat,'p_chats','brand')}${item(oos.length,t('outStock'),GI.warning,'p_products','warn')}</div>
+      ${pending.length?`<div class="pt-quick">${pending.slice(0,3).map(o=>`<div class="pt-q"><div><b>#${1000+o.id}</b><small>${esc(o.item_summary)}</small></div><b>${money(o.total)}</b><button class="btn sm" data-qacc="${o.id}">Accept</button></div>`).join('')}</div>`:''}`;
+    host.querySelectorAll('[data-tabnav]').forEach(b=>b.onclick=()=>setTab(b.dataset.tabnav));
+    host.querySelectorAll('[data-qacc]').forEach(b=>b.onclick=async()=>{ try{ await api(`/partner/orders/${b.dataset.qacc}/status`,{method:'POST',body:{status:'accepted'}}); toast('Order accepted'); renderPartnerToday(host); }catch(e){ toast(e.message); } });
+    const al=$('#alertOn'); if(al) al.onclick=async()=>{ try{ const r=await Notification.requestPermission(); toast(r==='granted'?'Order alerts on':'Alerts stay off — new orders still show here'); renderPartnerToday(host); }catch(e){} };
+    pollPartnerOrders(true);
+  }catch(e){ host.innerHTML=''; }
+}
+let _pPoll=null;
+function pollPartnerOrders(start){
+  if(start && _pPoll) return;
+  const tick=async()=>{ if(state.view!=='partner'||!token||!me||me.role!=='business_partner'){ clearInterval(_pPoll); _pPoll=null; return; }
+    try{ const orders=await api('/partner/orders'); const seen=new Set(safeParse(localStorage.getItem('ll_seen_orders'))||[]); const first=!localStorage.getItem('ll_seen_orders');
+      const fresh=orders.filter(o=>o.status==='pending' && !seen.has(o.id));
+      orders.forEach(o=>seen.add(o.id)); localStorage.setItem('ll_seen_orders', JSON.stringify([...seen].slice(-300)));
+      if(first || !fresh.length) return;
+      const msg = fresh.length===1 ? `New order #${1000+fresh[0].id} · ${money(fresh[0].total)}` : `${fresh.length} new orders`;
+      toast('🛎️ '+msg);
+      if('Notification' in window && Notification.permission==='granted' && document.hidden){ try{ new Notification('Local Link Partner', { body: msg, icon:'/icon-partner-192.png' }); }catch(e){} }
+      const td=$('#todo'); if(td) renderPartnerToday(td);
+    }catch(e){} };
+  tick(); _pPoll=setInterval(tick, 30000);
+}
 SCREENS.p_dash = async (el) => {
   if(!token || (me.role!=='business_partner')) return renderLogin(el,'partner');
   el.innerHTML = `<header class="vhd"><div class="vhd-brand"><span class="cbrand-logo">${logoMark(30)}</span>${wordmark()}<span class="vhd-tag">Partner</span><div style="flex:1"></div>${miniControls()}
       <button class="avatar vav" data-tabnav="p_profile" aria-label="Profile" style="background:${grad(me.avatar_color,'#0B5A55')}">${me.name[0]}</button></div>
     <div class="vgreet" style="margin:12px 2px 0"><b>${greetWord()}, ${esc(me.name.split(' ')[0])}</b><span>Here’s how your shop is doing today</span></div></header>
+    <section class="pt-today" id="todo" aria-live="polite"></section>
     <div id="fcHub"></div>
     <div class="px" id="body" style="margin-top:12px">${skeletonRow(2)}</div><div style="height:90px"></div>`;
-  renderForecastHub($('#fcHub'));
+  renderForecastHub($('#fcHub')); renderPartnerToday($('#todo'));
   const [d, an] = await Promise.all([api('/partner/overview'), api('/partner/analytics').catch(()=>null)]);
   const stat=(lab,val,emoji)=>`<div class="stat vstat"><span class="ic">${gi(emoji)}</span><div class="lab">${lab}</div><div class="num">${val}</div></div>`;
   $('#body').innerHTML = `
@@ -2198,6 +2271,20 @@ function renderAdmin(body){
       <div class="avatar" style="width:36px;height:36px;font-size:14px;background:${grad(me.avatar_color,'#0B5A55')}">${me.name[0]}</div></div>
       <div class="adbody" id="adbody"></div></main></div>`;
   const am=$('#a-menu'); if(am) am.onclick=()=>body.querySelector('.side').classList.toggle('show');
+  const sbar=body.querySelector('.adtop .searchbar'); const sin=sbar&&sbar.querySelector('input');
+  if(sin){ sin.setAttribute('aria-label','Search businesses, users and orders'); sin.placeholder='Search businesses, users, orders…'; sbar.style.position='relative';
+    const dd=document.createElement('div'); dd.className='ad-sdd'; dd.hidden=true; sbar.appendChild(dd); let tm=null;
+    sin.oninput=()=>{ clearTimeout(tm); const q=sin.value.trim(); if(q.length<2){ dd.hidden=true; return; } tm=setTimeout(async()=>{ try{ const r=await api('/admin/search?q='+encodeURIComponent(q));
+      const sec=(title,items,fn)=>items.length?`<div class="ad-sh">${title}</div>`+items.map(fn).join(''):'';
+      const html=sec('Businesses',r.businesses,b=>`<button data-go="biz" data-id="${b.id}"><b>${esc(b.name)}</b><small>${esc(b.subcategory||'')} · ${esc(b.status)}</small></button>`)
+        + sec('Users',r.users,u=>`<button data-go="users"><b>${esc(u.name)}</b><small>${esc(u.email||u.phone||'')} · ${esc(u.role)}</small></button>`)
+        + sec('Orders',r.orders,o=>`<button data-go="orders"><b>#${1000+o.id} · ${esc(o.business)}</b><small>${money(o.total)} · ${esc(o.status)}</small></button>`);
+      dd.innerHTML = html || '<p class="ad-sh">No matches</p>'; dd.hidden=false;
+      dd.querySelectorAll('[data-go]').forEach(x=>x.onclick=()=>{ dd.hidden=true; sin.value=''; if(x.dataset.go==='biz'){ adminRoute='businesses'; adminBiz=Number(x.dataset.id); } else { adminRoute=x.dataset.go; adminBiz=null; } renderAdmin(body); });
+    }catch(e){} },220); };
+    sin.onkeydown=e=>{ if(e.key==='Escape'){ dd.hidden=true; sin.blur(); } };
+    document.addEventListener('click',e=>{ if(!sbar.contains(e.target)) dd.hidden=true; });
+  }
   body.querySelectorAll('.side a[data-r]').forEach(a=>a.onclick=()=>{ adminRoute=a.dataset.r; adminBiz=null; renderAdmin(body); });
   $('#a-out').onclick=()=>{ token=null;me=null;localStorage.removeItem('ll_token');localStorage.removeItem('ll_user'); openView('customer'); };
   renderAdminRoute();
@@ -2367,10 +2454,27 @@ async function renderAdminDashboard(el){
       <div class="panel"><div class="ph"><h3>Businesses by category</h3></div><div style="padding:18px;display:flex;gap:20px;align-items:center" id="donut"></div></div>
       <div class="panel"><div class="ph"><h3>Orders by status</h3></div><div style="padding:18px" id="bars"></div></div>
     </div>
-    <div class="panel" style="margin-top:16px"><div class="ph"><h3>Top rated businesses</h3></div>
+    <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:14px;margin-top:14px" class="ad-row2">
+      <div class="panel"><div class="ph"><h3>Approvals queue</h3><span class="badge ${d.pendingList&&d.pendingList.length?'warn':'open'}">${(d.pendingList||[]).length} waiting</span></div>
+        <div id="apq" class="ad-apq">${(d.pendingList||[]).length? d.pendingList.map(b=>`<div class="ad-ap" data-apid="${b.id}"><label><input type="checkbox" value="${b.id}" aria-label="Select ${esc(b.name)}"/></label><div><b>${esc(b.name)}</b><small>${esc(b.subcategory||'')}${b.area?' · '+esc(b.area):''}</small></div>
+          <button class="btn sm" data-apst="approved">Approve</button><button class="btn sm ghost" data-apst="rejected">Reject</button></div>`).join('')
+          + `<div class="ad-bulk"><label><input type="checkbox" id="apAll"/> Select all</label><button class="btn sm" data-bulk="approved">Approve selected</button><button class="btn sm ghost" data-bulk="rejected">Reject selected</button></div>`
+          : `<div class="empty" style="padding:26px"><div class="eic">${gi('shield')}</div><p>Nothing waiting — all businesses reviewed.</p></div>`}</div></div>
+      <div class="panel"><div class="ph"><h3>Customer funnel</h3><span class="muted" style="font-size:12px">last 30 days · sessions</span></div><div id="funnel" class="ad-fun">${skeletonRow(2)}</div></div>
+    </div>
+    <div class="panel" style="margin-top:14px"><div class="ph"><h3>Top rated businesses</h3></div>
       <table><thead><tr><th>Business</th><th>Rating</th><th>Reviews</th></tr></thead><tbody>
       ${d.topRated.map(b=>`<tr><td><b>${esc(b.name)}</b></td><td>${stars(b.rating)}</td><td class="tabnums">${b.review_count}</td></tr>`).join('')}
       </tbody></table></div>`;
+  // approvals queue
+  const setSt=async(ids,st)=>{ try{ for(const id of ids) await api(`/admin/businesses/${id}/status`,{method:'POST',body:{status:st}}); toast(`${ids.length} business${ids.length>1?'es':''} ${st}`); renderAdminRoute(); }catch(e){ toast(e.message); } };
+  el.querySelectorAll('[data-apst]').forEach(b=>b.onclick=()=>setSt([b.closest('[data-apid]').dataset.apid], b.dataset.apst));
+  const apAll=$('#apAll'); if(apAll) apAll.onchange=()=>el.querySelectorAll('#apq .ad-ap input').forEach(c=>c.checked=apAll.checked);
+  el.querySelectorAll('[data-bulk]').forEach(b=>b.onclick=()=>{ const ids=[...el.querySelectorAll('#apq .ad-ap input:checked')].map(c=>c.value); if(!ids.length) return toast('Select at least one'); setSt(ids,b.dataset.bulk); });
+  // funnel
+  api('/admin/funnel').then(f=>{ const draw=(steps)=>{ const top=Math.max(1,steps[0].sessions); return steps.map((x,i)=>{ const pct=Math.round(x.sessions/top*100); const drop=i?Math.round(100-(x.sessions/Math.max(1,steps[i-1].sessions))*100):0;
+      return `<div class="ad-fs"><span>${esc(x.label)}</span><div class="ad-fb"><i style="width:${Math.max(2,pct)}%"></i></div><b>${x.sessions}</b>${i&&steps[i-1].sessions?`<em>${drop>0?'−'+drop+'%':'—'}</em>`:'<em></em>'}</div>`; }).join(''); };
+    const fn=$('#funnel'); if(fn) fn.innerHTML = draw(f.shopping) + `<div class="ad-fsep">Ask Local Link</div>` + draw(f.ask) + `<p class="muted" style="font-size:11.5px;margin-top:8px">Counts unique app sessions. Fills in as people use the customer app.</p>`; }).catch(()=>{ const fn=$('#funnel'); if(fn) fn.innerHTML='<p class="muted">Funnel unavailable.</p>'; });
   // donut
   const total=d.byCategory.reduce((s,x)=>s+x.value,0)||1; let acc=0; const R=54,C=2*Math.PI*R;
   const segs=d.byCategory.map((x,i)=>{ const frac=x.value/total; const dash=frac*C; const seg=`<circle cx="70" cy="70" r="${R}" fill="none" stroke="${donutColors[i%donutColors.length]}" stroke-width="20" stroke-dasharray="${dash} ${C-dash}" stroke-dashoffset="${-acc*C}" transform="rotate(-90 70 70)"/>`; acc+=frac; return seg; }).join('');

@@ -1411,3 +1411,91 @@ body:is(.cdark) .pt-img,:root[data-theme="dark"] .pt-img{background:var(--surfac
 .pt-items{font-size:13.5px; margin-top:8px; line-height:1.45}
 .pt-ticket footer{display:flex; justify-content:space-between; align-items:center; margin-top:12px}
 .pt-ticket footer > b{font-size:17px}
+
+/* =====================================================================
+   v27 — UX pass: lite mode, contrast, tap targets, first-run card,
+   live order pill, trust signals, actionable Ask, partner today,
+   admin approvals / funnel / search
+   ===================================================================== */
+/* lite mode (cheap phones, data saver): keep it flat and fast */
+html.lite .atmo > i,html.lite .atmo::before,html.lite .atmo::after,html.lite .floaters,html.lite .vbg > i,html.lite .vbg .vwave,html.lite .qc-head::after,html.lite .searchrow::after{animation:none !important; display:none}
+html.lite *{backdrop-filter:none !important; -webkit-backdrop-filter:none !important}
+html.lite .bnav.vdock{background:var(--surface)}
+html.lite img.ph{transition:none; transform:none}
+/* contrast + tap targets */
+:root{--faint:#8A939A; --muted:#626B72}
+:root[data-theme="dark"],body.cdark{--faint:#7A8986; --muted:#9AA8A5}
+.clang button,.lang-toggle button{min-width:40px; min-height:34px}
+.fav2,.qc-ico,.st-ib{min-width:40px; min-height:40px}
+.fav2{width:36px; height:36px}
+/* first-run card */
+.qc-intro{display:flex; align-items:center; gap:12px; margin:12px 16px 0; padding:12px; border-radius:18px; background:var(--sun-50); border:1px solid color-mix(in srgb,var(--sun) 50%,transparent); animation:rise .5s var(--spring) both; transition:opacity .3s, transform .3s}
+.qc-intro.bye{opacity:0; transform:scale(.96)}
+.qc-ii{flex:none}
+.qc-intro b{display:block; font-size:14px} .qc-intro small{display:block; font-size:12px; color:var(--ink2); line-height:1.4}
+.qc-intro .btn{flex:none; box-shadow:none}
+/* live order pill */
+.qc-pill{display:flex; align-items:center; gap:10px; width:calc(100% - 32px); margin:12px 16px 0; padding:11px 14px; border-radius:16px; text-align:left; font-size:13px; color:var(--ink);
+  background:var(--brand-50); border:1px solid color-mix(in srgb,var(--brand) 25%,transparent); animation:rise .5s var(--spring) both}
+.qc-pill > span:nth-child(2){flex:1; min-width:0}
+.qc-pill svg{width:16px; height:16px; color:var(--brand)}
+.qc-pdot{width:10px; height:10px; flex:none; border-radius:50%; background:var(--brand); box-shadow:0 0 0 0 rgba(12,143,130,.6); animation:fcLive 1.6s ease-out infinite}
+@keyframes fcLive{70%{box-shadow:0 0 0 8px rgba(12,143,130,0)} 100%{box-shadow:0 0 0 0 rgba(12,143,130,0)}}
+/* trust signals */
+.qc-new{font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#2F5FD0; background:#E6F0FF; border-radius:5px; padding:1px 6px}
+.bc-hrs{font-size:11.5px; color:var(--muted)}
+.bc-foot{justify-content:space-between}
+.bc-foot > span:first-child{display:inline-flex; align-items:center; gap:3px}
+.bc-foot svg{width:12px; height:12px; fill:var(--faint)}
+.bc-call{width:34px; height:34px; border-radius:50%; display:grid; place-items:center; background:var(--brand-50); color:var(--brand); transition:transform .25s var(--spring)}
+.bc-call svg{width:16px; height:16px; fill:var(--brand)}
+.bc-call:active{transform:scale(.88)}
+/* Ask: honest mode, heard transcript, actions */
+.ai-limit{display:block; margin-top:6px; font-size:12.5px; color:var(--warn); background:var(--warn-50); border-radius:10px; padding:6px 9px}
+.ai-heard{margin:0 14px 8px; padding:8px 12px; border-radius:14px; background:var(--brand-50); font-size:12.5px; color:var(--ink2); animation:rise .3s var(--ease)}
+.ai-heard button{margin-left:6px; color:var(--brand); font-weight:800; text-decoration:underline}
+.ai-inputbar.heard{box-shadow:0 0 0 2px var(--brand), var(--shadow)}
+.ai-acts{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+.ai-act{display:inline-flex; align-items:center; gap:4px; padding:6px 10px; border-radius:999px; font-size:11.5px; font-weight:800; background:var(--surface-2); color:var(--ink); transition:transform .2s var(--spring)}
+.ai-act svg{width:13px; height:13px} .ai-act:active{transform:scale(.92)}
+.ai-act.hot{background:var(--brand); color:#fff} .ai-act.ghost{background:transparent; color:var(--brand)}
+.airow{align-items:flex-start}
+/* partner: needs action today */
+.pt-today{margin:14px 16px 0}
+.pt-today:empty{display:none}
+.pt-th{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px}
+.pt-th b{font-size:15px; font-weight:800}
+.pt-th button{display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:800; color:var(--brand); background:var(--brand-50); border-radius:999px; padding:6px 10px}
+.pt-th button svg{width:14px; height:14px}
+.pt-dos{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
+.pt-do{display:grid; justify-items:center; gap:1px; padding:10px 4px; border-radius:18px; background:var(--surface); box-shadow:var(--shadow); text-align:center; animation:catIn .5s var(--spring) both; transition:transform .25s var(--spring)}
+.pt-do:active{transform:scale(.94)}
+.pt-do span{width:32px; height:32px; border-radius:11px; display:grid; place-items:center; background:var(--surface-2); color:var(--muted)}
+.pt-do span svg{width:17px; height:17px}
+.pt-do b{font-size:20px; font-weight:800; letter-spacing:-.04em; font-variant-numeric:tabular-nums}
+.pt-do small{font-size:10px; font-weight:700; color:var(--muted); line-height:1.15}
+.pt-do.hot span{background:var(--hot); color:#fff} .pt-do.hot b{color:var(--hot)} .pt-do.hot{box-shadow:0 0 0 2px color-mix(in srgb,var(--hot) 30%,transparent), var(--shadow); animation:catIn .5s var(--spring) both, tkGlow 2.4s ease-in-out infinite}
+.pt-do.sun span{background:var(--sun); color:#2B2100} .pt-do.brand span{background:var(--brand); color:#fff} .pt-do.warn span{background:var(--warn); color:#fff}
+.pt-do.zero{opacity:.7}
+.pt-quick{display:grid; gap:8px; margin-top:10px}
+.pt-q{display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:10px; align-items:center; padding:10px 12px; border-radius:16px; background:var(--hot-50)}
+.pt-q small{display:block; font-size:11.5px; color:var(--ink2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+@keyframes tkGlow{50%{box-shadow:0 0 0 5px color-mix(in srgb,var(--hot) 12%,transparent), var(--shadow)}}
+/* admin: approvals, funnel, search */
+.ad-apq{padding:4px 16px 14px}
+.ad-ap{display:grid; grid-template-columns:auto minmax(0,1fr) auto auto; gap:10px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line)}
+.ad-ap b{font-size:14px} .ad-ap small{display:block; font-size:12px; color:var(--muted)}
+.ad-ap input,.ad-bulk input{width:17px; height:17px; accent-color:var(--brand)}
+.ad-bulk{display:flex; align-items:center; gap:8px; padding-top:12px} .ad-bulk label{flex:1; display:flex; gap:7px; align-items:center; font-size:13px; font-weight:600}
+.ad-fun{padding:4px 16px 16px}
+.ad-fs{display:grid; grid-template-columns:118px 1fr 40px 46px; gap:8px; align-items:center; font-size:12.5px; margin:7px 0}
+.ad-fb{height:12px; border-radius:6px; background:var(--canvas); overflow:hidden}
+.ad-fb i{display:block; height:100%; border-radius:6px; background:linear-gradient(90deg,var(--brand),var(--brand-l)); animation:growx .8s var(--ease) both; transform-origin:left}
+.ad-fs b{text-align:right; font-variant-numeric:tabular-nums} .ad-fs em{font-style:normal; font-size:11px; color:var(--hot); font-weight:700; text-align:right}
+.ad-fsep{font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:12px 0 2px}
+.ad-sdd{position:absolute; top:calc(100% + 8px); left:0; width:340px; max-height:420px; overflow-y:auto; z-index:50; background:var(--surface); border-radius:18px; box-shadow:var(--shadow-lg); padding:6px; animation:rise .2s var(--ease)}
+.ad-sdd .ad-sh{font-size:10.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); padding:8px 10px 4px}
+.ad-sdd button{display:block; width:100%; text-align:left; padding:8px 10px; border-radius:12px}
+.ad-sdd button:hover,.ad-sdd button:focus-visible{background:var(--brand-50)}
+.ad-sdd b{display:block; font-size:13.5px} .ad-sdd small{font-size:12px; color:var(--muted)}
+@media (max-width:1100px){ .ad-row2{grid-template-columns:1fr !important} }
