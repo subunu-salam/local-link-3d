@@ -19,6 +19,12 @@ In **Admin → Locations**, every area (Kunnamangalam, Inapura, Chelavur, Nadakk
 
 ---
 
+## 🎨 v22 — VoiceBite UI/UX (in Local Link colours)
+All three apps now follow the VoiceBite design language, kept in Local Link's teal + coral palette (`public/vb.css`, loaded last):
+- **Customer** — aurora stage + device frame, frosted rounded header with location pill and pill search + mic, swipeable promo cards (Ask by voice / Deals / Near you), greeting, mood chips, rounded category tiles, floating pill dock with a raised centre **Ask** button, and a full-screen **voice screen** (orb, live listening state, captions, EN/മ toggle).
+- **Partner** — same frame and dock; the raised centre button is **Add product**; greeting header, brand-coloured stat tiles, rounded quick actions.
+- **Admin** — bento console: one canvas with even gaps, rounded dark-teal sidebar with a coral sliding highlight, KPI tiles with sparklines, side-sheet forms and a two-panel bento sign-in.
+
 ## ✨ What's inside
 
 - **Premium, mobile-first UI** — teal + coral brand system, Poppins/Inter type, light **and** dark themes, custom pin-with-rings logo.
