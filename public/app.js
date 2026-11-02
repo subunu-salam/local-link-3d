@@ -1954,42 +1954,70 @@ SCREENS.p_offers = async (el) => {
   const e3=$('#e3'); if(e3) e3.onclick=()=>openAddOffer(ov.businesses);
   el.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{ try{ await api('/partner/offers/'+b.dataset.del,{method:'DELETE'}); toast('Offer removed'); setTab('p_offers'); }catch(e){toast(e.message);} });
 };
+/* Add product — 3 quick steps (photo → name & price → stock) with a live
+   preview of the card customers will see. Same API and fields as before. */
 function openAddProduct(biz){
   if(!biz) return toast('No business found');
-  let uploaded=null;   // data URL from an uploaded photo
-  showSheet('Add product', `
-    <div class="field"><label>Product photo</label>
-      <div class="photo-up"><input type="file" id="pfile" accept="image/*" hidden/>
-        <button type="button" class="pu-drop" id="puDrop"><span class="gi">${GI.package}</span><span>Tap to upload a photo from your device</span></button>
-        <div class="pu-prevwrap" id="puWrap" hidden><img id="puPrev" class="pu-prev"/><button type="button" class="pu-x" id="puClear">${I.back.replace('m15 18-6-6 6-6','M6 6l12 12M18 6 6 18')}</button></div>
-      </div></div>
-    <div class="field"><label>Product name</label><div class="input"><input id="pn" placeholder="e.g. Chicken Biriyani"/></div></div>
-    <div class="row" style="gap:10px"><div class="field" style="flex:1"><label>Selling price ₹</label><div class="input"><input id="pp" type="number" placeholder="210"/></div></div>
-      <div class="field" style="flex:1"><label>Unit</label><div class="input"><input id="pu" placeholder="plate, kg, piece"/></div></div></div>
-    <div class="promo-box">
-      <label class="promo-toggle"><input type="checkbox" id="pofferOn"/> <span>Add an offer / promotion</span></label>
-      <div id="pofferFields" hidden>
-        <div class="row" style="gap:10px;margin-top:8px"><div class="field" style="flex:1"><label>Original price ₹ <span class="faint" style="font-weight:500">(for % off)</span></label><div class="input"><input id="pm" type="number" placeholder="240"/></div></div>
-          <div class="field" style="flex:1"><label>Promo tag</label><div class="input"><input id="ppromo" placeholder="Buy 1 Get 1 / Combo"/></div></div></div>
-        <p class="faint" style="font-size:11.5px;margin:2px 0 0">An original price shows a strike-through discount; the promo tag shows as a badge on your product.</p>
-      </div>
-    </div>
-    <details style="margin-top:6px"><summary class="faint" style="font-size:12px;cursor:pointer">Or paste a photo URL instead</summary>
-      <div class="field" style="margin-top:8px"><div class="input"><input id="pimg" placeholder="https://… link to your product photo"/></div></div></details>
-    <button class="btn block" id="psave" style="margin-top:14px">Publish product</button>`, ()=>{
-      const drop=$('#puDrop'), file=$('#pfile'), wrap=$('#puWrap'), prev=$('#puPrev');
-      drop.onclick=()=>file.click();
-      file.onchange=async()=>{ const f=file.files[0]; if(!f)return; try{ toast('Processing photo…'); uploaded=await readImageFile(f); prev.src=uploaded; wrap.hidden=false; drop.hidden=true; }catch(e){ toast('Could not read that image'); } };
-      $('#puClear').onclick=()=>{ uploaded=null; file.value=''; wrap.hidden=true; drop.hidden=false; };
-      $('#pofferOn').onchange=(e)=>{ $('#pofferFields').hidden=!e.target.checked; };
-      $('#psave').onclick=async()=>{ const name=$('#pn').value.trim(), price=Number($('#pp').value); if(!name||!price)return toast('Name & price required');
-        const offerOn=$('#pofferOn').checked;
-        try{ await api('/partner/products',{method:'POST',body:{business_id:biz.id,name,price,
-          mrp: offerOn ? (Number($('#pm').value)||null) : null,
-          promo_label: offerOn ? ($('#ppromo').value.trim()||null) : null,
-          unit:$('#pu').value.trim()||null, image_url: uploaded || $('#pimg').value.trim() || null, emoji:null}});
-          closeSheet(); toast('Product published'); setTab('p_products'); }catch(e){toast(e.message);} };
-    });
+  const d={ img:null, name:'', price:'', unit:'', mrp:'', promo:'', offer:false, stock:'in_stock' };
+  let step=1;
+  const preview=()=>{ const price=Number(d.price)||0, mrp=Number(d.mrp)||0, disc=d.offer&&mrp>price&&price>0;
+    return `<div class="ap-prev"><small>Customers will see</small><div class="pcard qc-card ap-card">
+      <div class="pimg">${d.img?`<img class="ph on" src="${d.img}" alt=""/>`:`<span class="gi">${GI.package}</span>`}${d.offer&&d.promo?`<span class="qc-rib">${esc(d.promo)}</span>`:disc?`<span class="qc-rib">${Math.round((1-price/mrp)*100)}%<br>OFF</span>`:''}${d.stock==='out_of_stock'?'<span class="qc-oos">Out of stock</span>':'<span class="qc-add" aria-hidden="true">ADD</span>'}</div>
+      <div class="pb"><span class="qc-time">${gi('store')} ${esc(String(biz.name||'').split(' ').slice(0,2).join(' '))}</span><h4>${esc(d.name||'Product name')}</h4><div class="punit">${esc(d.unit||'1 unit')} · <span class="qc-new">New</span></div>
+        <div class="price">${price?money(price):'₹—'}${disc?`<span class="old">${money(mrp)}</span>`:''}</div></div></div></div>`; };
+  const body=()=>{
+    const dots=`<div class="ap-steps" aria-label="Step ${step} of 3">${['Photo','Details','Stock'].map((l,i)=>`<span class="${i+1<step?'done':i+1===step?'on':''}"><i>${i+1<step?'✓':i+1}</i>${l}</span>`).join('<b></b>')}</div>`;
+    if(step===1) return dots+`<div class="ap-photo">
+        <input type="file" id="pcam" accept="image/*" capture="environment" hidden/><input type="file" id="pfile" accept="image/*" hidden/>
+        ${d.img?`<div class="ap-shot"><img src="${d.img}" alt="Product photo preview"/><button type="button" class="pu-x" id="puClear" aria-label="Remove photo">✕</button></div>`
+          :`<button type="button" class="ap-cam" id="apCam"><span>${GI.package}</span><b>Take a photo</b><small>Opens your camera</small></button>
+            <button type="button" class="ap-gal" id="apGal">Choose from gallery</button>`}
+        <details class="ap-url"><summary>Or paste a photo link</summary><div class="input" style="margin-top:8px"><input id="pimg" placeholder="https://…" value=""/></div></details></div>
+      <div class="ap-nav"><button class="btn ghost" id="apSkip">${d.img?'':'Skip photo'}</button><button class="btn" id="apNext">Next</button></div>`;
+    if(step===2) return dots+`<div class="ap-two">
+        <div class="field"><label for="pn">Product name</label><div class="input"><input id="pn" value="${esc(d.name)}" placeholder="e.g. Chicken Biriyani" autocomplete="off"/></div></div>
+        <div class="row" style="gap:8px"><div class="field" style="flex:1"><label for="pp">Price ₹</label><div class="input"><input id="pp" type="number" inputmode="decimal" value="${esc(d.price)}" placeholder="210"/></div></div>
+          <div class="field" style="flex:1"><label for="pu">Unit</label><div class="input"><input id="pu" value="${esc(d.unit)}" placeholder="plate, kg, piece"/></div></div></div>
+        <div class="ap-units">${['1 plate','1 kg','500 g','1 piece','1 L','1 pack'].map(u=>`<button type="button" data-u="${u}" class="${d.unit===u?'on':''}">${u}</button>`).join('')}</div>
+        <div class="promo-box"><label class="promo-toggle"><input type="checkbox" id="pofferOn" ${d.offer?'checked':''}/> <span>Add an offer / promotion</span></label>
+          <div id="pofferFields" ${d.offer?'':'hidden'}><div class="row" style="gap:8px;margin-top:8px"><div class="field" style="flex:1"><label for="pm">Original price ₹</label><div class="input"><input id="pm" type="number" inputmode="decimal" value="${esc(d.mrp)}" placeholder="240"/></div></div>
+            <div class="field" style="flex:1"><label for="ppromo">Promo tag</label><div class="input"><input id="ppromo" value="${esc(d.promo)}" placeholder="Combo"/></div></div></div></div></div>
+        <div id="apPrev">${preview()}</div></div>
+      <div class="ap-nav"><button class="btn ghost" id="apBack">Back</button><button class="btn" id="apNext">Next</button></div>`;
+    return dots+`<div class="ap-stock">
+        <button type="button" class="ap-opt ${d.stock==='in_stock'?'on':''}" data-st="in_stock"><span class="ok">●</span><div><b>In stock</b><small>Customers can order it now</small></div></button>
+        <button type="button" class="ap-opt ${d.stock==='out_of_stock'?'on':''}" data-st="out_of_stock"><span class="no">●</span><div><b>Out of stock</b><small>Listed, but can't be ordered yet</small></div></button></div>
+      ${preview()}
+      <div class="ap-nav"><button class="btn ghost" id="apBack">Back</button><button class="btn" id="psave">Publish product</button></div>`;
+  };
+  const read=()=>{ const v=id=>{ const e=document.getElementById(id); return e?e.value.trim():null; };
+    if(step===1){ const u=v('pimg'); if(u) d.img=u; }
+    if(step===2){ d.name=v('pn')??d.name; d.price=v('pp')??d.price; d.unit=v('pu')??d.unit; d.mrp=v('pm')??d.mrp; d.promo=v('ppromo')??d.promo; const o=$('#pofferOn'); if(o) d.offer=o.checked; } };
+  const render=()=>{ const sb=document.querySelector('#sheet .sh-body'); if(!sb) return; sb.innerHTML=body(); wire(); sb.scrollTop=0; };
+  const wire=()=>{
+    const cam=$('#pcam'), file=$('#pfile');
+    const take=async(inp)=>{ const f=inp.files[0]; if(!f) return; try{ toast('Processing photo…'); d.img=await readImageFile(f); buzz(); render(); }catch(e){ toast('Could not read that image'); } };
+    if(cam){ cam.onchange=()=>take(cam); } if(file){ file.onchange=()=>take(file); }
+    const ac=$('#apCam'); if(ac) ac.onclick=()=>cam.click();
+    const ag=$('#apGal'); if(ag) ag.onclick=()=>file.click();
+    const pc=$('#puClear'); if(pc) pc.onclick=()=>{ d.img=null; render(); };
+    const sk=$('#apSkip'); if(sk) sk.onclick=()=>{ read(); step=2; render(); };
+    const nx=$('#apNext'); if(nx) nx.onclick=()=>{ read();
+      if(step===2){ if(!d.name) { toast('Add a product name'); $('#pn').focus(); return; } if(!(Number(d.price)>0)){ toast('Add a price'); $('#pp').focus(); return; } }
+      step++; render(); };
+    const bk=$('#apBack'); if(bk) bk.onclick=()=>{ read(); step--; render(); };
+    document.querySelectorAll('#sheet [data-u]').forEach(b=>b.onclick=()=>{ $('#pu').value=b.dataset.u; read(); render(); });
+    const of=$('#pofferOn'); if(of) of.onchange=()=>{ $('#pofferFields').hidden=!of.checked; read(); $('#apPrev').innerHTML=preview(); };
+    ['pn','pp','pu','pm','ppromo'].forEach(id=>{ const e=document.getElementById(id); if(e) e.oninput=()=>{ read(); const pv=$('#apPrev'); if(pv) pv.innerHTML=preview(); }; });
+    document.querySelectorAll('#sheet [data-st]').forEach(b=>b.onclick=()=>{ d.stock=b.dataset.st; render(); });
+    const sv=$('#psave'); if(sv) sv.onclick=async()=>{ sv.disabled=true;
+      try{ const r=await api('/partner/products',{method:'POST',body:{business_id:biz.id,name:d.name,price:Number(d.price),
+          mrp: d.offer ? (Number(d.mrp)||null) : null, promo_label: d.offer ? (d.promo||null) : null,
+          unit:d.unit||null, image_url:d.img||null, emoji:null}});
+        if(d.stock==='out_of_stock' && r && r.id){ try{ await api('/partner/products/'+r.id,{method:'PATCH',body:{stock_status:'out_of_stock'}}); }catch(e){} }
+        buzz(20); closeSheet(); toast('Product published'); setTab('p_products'); }catch(e){ sv.disabled=false; toast(e.message); } };
+  };
+  showSheet('Add product', body(), wire);
 }
 SCREENS.p_products = async (el) => {
   if(!token||me.role!=='business_partner') return renderLogin(el,'partner');
