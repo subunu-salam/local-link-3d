@@ -4,7 +4,7 @@
    - Navigations: network-first, fall back to the cached app shell when offline.
    - Same-origin static assets: stale-while-revalidate (instant load, updates in bg).
    - Cross-origin (fonts, photos): left to the browser. */
-const VERSION = 'll-v23-voicebite';
+const VERSION = 'll-v24-qc';
 const SHELL = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
 const SHELL_ASSETS = ['/', '/index.html', '/app.js', '/vb.css', '/vbfx.js', '/favicon.svg',
