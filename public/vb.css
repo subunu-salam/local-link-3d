@@ -1499,3 +1499,38 @@ html.lite img.ph{transition:none; transform:none}
 .ad-sdd button:hover,.ad-sdd button:focus-visible{background:var(--brand-50)}
 .ad-sdd b{display:block; font-size:13.5px} .ad-sdd small{font-size:12px; color:var(--muted)}
 @media (max-width:1100px){ .ad-row2{grid-template-columns:1fr !important} }
+
+/* =====================================================================
+   v29 — partner: compact, aligned bottom navigation (standard mobile
+   sizing: 64px bar, 24px icons, 11px labels, ≥48px targets) + forecast entry
+   ===================================================================== */
+#navholder .bnav.pdock{pointer-events:auto; position:absolute; left:10px; right:10px; bottom:calc(8px + var(--bottom)); z-index:20; display:grid; grid-template-columns:repeat(5,1fr); align-items:center;
+  height:64px; padding:0 4px; border-radius:20px; background:color-mix(in srgb,var(--surface) 94%,transparent); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  border:1px solid var(--line); box-shadow:0 10px 28px -14px rgba(10,40,36,.35)}
+.pdock .vtab{height:56px; margin:0 3px; gap:3px; border-radius:14px; font-size:11px; font-weight:600; color:#8A949A; flex:none; min-width:0}
+.pdock .vtab svg{width:22px; height:22px}
+.pdock .vtab.on{color:var(--brand); background:var(--brand-50)}
+.pdock .vtab.on > span:last-child{opacity:1; font-weight:800}
+.pdock .vtab.on::after{display:none}
+.pdock .vtab > span:last-child{line-height:1}
+.pdock .cartbadge{top:-5px; right:-9px}
+.pdock .pd-addtab{color:var(--brand)}
+.pdock .pd-add{width:30px; height:30px; border-radius:10px; display:grid; place-items:center; color:#fff; background:linear-gradient(135deg,#17B6A6,#0C8F82); box-shadow:0 6px 14px -6px rgba(12,143,130,.8); transition:transform .25s var(--spring)}
+.pdock .pd-add svg{width:18px; height:18px}
+.pdock .pd-addtab:active .pd-add{transform:scale(.88)}
+.pdock .pd-addtab.boing .pd-add{animation:boing .45s var(--spring)}
+body[data-app="partner"] .phone .screen{padding-bottom:96px}
+/* forecast entry card on the dashboard */
+#fcEntry{margin-top:14px}
+.fc-entry{position:relative; overflow:hidden; display:flex; align-items:center; gap:12px; width:100%; padding:14px; border-radius:20px; text-align:left; color:#fff;
+  background:radial-gradient(200px 140px at 100% 0%, rgba(44,203,186,.55), transparent 70%), linear-gradient(140deg,#0A5C55,#073F3A); box-shadow:0 16px 30px -18px rgba(7,63,58,.8); transition:transform .25s var(--spring)}
+.fc-entry:active{transform:scale(.98)}
+.fc-entry::after{content:""; position:absolute; right:-30px; top:-30px; width:120px; height:120px; border-radius:50%; border:1.5px dashed rgba(255,255,255,.18); animation:spin 26s linear infinite}
+.fc-eic{width:42px; height:42px; flex:none; border-radius:14px; display:grid; place-items:center; background:rgba(255,255,255,.14); color:#FFD86B}
+.fc-eic svg{width:22px; height:22px}
+.fc-et{flex:1; min-width:0}
+.fc-et small{display:block; font-size:10.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#BFE7E1}
+.fc-et b{display:block; font-size:14px; font-weight:700; margin-top:2px}
+.fc-et em{font-style:normal; display:inline-block; margin-left:4px; font-size:11px; color:#FFD86B}
+.fc-ego{width:32px; height:32px; flex:none; border-radius:50%; display:grid; place-items:center; background:#fff; color:#0A5C55}
+.fc-ego svg{width:16px; height:16px}
