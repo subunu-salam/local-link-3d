@@ -680,7 +680,8 @@ function renderBottomNav(){
     renderCartBar();
   } else if (state.view==='partner'){
     if (cur==='p_login'){ holder.innerHTML=''; return; }
-    holder.innerHTML = `<nav class="bnav vdock">${tab('p_dash',I.home,'Home')}${tab('p_products',I.store,'Products')}${talk('Add',I.plus)}${tab('p_orders',I.bag,'Orders')}${tab('p_chats',GI.chat,'Chats','<span class="cartbadge pchatbadge" hidden></span>')}</nav>`;
+    const addBtn=`<button class="vtab pd-addtab" data-tabnav="__talk" aria-label="Add product"><span class="vico pd-add">${I.plus}</span><span>Add</span></button>`;
+    holder.innerHTML = `<nav class="bnav pdock" aria-label="Partner">${tab('p_dash',I.home,'Home')}${tab('p_products',I.store,'Products')}${addBtn}${tab('p_orders',I.bag,'Orders')}${tab('p_chats',GI.chat,'Chats','<span class="cartbadge pchatbadge" hidden></span>')}</nav>`;
     setTimeout(()=>{ try{ api('/partner/overview').then(d=>setPartnerChatBadge(d.usage&&d.usage.unreadChats)).catch(()=>{}); }catch(e){} }, 50);
   }
   holder.querySelectorAll('[data-tabnav]').forEach(b=>b.onclick=async()=>{ const r=b.dataset.tabnav;
@@ -1747,6 +1748,20 @@ function fcChart(r){
     <text x="${split+8}" y="13" class="fc-zl">FORECAST</text><text x="6" y="13" class="fc-zl h">LAST 6 MONTHS</text>
     ${bars}<path d="${area}" class="fc-area"/><path d="${line}" class="fc-line" pathLength="1"/>${dots}${labels}</svg>`;
 }
+/* compact entry on the dashboard → full forecast lives on its own screen */
+async function renderForecastEntry(host){
+  if(!host) return;
+  host.innerHTML=`<button class="fc-entry" id="fcGo" aria-label="Open AI demand forecast"><span class="fc-eic">${GI.sparkles}</span>
+    <span class="fc-et"><small>AI demand forecast</small><b id="fcEb">See what will sell in the next 30 days</b></span><span class="fc-ego">${I.chev}</span></button>`;
+  $('#fcGo').onclick=()=>go('p_forecast');
+  try{ const d=await api('/partner/forecast'); const S=d.summary; const b=$('#fcEb');
+    if(b && d.products && d.products.length) b.innerHTML=`${S.units.toLocaleString('en-IN')} units · ${money(S.revenue)} expected <em>${S.confidence}% confidence</em>`; }catch(e){}
+}
+SCREENS.p_forecast = async (el) => {
+  if(!token||me.role!=='business_partner') return renderLogin(el,'partner');
+  el.innerHTML = `${topbarBack('Demand forecast')}<div id="fcHub"></div><div style="height:100px"></div>`;
+  backWire(el); renderForecastHub($('#fcHub'));
+};
 async function renderForecastHub(host){
   host.innerHTML = `<section class="fc-hub">
     <div class="fc-hero"><div class="fc-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -1852,9 +1867,9 @@ SCREENS.p_dash = async (el) => {
       <button class="avatar vav" data-tabnav="p_profile" aria-label="Profile" style="background:${grad(me.avatar_color,'#0B5A55')}">${me.name[0]}</button></div>
     <div class="vgreet" style="margin:12px 2px 0"><b>${greetWord()}, ${esc(me.name.split(' ')[0])}</b><span>Here’s how your shop is doing today</span></div></header>
     <section class="pt-today" id="todo" aria-live="polite"></section>
-    <div id="fcHub"></div>
+    <div id="fcEntry" class="px"></div>
     <div class="px" id="body" style="margin-top:12px">${skeletonRow(2)}</div><div style="height:90px"></div>`;
-  renderForecastHub($('#fcHub')); renderPartnerToday($('#todo'));
+  renderForecastEntry($('#fcEntry')); renderPartnerToday($('#todo'));
   const [d, an] = await Promise.all([api('/partner/overview'), api('/partner/analytics').catch(()=>null)]);
   const stat=(lab,val,emoji)=>`<div class="stat vstat"><span class="ic">${gi(emoji)}</span><div class="lab">${lab}</div><div class="num">${val}</div></div>`;
   $('#body').innerHTML = `
