@@ -297,7 +297,7 @@ async function addToCart(item){
     cart = []; // clear the old store's cart
   }
   const ex=cart.find(i=>i.id===item.id); if(ex) ex.qty++; else cart.push({...item,qty:1});
-  saveCart(); track('add_to_cart',{id:item.id}); updateCartBadge(); return true;
+  saveCart(); buzz(); track('add_to_cart',{id:item.id}); updateCartBadge(); return true;
 }
 function setQty(id,d){ const it=cart.find(i=>i.id===id); if(!it)return; it.qty+=d; if(it.qty<=0) cart=cart.filter(i=>i.id!==id); saveCart(); updateCartBadge(); }
 function syncCartUI(){
@@ -321,6 +321,7 @@ function renderCartBar(){
     <span class="qc-cgo">View cart ${I.chev}</span><span class="qc-prog" style="--p:${pct}%"></span></button>`;
   $('#qcGoCart').onclick=()=>{ track('view_cart'); go('cart'); };
 }
+function buzz(ms=12){ try{ navigator.vibrate && navigator.vibrate(ms); }catch(e){} }
 function track(evt, data){ try{ let sid=sessionStorage.getItem('ll_sid'); if(!sid){ sid=Math.random().toString(36).slice(2,12); sessionStorage.setItem('ll_sid',sid); } fetch('/api/track',{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({name:evt,session:sid,meta:data||null})}).catch(()=>{}); }catch(e){} try{ const k='ll_events'; const a=safeParse(localStorage.getItem(k))||[]; a.push({e:evt,d:data||null,t:Date.now(),v:state.view}); localStorage.setItem(k,JSON.stringify(a.slice(-200))); }catch(e){} }
 function updateCartBadge(){ const b=document.querySelector('.bnav .cartbadge:not(.pchatbadge)'); const n=cartCount(); if(b){ b.textContent=n; b.hidden=!n; } syncCartUI(); }
 function setPartnerChatBadge(n){ const b=document.querySelector('.pchatbadge'); if(b){ b.textContent=n||0; b.hidden=!n; } }
@@ -411,16 +412,26 @@ function logoMark(size=26){
 
 /* ---------------- customer router ---------------- */
 function stack(){ return nav[state.view]; }
-function go(routeName, params){ stack().push({name:routeName, params:params||{}}); routeRender(); const s=$('#screen'); if(s) s.scrollTop=0; }
-function back(){ if(stack().length>1){ stack().pop(); routeRender(); } }
+function go(routeName, params){ stack().push({name:routeName, params:params||{}}); try{ history.pushState({ll:1, view:state.view}, ''); }catch(e){} routeRender(); const s=$('#screen'); if(s) s.scrollTop=0; }
+function back(){ if(stack().length>1){ if(history.state && history.state.ll){ history.back(); return; } stack().pop(); routeRender(); } }
 function setTab(routeName){ nav[state.view]=[{name:routeName}]; routeRender(); }
 
 const SCREENS = {};
+function wirePullToRefresh(){
+  const sc=document.getElementById('screen'); if(!sc || sc.__ptr) return; sc.__ptr=true;
+  const ok=()=>['p_dash','p_orders','p_chats','p_products','home','orders'].includes((stack()[stack().length-1]||{}).name);
+  const ind=document.createElement('div'); ind.className='ptr'; ind.innerHTML=I.dir; sc.parentNode.appendChild(ind);
+  let y0=null, dy=0;
+  sc.addEventListener('touchstart',e=>{ if(sc.scrollTop<=0 && ok()){ y0=e.touches[0].clientY; dy=0; } },{passive:true});
+  sc.addEventListener('touchmove',e=>{ if(y0===null) return; dy=Math.max(0,e.touches[0].clientY-y0); const k=Math.min(1,dy/80); ind.style.opacity=k; ind.style.transform=`translate(-50%,${Math.min(70,dy*.6)}px) rotate(${dy*3}deg)`; ind.classList.toggle('ready',dy>80); },{passive:true});
+  sc.addEventListener('touchend',()=>{ if(y0===null) return; y0=null; if(dy>80){ ind.classList.add('spin'); buzz(); Promise.resolve(routeRender()).finally(()=>setTimeout(()=>{ ind.classList.remove('spin','ready'); ind.style.opacity=0; ind.style.transform=''; },400)); } else { ind.style.opacity=0; ind.style.transform=''; } });
+}
 async function routeRender(){
   const cur = stack()[stack().length-1];
   const screen = $('#screen');
   if (!screen) return;
   screen.scrollTop = 0;                 // always start a screen at the top (fixes "stuck in middle")
+  wirePullToRefresh();
   const fn = SCREENS[cur.name];
   if (!fn){ screen.innerHTML = emptyState('compass','Screen not found',''); return; }
   try { await fn(screen, cur.params||{}); }
@@ -1630,7 +1641,7 @@ function aiResultRow(x){
 
 /* ---------------- bottom sheet ---------------- */
 function showSheet(title, bodyHtml, wire){
-  closeSheet();
+  closeSheet(); try{ history.pushState({llsheet:1}, ''); }catch(e){}
   const phone = $('.phone') || document.body;
   const s = h(`<div class="sheet" id="sheet"><div class="panel-s"><div class="grab"></div>
     <div class="sh-head"><h3 style="font-size:16px;flex:1">${title}</h3><button class="tb-btn" id="sclose">✕</button></div>
@@ -1640,7 +1651,7 @@ function showSheet(title, bodyHtml, wire){
   $('#sclose').onclick=closeSheet;
   if(wire) wire();
 }
-function closeSheet(){ const s=$('#sheet'); if(s) s.remove(); }
+function closeSheet(){ const s=$('#sheet'); if(s){ s.classList.add('closing'); setTimeout(()=>s.remove(),180); if(history.state && history.state.llsheet){ try{ history.replaceState(null,''); }catch(e){} } } }
 
 /* ---------------- auth (customer/partner/admin shared) ---------------- */
 function renderLogin(el, kind){
@@ -1871,11 +1882,10 @@ SCREENS.p_dash = async (el) => {
     <div class="px" id="body" style="margin-top:12px">${skeletonRow(2)}</div><div style="height:90px"></div>`;
   renderForecastEntry($('#fcEntry')); renderPartnerToday($('#todo'));
   const [d, an] = await Promise.all([api('/partner/overview'), api('/partner/analytics').catch(()=>null)]);
-  const stat=(lab,val,emoji)=>`<div class="stat vstat"><span class="ic">${gi(emoji)}</span><div class="lab">${lab}</div><div class="num">${val}</div></div>`;
+  const stat=(lab,val,emoji)=>`<div class="pt-kpi"><span>${gi(emoji)}</span><div><b>${val}</b><small>${lab}</small></div></div>`;
   $('#body').innerHTML = `
-    <div class="grid2" style="gap:12px">
-      ${stat('New orders', d.stats.orders, 'package')}${stat('Enquiries', d.stats.enquiries, 'chat')}
-      ${stat('Revenue', money(d.stats.revenue), 'card')}${stat('Profile views', d.stats.views, 'compass')}</div>
+    <div class="pt-sh"><b>Your shop at a glance</b><small>All time</small></div>
+    <div class="pt-kpis">${stat('Orders', d.stats.orders, 'package')}${stat('Revenue', money(d.stats.revenue), 'card')}${stat('Enquiries', d.stats.enquiries, 'chat')}${stat('Profile views', d.stats.views, 'compass')}</div>
     ${an ? `<div class="card" style="padding:15px;margin-top:14px">
       <div class="row" style="justify-content:space-between;align-items:baseline"><h3 style="font-size:15px">Sales — last 7 days</h3><span class="muted" style="font-size:12px">Avg order ${money(an.avgOrder)}</span></div>
       ${barChartSVG(an.revenue7)}
@@ -2011,7 +2021,7 @@ SCREENS.p_products = async (el) => {
   const wire=()=>{
     el.querySelectorAll('[data-pedit]').forEach(b=>b.onclick=()=>{ const p=prods.find(x=>String(x.id)===b.dataset.pedit); if(p) openEditProduct(p); });
     el.querySelectorAll('[data-poos]').forEach(b=>b.onchange=async()=>{ const next=b.dataset.cur==='out_of_stock'?'in_stock':'out_of_stock';
-      try{ await api('/partner/products/'+b.dataset.poos,{method:'PATCH',body:{stock_status:next}}); toast(next==='out_of_stock'?'Marked out of stock':'Marked in stock'); refresh(); }catch(e){toast(e.message); b.checked=!b.checked;} });
+      try{ await api('/partner/products/'+b.dataset.poos,{method:'PATCH',body:{stock_status:next}}); buzz(); toast(next==='out_of_stock'?'Marked out of stock':'Marked in stock'); refresh(); }catch(e){toast(e.message); b.checked=!b.checked;} });
     el.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=async()=>{ const ok=await confirmDialog({title:'Delete product?',message:'Delete "'+b.dataset.pname+'"? This cannot be undone.',ok:'Delete',cancel:'Keep',icon:I.trash||GI.warning,danger:true}); if(!ok)return;
       try{ await api('/partner/products/'+b.dataset.pdel,{method:'DELETE'}); toast('Product deleted'); refresh(); }catch(e){toast(e.message);} });
   };
@@ -2068,8 +2078,19 @@ SCREENS.p_orders = async (el) => {
       <p class="pt-items">${esc(o.item_summary)}</p>
       ${['rejected','cancelled'].includes(o.status)?'':orderTimeline(o.status)}
       <footer><b>${money(o.total)}</b><div class="row" style="gap:7px">${(nextActs[o.status]||[]).map(([s,l])=>`<button class="btn sm ${s==='rejected'?'ghost':''}" data-oid="${o.id}" data-st="${s}">${l}</button>`).join('')}</div></footer></article>`).join('')
-      : emptyState('package','Nothing here','Orders in this stage will show up here.');
-    $('#l').querySelectorAll('[data-oid]').forEach(b=>b.onclick=async()=>{ try{ await api(`/partner/orders/${b.dataset.oid}/status`,{method:'POST',body:{status:b.dataset.st}}); toast('Order updated'); draw(); }catch(e){toast(e.message);} });
+      : emptyState('package', lane==='new'?'No new orders right now':'Nothing here', lane==='new'?'Share your shop so nearby customers can order.':'Orders in this stage will show up here.', lane==='new'?`<button class="btn sm" id="shareShop">${I.share} Share your shop</button>`:'');
+    const setStatus=async(oid,st,card)=>{ try{ await api(`/partner/orders/${oid}/status`,{method:'POST',body:{status:st}}); buzz(st==='rejected'?[10,40,10]:18); if(card){ card.classList.add(st==='rejected'?'gone-l':'gone-r'); await new Promise(r=>setTimeout(r,260)); } toast(st==='rejected'?'Order rejected':'Order updated'); draw(); }catch(e){toast(e.message);} };
+    $('#l').querySelectorAll('[data-oid]').forEach(b=>b.onclick=()=>setStatus(b.dataset.oid,b.dataset.st,b.closest('.pt-ticket')));
+    // swipe: right = next step (accept / advance), left = reject (only where allowed)
+    $('#l').querySelectorAll('.pt-ticket').forEach(card=>{ const btns=[...card.querySelectorAll('[data-oid]')]; if(!btns.length) return;
+      const fwd=btns.find(b=>b.dataset.st!=='rejected'), rej=btns.find(b=>b.dataset.st==='rejected');
+      card.insertAdjacentHTML('afterbegin',`<span class="sw-hint r">${I.chev} ${fwd?esc(fwd.textContent):''}</span>${rej?`<span class="sw-hint l">Reject</span>`:''}`);
+      let x0=null, dx=0; card.addEventListener('pointerdown',e=>{ if(e.target.closest('button')) return; x0=e.clientX; dx=0; card.setPointerCapture(e.pointerId); });
+      card.addEventListener('pointermove',e=>{ if(x0===null) return; dx=e.clientX-x0; if(!rej&&dx<0) dx=0; card.style.transform=`translateX(${dx}px) rotate(${dx/40}deg)`; card.classList.toggle('sw-r',dx>40); card.classList.toggle('sw-l',dx<-40); });
+      const end=()=>{ if(x0===null) return; x0=null; card.style.transform=''; card.classList.remove('sw-r','sw-l');
+        if(dx>90 && fwd) setStatus(fwd.dataset.oid,fwd.dataset.st,card); else if(dx<-90 && rej) setStatus(rej.dataset.oid,'rejected',card); };
+      card.addEventListener('pointerup',end); card.addEventListener('pointercancel',end); });
+    const es=$('#shareShop'); if(es) es.onclick=async()=>{ const url=location.origin+'/'; try{ if(navigator.share) await navigator.share({title:'Order from my shop on Local Link',url}); else { await navigator.clipboard.writeText(url); toast('Link copied'); } }catch(e){} };
     $('#of').querySelectorAll('[data-lane]').forEach(b=>b.onclick=()=>{ lane=b.dataset.lane; draw(); });
   };
   $('#oref').onclick=()=>draw();
@@ -2159,8 +2180,9 @@ SCREENS.p_profile = async (el) => {
         <button data-tabnav="p_settings"><span class="ic">${gi('card')}</span> Payments & business settings <span class="chev">${I.chev}</span></button>
       </div>
       <div class="plist" style="margin-top:12px"><button data-tabnav="p_plans"><span class="ic">${I.chart}</span> Subscription plan <span class="rt" id="planlab">…</span></button></div>
-      <button class="btn ghost block" style="margin-top:16px;color:var(--error);border-color:var(--error)" id="out">${I.logout} Log out</button></div>`;
-  $('#out').onclick=()=>{ token=null;me=null;localStorage.removeItem('ll_token');localStorage.removeItem('ll_user'); nav.partner=[{name:'p_login'}]; toast('Logged out'); routeRender(); };
+      <button class="btn ghost block pt-logout" id="out">${I.logout} Log out</button></div>`;
+  $('#out').onclick=async()=>{ const ok=await confirmDialog({title:'Log out?',message:'You will stop getting new-order alerts on this device until you log in again.',ok:'Log out',cancel:'Stay',danger:true,icon:I.logout}); if(!ok) return;
+    token=null;me=null;localStorage.removeItem('ll_token');localStorage.removeItem('ll_user'); nav.partner=[{name:'p_login'}]; toast('Logged out'); routeRender(); };
   el.querySelectorAll('[data-tabnav]').forEach(b=>b.onclick=()=>setTab(b.dataset.tabnav));
   api('/partner/overview').then(d=>{ const p=$('#planlab'); if(p&&d.plan) p.innerHTML=`${esc(d.plan.name)} ${I.chev}`; }).catch(()=>{});
 };
@@ -2750,7 +2772,14 @@ document.addEventListener('click', (e) => {
   if (lb){ state.lang=lb.dataset.l; localStorage.setItem('ll_lang',state.lang); renderShell(); return; }
   if (e.target.closest('[data-mini-theme]')){ cycleTheme(); return; }
 });
-window.addEventListener('popstate', () => { const v=viewFromPath(); if(v!==state.view){ state.view=v; renderShell(); } });
+window.addEventListener('popstate', (e) => {
+  // phone back button / swipe-back: close an open panel first, then step back inside the app
+  const sh=document.getElementById('sheet'); const cd=document.querySelector('.cd-back');
+  if(cd){ cd.querySelector('.cd-acts button')?.click(); return; }
+  if(sh){ closeSheet(); return; }
+  if(e.state && e.state.ll && nav[state.view] && nav[state.view].length>1){ nav[state.view].pop(); routeRender(); return; }
+  if(nav[state.view] && nav[state.view].length>1){ nav[state.view].pop(); routeRender(); return; }
+  const v=viewFromPath(); if(v!==state.view){ state.view=v; renderShell(); } });
 
 async function boot(){
   try{

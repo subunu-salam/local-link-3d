@@ -1534,3 +1534,67 @@ body[data-app="partner"] .phone .screen{padding-bottom:96px}
 .fc-et em{font-style:normal; display:inline-block; margin-left:4px; font-size:11px; color:#FFD86B}
 .fc-ego{width:32px; height:32px; flex:none; border-radius:50%; display:grid; place-items:center; background:#fff; color:#0A5C55}
 .fc-ego svg{width:16px; height:16px}
+
+/* =====================================================================
+   v30 — mobile sizing pass (partner first, safe everywhere)
+   type: 12px minimum, 14–15px body · targets: ≥44px · spacing: 8/16/24
+   ===================================================================== */
+body[data-app="partner"]{font-size:15px}
+/* calmer headings */
+body[data-app="partner"] .chead h2,body[data-app="partner"] .vgreet b{font-size:24px !important; line-height:1.05}
+body[data-app="partner"] .pt-head h2{font-size:26px}
+body[data-app="partner"] .row.px[style*="sticky"] h3{font-size:22px !important}
+body[data-app="partner"] .vgreet span{font-size:14px}
+/* minimum readable sizes */
+body[data-app="partner"] :is(.badge,.fc-pc,.fc-basis,.fc-why span,.pt-do small,.pt-card small,.pt-q small,.fc-mrow small,.fc-mrow i,.fc-bandl,.fc-big small,.fc-kpi span,.fc-evs span,.pt-filt button i,.olab){font-size:12px !important}
+body[data-app="partner"] .fc-chart text{font-size:10px}
+body[data-app="partner"] .fc-ring span{font-size:8px}
+body[data-app="partner"] .olab{line-height:1.15}
+body[data-app="partner"] .muted{font-size:max(12px,1em)}
+/* tap targets ≥44px */
+body[data-app="partner"] :is(.pmbtn,.btn.sm,.pt-filt button,.pt-th button,.lang-toggle button,.tb-btn,.pt-live){min-height:44px}
+body[data-app="partner"] .pmbtn{padding:0 14px; font-size:13px}
+body[data-app="partner"] .lang-toggle button{min-width:44px}
+body[data-app="partner"] .pt-sw{min-height:44px}
+body[data-app="partner"] .pt-acts .pmbtn.danger{min-width:44px; justify-content:center}
+body[data-app="partner"] .plist > :is(a,button){min-height:56px}
+/* 8 / 16 / 24 spacing rhythm */
+body[data-app="partner"] .pt-today,body[data-app="partner"] #fcEntry{margin-top:16px}
+body[data-app="partner"] .pt-dos{gap:8px}
+body[data-app="partner"] .pt-quick{gap:8px; margin-top:8px}
+body[data-app="partner"] #body > *{margin-top:16px !important}
+body[data-app="partner"] .sec-head{margin:24px 0 8px !important}
+body[data-app="partner"] .grid2{gap:8px !important}
+/* long names wrap instead of being cut */
+.pt-items,.pt-q small,.qc-line h4,.pt-card h4,.cart-item h4{white-space:normal !important; -webkit-line-clamp:unset !important; overflow:visible !important; text-overflow:clip !important}
+.pt-q small{display:-webkit-box !important; -webkit-line-clamp:2 !important; -webkit-box-orient:vertical; overflow:hidden !important}
+/* one action area + slim KPI strip */
+.pt-sh{display:flex; justify-content:space-between; align-items:baseline}
+.pt-sh b{font-size:15px; font-weight:800} .pt-sh small{font-size:12px; color:var(--muted)}
+.pt-kpis{display:flex; gap:8px; overflow-x:auto; margin:8px -16px 0 !important; padding:0 16px 4px; scrollbar-width:none; scroll-snap-type:x mandatory}
+.pt-kpis::-webkit-scrollbar{display:none}
+.pt-kpi{flex:none; scroll-snap-align:start; display:flex; align-items:center; gap:10px; min-width:150px; padding:12px 14px; border-radius:16px; background:var(--surface); box-shadow:var(--shadow)}
+.pt-kpi span{width:36px; height:36px; border-radius:12px; display:grid; place-items:center; background:var(--brand-50); color:var(--brand)}
+.pt-kpi span svg{width:18px; height:18px}
+.pt-kpi b{display:block; font-size:18px; font-weight:800; letter-spacing:-.03em; font-variant-numeric:tabular-nums; line-height:1.1}
+.pt-kpi small{font-size:12px; color:var(--muted)}
+/* safer log out: separated, lower, quieter */
+.pt-logout{margin-top:32px !important; color:var(--bad) !important; background:transparent !important; box-shadow:none !important; border:1px solid color-mix(in srgb,var(--bad) 30%,transparent) !important; min-height:48px}
+/* swipe on order tickets */
+.pt-ticket{position:relative; touch-action:pan-y; transition:transform .25s var(--ease), opacity .25s; user-select:none}
+.pt-ticket .sw-hint{position:absolute; top:50%; transform:translateY(-50%); z-index:-1; display:inline-flex; align-items:center; gap:4px; font-size:13px; font-weight:800; opacity:0; transition:opacity .2s}
+.pt-ticket .sw-hint svg{width:16px; height:16px}
+.pt-ticket .sw-hint.r{left:-96px; color:var(--ok)} .pt-ticket .sw-hint.l{right:-80px; color:var(--bad)}
+.pt-ticket.sw-r{box-shadow:0 0 0 2px var(--ok), var(--shadow) !important} .pt-ticket.sw-r .sw-hint.r{opacity:1}
+.pt-ticket.sw-l{box-shadow:0 0 0 2px var(--bad), var(--shadow) !important} .pt-ticket.sw-l .sw-hint.l{opacity:1}
+.pt-ticket.gone-r{transform:translateX(110%) rotate(6deg) !important; opacity:0}
+.pt-ticket.gone-l{transform:translateX(-110%) rotate(-6deg) !important; opacity:0}
+#l:has(.pt-ticket)::before{content:"Tip: swipe right to accept or advance, left to reject"; display:block; font-size:12px; color:var(--muted); text-align:center; margin:-2px 0 4px}
+/* pull to refresh */
+.ptr{position:absolute; top:calc(8px + var(--top)); left:50%; z-index:30; width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--surface); color:var(--brand); box-shadow:var(--shadow); opacity:0; transform:translate(-50%,0); pointer-events:none}
+.ptr svg{width:18px; height:18px}
+.ptr.ready{background:var(--brand); color:#fff}
+.ptr.spin svg{animation:spin .7s linear infinite}
+/* sheets close smoothly (back gesture) */
+.sheet.closing{animation:fadeOut .18s ease forwards} .sheet.closing .panel-s{animation:sheetDown .18s ease forwards}
+@keyframes fadeOut{to{opacity:0}} @keyframes sheetDown{to{transform:translateY(40px)}}
