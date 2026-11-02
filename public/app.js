@@ -293,10 +293,32 @@ async function addToCart(item){
     cart = []; // clear the old store's cart
   }
   const ex=cart.find(i=>i.id===item.id); if(ex) ex.qty++; else cart.push({...item,qty:1});
-  saveCart(); toast(item.name+' added to cart'); updateCartBadge(); return true;
+  saveCart(); track('add_to_cart',{id:item.id}); updateCartBadge(); return true;
 }
-function setQty(id,d){ const it=cart.find(i=>i.id===id); if(!it)return; it.qty+=d; if(it.qty<=0) cart=cart.filter(i=>i.id!==id); saveCart(); }
-function updateCartBadge(){ const b=document.querySelector('.bnav .cartbadge:not(.pchatbadge)'); const n=cartCount(); if(b){ b.textContent=n; b.hidden=!n; } }
+function setQty(id,d){ const it=cart.find(i=>i.id===id); if(!it)return; it.qty+=d; if(it.qty<=0) cart=cart.filter(i=>i.id!==id); saveCart(); updateCartBadge(); }
+function syncCartUI(){
+  document.querySelectorAll('[data-ctl-pid]').forEach(el=>{ const pid=Number(el.dataset.ctlPid); const it=cart.find(i=>i.id===pid);
+    if(it && el.classList.contains('qc-step')){ el.querySelector('b').textContent=it.qty; return; }
+    if(!!it === el.classList.contains('qc-step')) return;
+    const p={ id:pid, name:el.dataset.pname||(it&&it.name)||'', price:Number(el.dataset.pprice||(it&&it.price)||0), mrp:Number(el.dataset.pmrp||(it&&it.mrp)||0), unit:el.dataset.punit||(it&&it.unit)||'', business:el.dataset.pbiz||(it&&it.biz)||'', business_id:Number(el.dataset.pbizid||(it&&it.bizId)||0) };
+    const keep={pname:p.name,pprice:p.price,pmrp:p.mrp,punit:p.unit,pbiz:p.business,pbizid:p.business_id,pimg:el.dataset.pimg||(it&&it.image)||''};
+    const n=h(addCtl(p, keep.pimg)); Object.entries(keep).forEach(([k,v])=>{ if(!n.dataset[k]) n.dataset[k]=v; }); el.replaceWith(n); });
+  renderCartBar();
+}
+function renderCartBar(){
+  const host=document.getElementById('qcCartBar'); if(!host) return;
+  const n=cartCount(), tot=cartTotal(), FREE=499;
+  if(!n){ host.innerHTML=''; host.hidden=true; return; }
+  host.hidden=false;
+  const left=Math.max(0,FREE-tot), pct=Math.min(100,Math.round(tot/FREE*100));
+  host.innerHTML=`<button class="qc-cartbar" id="qcGoCart" aria-label="View cart, ${n} items, ${money(tot)}">
+    <span class="qc-thumbs">${cart.slice(-3).map(i=>`<i>${i.image?`<img src="${esc(i.image)}" alt="" onerror="this.remove()">`:''}</i>`).join('')}</span>
+    <span class="qc-cbt"><b>${n} item${n>1?'s':''} · ${money(tot)}</b><small>${left?`Add ${money(left)} for FREE delivery`:'🎉 FREE delivery unlocked'}</small></span>
+    <span class="qc-cgo">View cart ${I.chev}</span><span class="qc-prog" style="--p:${pct}%"></span></button>`;
+  $('#qcGoCart').onclick=()=>{ track('view_cart'); go('cart'); };
+}
+function track(evt, data){ try{ const k='ll_events'; const a=safeParse(localStorage.getItem(k))||[]; a.push({e:evt,d:data||null,t:Date.now(),v:state.view}); localStorage.setItem(k,JSON.stringify(a.slice(-200))); }catch(e){} }
+function updateCartBadge(){ const b=document.querySelector('.bnav .cartbadge:not(.pchatbadge)'); const n=cartCount(); if(b){ b.textContent=n; b.hidden=!n; } syncCartUI(); }
 function setPartnerChatBadge(n){ const b=document.querySelector('.pchatbadge'); if(b){ b.textContent=n||0; b.hidden=!n; } }
 
 /* ---------------- wishlist / saved items (persisted) ---------------- */
@@ -429,21 +451,24 @@ function offerCard(o){ return `<button class="ocard" data-nav="business" data-id
   <span class="badge tag">${esc(o.discount_label||'OFFER')}</span>
   <div><h4>${esc(o.title)}</h4><div class="biz">${esc(o.business||'')}</div></div>
   <span class="disc">%</span></button>`; }
+function addCtl(p, src, biz){
+  const inCart = cart.find(i=>i.id===p.id);
+  if(inCart) return `<span class="qc-step" data-ctl-pid="${p.id}" role="group" aria-label="Quantity of ${esc(p.name)}"><button data-qdec="${p.id}" aria-label="Remove one">−</button><b aria-live="polite">${inCart.qty}</b><button data-qinc="${p.id}" aria-label="Add one">+</button></span>`;
+  return `<button class="qc-add" data-ctl-pid="${p.id}" data-add="1" data-pid="${p.id}" data-pname="${esc(p.name)}" data-pprice="${p.price}" data-pmrp="${p.mrp||''}" data-punit="${esc(p.unit||'')}" data-pimg="${esc(src)}" data-pbiz="${esc(p.business||(biz&&biz.name)||'')}" data-pbizid="${p.business_id||(biz&&biz.id)||''}" aria-label="Add ${esc(p.name)} to cart">ADD</button>`;
+}
 function productCard(p, biz, opts={}){ const disc = p.mrp && p.mrp>p.price;
   const src = p.image_url || pic((p.name||'product').toLowerCase(), 500+(p.id||0));
   const pct = disc ? Math.round((1-p.price/p.mrp)*100) : 0;
-  const badge = p.promo_label ? `<span class="poff" style="background:var(--primary)">${esc(p.promo_label)}</span>` : (opts.best ? `<span class="bestseller">Best Seller</span>` : (disc ? `<span class="poff">${pct}% OFF</span>` : ''));
   const oos = p.stock_status==='out_of_stock';
   const rating = (p.rating || (4 + ((p.id||1)%10)/10)).toFixed(1);
-  const rc = p.review_count || (30 + (p.id||1)*7 % 900);
-  const add = oos ? '' : `<span class="add" data-add="1" data-pid="${p.id}" data-pname="${esc(p.name)}" data-pprice="${p.price}" data-pimg="${esc(src)}" data-pbiz="${esc(p.business||(biz&&biz.name)||'')}" data-pbizid="${p.business_id||(biz&&biz.id)||''}">+</span>`;
-  const fav = `<span class="fav2 ${isSaved('product',p.id)?'on':''}" data-fav data-ftype="product" data-fid="${p.id}" data-fname="${esc(p.name)}" data-fprice="${p.price}" data-fimg="${esc(src)}">${I.heart}</span>`;
-  return `<div class="pcard" data-nav="product" data-id="${p.id}"><div class="pimg">${photoLayer(src)}${badge}${fav}${dIcon({name:p.name, category_slug: biz&&biz.category_slug},'cart')}${add}</div>
-    <div class="pb"><h4>${esc(p.name)}</h4>
-      <div class="prow"><span class="prate">${I.star}${rating} <small>(${rc})</small></span></div>
-      <div class="price">${money(p.price)}${disc?`<span class="old">${money(p.mrp)}</span>`:''}</div>
-      ${p.unit?`<div class="punit">${esc(p.unit)}</div>`:''}
-      <span class="xbadge">express</span>${oos?'<span class="oos">Out of stock</span>':''}</div></div>`; }
+  const rib = p.promo_label ? `<span class="qc-rib">${esc(p.promo_label)}</span>` : disc ? `<span class="qc-rib">${pct}%<br>OFF</span>` : (opts.best ? `<span class="qc-rib best">BEST<br>SELLER</span>` : '');
+  const fav = `<button class="fav2 ${isSaved('product',p.id)?'on':''}" data-fav data-ftype="product" data-fid="${p.id}" data-fname="${esc(p.name)}" data-fprice="${p.price}" data-fimg="${esc(src)}" aria-label="Save ${esc(p.name)}">${I.heart}</button>`;
+  return `<div class="pcard qc-card${oos?' oos-card':''}" data-nav="product" data-id="${p.id}" role="link" tabindex="0" aria-label="${esc(p.name)}, ${money(p.price)}">
+    <div class="pimg">${photoLayer(src)}${dIcon({name:p.name, category_slug: biz&&biz.category_slug},'cart')}${rib}${fav}${oos?'<span class="qc-oos">Out of stock</span>':addCtl(p,src,biz)}</div>
+    <div class="pb"><span class="qc-time">${gi('clock')} 15 MINS</span>
+      <h4>${esc(p.name)}</h4>
+      <div class="punit">${esc(p.unit||'1 unit')} · <span class="prate">${I.star}${rating}</span></div>
+      <div class="price">${money(p.price)}${disc?`<span class="old">${money(p.mrp)}</span>`:''}</div></div></div>`; }
 function serviceCard(s){ return `<button class="brow" data-nav="business" data-id="${s.business_id||s.id}" style="text-align:left">
   <div class="thumb" style="background:${grad('#6366F1','#4338CA')}">${dIcon(s,'wrench')}</div>
   <div class="info"><h4>${esc(s.name)}</h4><div class="muted" style="font-size:12.5px;margin-top:2px">${esc(s.business||'')}</div>
@@ -572,12 +597,15 @@ function startCountdown(){ if(_cdTimer) clearInterval(_cdTimer);
 const VERTICALS=[['all','store','All'],['food','fork','Food'],['grocery','cart','Grocery'],['services','wrench','Services'],['quick','bolt','Quick'],['workers','helmet','Workers'],['transport','car','Transport']];
 function vpillsHtml(active){ return `<div class="vbar"><div class="vpills">${VERTICALS.map(([k,icn,lab])=>`<button class="vpill ${active===k?'on':''}" data-vert="${k}"><span class="gi">${GI[icn]}</span>${esc(lab)}</button>`).join('')}</div></div>`; }
 function wireVerticals(el){ el.querySelectorAll('[data-vert]').forEach(b=>b.onclick=()=>{ const k=b.dataset.vert;
+  const hd=b.closest('.qc-head'); if(hd && k!=='all'){ hd.style.setProperty('--tone',QC_TONES[k]); el.querySelectorAll('.qc-tab').forEach(x=>{ x.classList.toggle('on',x===b); x.setAttribute('aria-selected',x===b); }); return setTimeout(()=>vertGo(k),220); }
+  vertGo(k); }); }
+function vertGo(k){
   if(k==='all'){ setTab('home'); return; }
   if(k==='food'){ go('category',{slug:'food-grocery',vfilter:'food',vlabel:'Food & Dining'}); return; }
   if(k==='grocery'){ go('category',{slug:'food-grocery',vfilter:'grocery',vlabel:'Grocery & Essentials'}); return; }
   if(k==='quick'){ go('category',{slug:'food-grocery',vfilter:'quick',vlabel:'Quick delivery'}); return; }
   const map={services:'services',workers:'workers',transport:'transport'};
-  go('category',{slug:map[k]||'food-grocery'}); }); }
+  go('category',{slug:map[k]||'food-grocery'}); }
 // which subcategories belong to each vertical filter
 const VFILTERS={
   food:/restaurant|hotel|bakery|cake|meat|seafood|fish|cafe|biriyani|biryani|juice|dining|food/i,
@@ -596,8 +624,17 @@ function wireCustControls(el){ const th=el.querySelector('[data-ctheme]'); if(th
 document.addEventListener('click', (e) => {
   const ab = e.target.closest('[data-add]'); if(!ab) return;
   e.stopPropagation(); e.preventDefault();
-  addToCart({ id:Number(ab.dataset.pid), name:ab.dataset.pname, price:Number(ab.dataset.pprice), image:ab.dataset.pimg||'', biz:ab.dataset.pbiz||'', bizId:Number(ab.dataset.pbizid)||1 });
+  addToCart({ id:Number(ab.dataset.pid), name:ab.dataset.pname, price:Number(ab.dataset.pprice), mrp:Number(ab.dataset.pmrp)||0, unit:ab.dataset.punit||'', image:ab.dataset.pimg||'', biz:ab.dataset.pbiz||'', bizId:Number(ab.dataset.pbizid)||1 });
 });
+/* delegate inline steppers on product cards */
+document.addEventListener('click', (e) => {
+  const d=e.target.closest('[data-qdec],[data-qinc]'); if(!d) return;
+  e.stopPropagation(); e.preventDefault();
+  if(d.dataset.qinc) setQty(Number(d.dataset.qinc),1); else setQty(Number(d.dataset.qdec),-1);
+  const cur=stack()[stack().length-1]; if(cur && cur.name==='cart') routeRender();
+});
+/* keyboard: Enter/Space opens role=link cards */
+document.addEventListener('keydown', (e) => { if((e.key==='Enter'||e.key===' ') && e.target.matches && e.target.matches('[role="link"][data-nav]')){ e.preventDefault(); e.target.click(); } });
 /* delegate wishlist (heart) clicks */
 document.addEventListener('click', (e) => {
   const fb = e.target.closest('[data-fav]'); if(!fb) return;
@@ -607,7 +644,7 @@ document.addEventListener('click', (e) => {
 });
 /* delegate nav clicks */
 document.addEventListener('click', (e) => {
-  if (e.target.closest('[data-add]')) return;
+  if (e.target.closest('[data-add],[data-qdec],[data-qinc],[data-fav]')) return;
   const nb = e.target.closest('[data-nav]'); if (!nb) return;
   const r = nb.dataset.nav;
   if (r==='business') go('business',{id:Number(nb.dataset.id)});
@@ -627,9 +664,11 @@ function renderBottomNav(){
   const tab=(r,icon,lab,extra='')=>`<button class="vtab ${cur===r?'on':''}" data-tabnav="${r}" ${cur===r?'aria-current="page"':''}><span class="vico">${icon}${extra}</span><span>${esc(lab)}</span></button>`;
   const talk=(lab,icon)=>`<button class="vtalk" data-tabnav="__talk" aria-label="${esc(lab)}"><span class="t-glow"></span><span class="t-ring"></span><span class="t-core">${icon}</span><span class="t-lab">${esc(lab)}</span></button>`;
   if (state.view==='customer'){
-    if (['splash','location','intro','register','login'].includes(cur)){ holder.innerHTML=''; return; }
+    if (['splash','location','intro','register','login','cart','checkout'].includes(cur)){ holder.innerHTML=''; return; }
     const cb=`<span class="cartbadge" ${cartCount()?'':'hidden'}>${cartCount()}</span>`;
-    holder.innerHTML = `<nav class="bnav vdock">${tab('home',I.home,'Home')}${tab('categories',I.grid,'Explore')}${talk('Ask',GI.mic)}${tab('cart',I.bag,'Cart',cb)}${tab('account',I.user,'Account')}</nav>`;
+    const hideBar=['cart','checkout','product','chat'].includes(cur);
+    holder.innerHTML = `${hideBar?'':'<div id="qcCartBar" class="qc-cartwrap" aria-live="polite" hidden></div>'}<nav class="bnav vdock qc-dock" aria-label="Main">${tab('home',I.home,'Home')}${tab('categories',I.grid,'Categories')}${talk('Ask',GI.mic)}${tab('orders',GI.package,'Orders')}${tab('account',I.user,'Account')}</nav>`;
+    renderCartBar();
   } else if (state.view==='partner'){
     if (cur==='p_login'){ holder.innerHTML=''; return; }
     holder.innerHTML = `<nav class="bnav vdock">${tab('p_dash',I.home,'Home')}${tab('p_products',I.store,'Products')}${talk('Add',I.plus)}${tab('p_orders',I.bag,'Orders')}${tab('p_chats',GI.chat,'Chats','<span class="cartbadge pchatbadge" hidden></span>')}</nav>`;
@@ -740,37 +779,31 @@ function pickArea(id,name){ state.areaId=id; state.areaName=name; state.onboarde
   const dest = state.introSeen ? 'home' : 'intro';
   nav.customer=[{name:dest}]; routeRender(); toast('Location set to '+name); }
 
+const QC_TONES={all:'#0C8F82',food:'#E0573E',grocery:'#2E9D5B',services:'#3D6FD8',quick:'#C98A00',workers:'#8A55D6',transport:'#0B7FA8'};
+function qcHeader(active){
+  return `<header class="qc-head" style="--tone:${QC_TONES[active]||QC_TONES.all}">
+    <div class="qc-top">
+      <button class="qc-eta" data-tabnav-loc aria-label="Delivering to ${esc(state.areaName)}. Change area">
+        <small>Local Link in</small><b>15 minutes</b>
+        <span>${I.pin}<em>${esc(state.areaName)}, Kozhikode</em>${I.chev.replace('m9 6 6 6-6 6','m6 9 6 6 6-6')}</span></button>
+      <div class="qc-acts">${custControls()}<button class="qc-ico" data-nav="saved" aria-label="Saved items">${I.heart}</button></div>
+    </div>
+    <div class="qc-search"><span aria-hidden="true">${I.search}</span>
+      <button class="qc-stxt" data-nav="searchScreen" aria-label="Search"><span class="sq" id="rotsq">Search "biriyani"</span></button>
+      <i class="qc-sdiv" aria-hidden="true"></i>
+      <button class="qc-smic" id="askHome" aria-label="Ask Local Link by voice">${GI.mic}</button></div>
+    <nav class="qc-tabs" role="tablist" aria-label="Browse">${VERTICALS.map(([k,icn,lab])=>`<button role="tab" aria-selected="${active===k}" class="qc-tab ${active===k?'on':''}" data-vert="${k}" style="--t:${QC_TONES[k]}"><span class="gi">${GI[icn]}</span>${esc(lab)}</button>`).join('')}</nav>
+  </header>`;
+}
 SCREENS.home = async (el) => {
   el.innerHTML = `
-    <header class="vhd">
-      <div class="vhd-brand"><span class="cbrand-logo">${logoMark(30)}</span>${wordmark()}<span class="vhd-tag">Everything local</span>
-        <div style="flex:1"></div>${custControls()}</div>
-      <div class="vhd-row">
-        <button class="vloc" data-tabnav-loc><span class="vloc-ico">${I.pin}</span>
-          <span class="vloc-t"><small>Delivering to <em class="opennow">Open now</em></small><b>${esc(state.areaName)} · Kozhikode</b></span></button>
-        <button class="vround" data-nav="saved" aria-label="Saved">${I.heart}</button>
-      </div>
-      <div class="vsrch"><span class="vsrch-ic">${I.search}</span>
-        <button class="vsrch-txt" data-nav="searchScreen"><span class="sq" id="rotsq">Search local shops & products…</span></button>
-        <button class="vsrch-mic" id="askHome" aria-label="Ask Local Link by voice">${GI.mic}</button></div>
-    </header>
-    <div class="vpromos" id="vpromos">
-      <div class="vpromo p-voice"><small>Ask Local Link</small><h2>Just say what you need</h2><p>English · മലയാളം</p>
-        <span class="vchips"><span>${GI.sparkles}<b>AI search</b></span><span>${GI.bolt}<b>Instant</b></span></span>
-        <span class="wave" aria-hidden="true">${Array.from({length:14},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span>
-        <button class="vpromo-btn" data-talk>${GI.mic}<span>Start talking</span></button></div>
-      <div class="vpromo p-deal" id="vpDeal"><small>Today's deal</small><h2>Mega deals near you</h2><p>Fresh local discounts — ending at midnight</p>
-        <span class="vchips"><span>${GI.percent}<b>Up to 50% off</b></span><span>${GI.clock}<b>Today only</b></span></span>
-        <button class="vpromo-btn" data-nav="deals"><span>Shop deals</span>${I.chev}</button></div>
-      <div class="vpromo p-near"><small>Near you</small><h2>Your whole neighbourhood</h2><p>Shops, services, workers & rides</p>
-        <span class="vchips"><span>${GI.store}<b>Local shops</b></span><span>${GI.car}<b>Rides</b></span></span>
-        <button class="vpromo-btn" data-nav="categories"><span>Explore</span>${I.chev}</button></div>
-    </div>
-    <div class="vdots" id="vdots"><i class="on"></i><i></i><i></i></div>
-    <div class="vgreet"><b>${greetWord()}${token&&me?', '+esc(me.name.split(' ')[0]):''}</b><span>What are you looking for in ${esc(state.areaName)} today?</span></div>
-    <div class="vmoods">${VERTICALS.map(([k,icn,lab],i)=>`<button class="vmood ${k==='all'?'on':''}" data-vert="${k}" style="--n:${i}"><i>${GI[icn]}</i>${esc(lab)}</button>`).join('')}</div>
-    <div class="nsec"><h3>${esc(t('categories'))}</h3><button class="viewall" data-nav="categories">${t('seeAll')} ${I.chev}</button></div>
-    <div class="vcats">${(ref.categories||[]).slice(0,10).map(c=>`<button class="vcat" data-nav="category" data-slug="${c.slug}"><span class="vcat-pic">${catIcon(c.slug)}</span><b>${esc(catLabel(c))}</b></button>`).join('')}</div>
+    ${qcHeader('all')}
+    <div class="qc-greet"><b>${greetWord()}${token&&me?', '+esc(me.name.split(' ')[0]):''} 👋</b><span>Shops, food & services around ${esc(state.areaName)} — delivered fast.</span></div>
+    <div class="qc-voice" role="button" tabindex="0" data-talk aria-label="Ask Local Link by voice">
+      <span class="qc-vorb">${GI.mic}</span><span><b>Just say what you need</b><small>“Biriyani under ₹250” · “Plumber today” · English or മലയാളം</small></span>
+      <span class="wave" aria-hidden="true">${Array.from({length:7},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span></div>
+    <div class="nsec"><h3>Shop by category</h3><button class="viewall" data-nav="categories">${t('seeAll')} ${I.chev}</button></div>
+    <div class="qc-catgrid">${(ref.categories||[]).slice(0,8).map((c,i)=>`<button class="qc-cat" data-nav="category" data-slug="${c.slug}" style="--n:${i}"><span class="qc-catpic">${catIcon(c.slug)}</span><b>${esc(catLabel(c))}</b></button>`).join('')}</div>
     <div class="nsec"><h3>Top offers</h3><button class="viewall" data-nav="offers">${t('seeAll')} ${I.chev}</button></div>
     <div class="hero" id="hero">${skeletonCards(1)}</div><div class="dots" id="dots"></div>
     <div id="promo"></div>
@@ -782,8 +815,8 @@ SCREENS.home = async (el) => {
     <div style="height:96px"></div>`;
   wireVerticals(el); wireCustControls(el);
   const ask=$('#askHome'); if(ask) ask.onclick=()=>openAsk('', {voice:true});
+  el.querySelectorAll('[data-talk]').forEach(b=>b.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openAsk('',{voice:true}); } }));
   el.querySelectorAll('[data-talk]').forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); openAsk('', {voice:true}); });
-  const vp=$('#vpromos'); if(vp){ vp.addEventListener('scroll',()=>{ const i=Math.round(vp.scrollLeft/(vp.clientWidth*0.9)); el.querySelectorAll('#vdots i').forEach((d,x)=>d.classList.toggle('on',x===i)); [...vp.children].forEach((c,x)=>c.classList.toggle('on',x===i)); },{passive:true}); vp.firstElementChild.classList.add('on'); autoAdvanceRow(vp,3); }
   const loc=el.querySelector('[data-tabnav-loc]'); if(loc) loc.onclick=()=>go('location');
   // rotating search placeholder
   const rot=$('#rotsq'); let ri=0; if(rot){ setInterval(()=>{ ri=(ri+1)%ROTATE.length; rot.textContent=ROTATE[ri]; },2600); }
@@ -846,37 +879,50 @@ SCREENS.deals = async (el) => {
 
 SCREENS.cart = async (el) => {
   if(!cart.length){
-    el.innerHTML = `<div class="addrbar" style="padding-top:16px"><div class="atext"><div class="atop">Cart</div></div></div>
+    el.innerHTML = `${topbarBack('Your cart')}
       <div class="cart-empty"><div class="ce-ic">${GI.cart}</div>
         <h3>Your cart is empty</h3><p>What are you waiting for? Start adding local products.</p>
         <button class="btn" data-tabnav="home">Start shopping</button>
         <div class="promo" style="margin-top:20px;width:100%;max-width:320px;background:${grad('#12A594','#0C6E64')}"><h4>New here?</h4><div class="psub">Use code below on your first order</div><span class="pcode">${gi('tag')} COMBO249</span></div>
       </div>
       <div id="best"></div><div style="height:96px"></div>`;
-    el.querySelector('[data-tabnav="home"]').onclick=()=>setTab('home');
+    backWire(el); el.querySelector('[data-tabnav="home"]').onclick=()=>setTab('home');
     const biz = await api('/products?limit=8');
     $('#best').innerHTML = nsecHead('Bestsellers for you') + `<div class="dealrow">${biz.slice(0,8).map((p,i)=>productCard(p,null,{best:i<2})).join('')}</div>`;
     return;
   }
-  const rows = cart.map(it=>`<div class="cart-item"><div class="cimg">${photoLayer(it.image||pic((it.name||'x').toLowerCase(),500+it.id,120,120))}</div>
-    <div class="cinfo"><h4>${esc(it.name)}</h4><div class="muted" style="font-size:11.5px;margin:2px 0 6px">${esc(it.biz||'')}</div>
-      <div class="row" style="justify-content:space-between;align-items:center"><b class="price">${money(it.price)}</b>
-        <div class="qty"><button data-dec="${it.id}">−</button><span>${it.qty}</span><button data-inc="${it.id}">+</button></div></div></div></div>`).join('');
-  const delivery = cartTotal()>=499?0:29;
-  el.innerHTML = `<div class="addrbar" style="padding-top:16px"><div class="atext"><div class="atop">Cart · ${cartCount()} item${cartCount()>1?'s':''}</div></div></div>
-    <div style="margin-top:6px">${rows}</div>
-    <div class="px"><div class="bill">
-      <div class="bill-row"><span>Item total</span><span>${money(cartTotal())}</span></div>
-      <div class="bill-row"><span>Delivery ${delivery===0?'<b style="color:var(--primary)">(FREE)</b>':''}</span><span>${delivery===0?'₹0':money(delivery)}</span></div>
-      <div class="bill-row total"><span>To pay</span><span>${money(cartTotal()+delivery)}</span></div>
-      ${delivery>0?`<div class="faint" style="font-size:11.5px;margin-top:6px">Add ${money(499-cartTotal())} more for free delivery</div>`:''}
-    </div></div>
+  const FREE=499, sub=cartTotal(), delivery = sub>=FREE?0:29, handling=0;
+  const mrpSave = cart.reduce((t,i)=>t+(i.mrp&&i.mrp>i.price?(i.mrp-i.price)*i.qty:0),0);
+  const saved = mrpSave + (delivery===0?29:0);
+  const rows = cart.map(it=>`<div class="qc-line"><div class="cimg">${photoLayer(it.image||pic((it.name||'x').toLowerCase(),500+it.id,120,120))}</div>
+    <div class="cinfo"><h4>${esc(it.name)}</h4><small>${esc(it.unit||'1 unit')}</small></div>
+    <span class="qc-step sm" role="group" aria-label="Quantity of ${esc(it.name)}"><button data-dec="${it.id}" aria-label="Remove one">−</button><b>${it.qty}</b><button data-inc="${it.id}" aria-label="Add one">+</button></span>
+    <div class="qc-lp"><b>${money(it.price*it.qty)}</b>${it.mrp&&it.mrp>it.price?`<s>${money(it.mrp*it.qty)}</s>`:''}</div></div>`).join('');
+  el.innerHTML = `${topbarBack('Your cart')}
+    <div class="qc-cart px">
+      ${saved>0?`<div class="qc-save" role="status">${gi('percent')}<span>You're saving <b>${money(saved)}</b> on this order</span></div>`:''}
+      <section class="qc-ship"><div class="qc-shiph"><span class="qc-clock">${gi('clock')}</span><div><b>Delivery in 15 minutes</b><small>Shipment of ${cartCount()} item${cartCount()>1?'s':''} from ${esc(cart[0].biz||'your store')}</small></div></div>
+        ${rows}
+        <button class="qc-more" data-nav="business" data-id="${cartBizId()||1}">${I.plus} Add more items</button></section>
+      <div id="qcSugg"></div>
+      <section class="qc-billc"><h4>Bill details</h4>
+        <div class="bill-row"><span>${gi('news')} Items total ${mrpSave?`<em class="qc-savetag">Saved ${money(mrpSave)}</em>`:''}</span><span>${mrpSave?`<s>${money(sub+mrpSave)}</s> `:''}${money(sub)}</span></div>
+        <div class="bill-row"><span>${GI.car} Delivery charge</span><span>${delivery===0?`<s>₹29</s> <b class="qc-free">FREE</b>`:money(delivery)}</span></div>
+        <div class="bill-row"><span>${gi('package')} Handling charge</span><span><b class="qc-free">FREE</b></span></div>
+        <div class="bill-row total"><span>Grand total</span><span>${money(sub+delivery+handling)}</span></div>
+        ${delivery>0?`<div class="qc-freebar"><span>Add <b>${money(FREE-sub)}</b> more for FREE delivery</span><i style="--p:${Math.min(100,Math.round(sub/FREE*100))}%"></i></div>`:''}</section>
+      <section class="qc-policy"><b>Cancellation policy</b><p>Orders can't be cancelled once the store starts packing. Refunds for missing or damaged items go back to your original payment method.</p></section>
+    </div>
     <div style="height:150px"></div>
-    <div class="cartbar"><div class="ct"><div class="lbl">To pay</div><div class="tot">${money(cartTotal()+delivery)}</div></div>
-      <button class="btn" id="checkout">Checkout ${I.chev}</button></div>`;
+    <div class="qc-paybar"><div class="qc-addr">${I.pin}<span>Delivering to <b>${esc(state.areaName)}</b></span><button data-tabnav-loc2 aria-label="Change area">Change</button></div>
+      <button class="qc-pay" id="checkout"><span><b>${money(sub+delivery)}</b><small>TOTAL</small></span><span>Proceed to pay ${I.chev}</span></button></div>`;
+  backWire(el);
   el.querySelectorAll('[data-inc]').forEach(b=>b.onclick=()=>{ setQty(Number(b.dataset.inc),1); routeRender(); });
   el.querySelectorAll('[data-dec]').forEach(b=>b.onclick=()=>{ setQty(Number(b.dataset.dec),-1); routeRender(); });
-  $('#checkout').onclick=()=>gateAction('place your order',()=>go('checkout'));
+  const ch=el.querySelector('[data-tabnav-loc2]'); if(ch) ch.onclick=()=>go('location');
+  $('#checkout').onclick=()=>{ track('checkout_start'); gateAction('place your order',()=>go('checkout')); };
+  api('/products?limit=10').then(ps=>{ const s=$('#qcSugg'); if(!s) return; const ids=new Set(cart.map(i=>i.id)); const list=(ps||[]).filter(p=>!ids.has(p.id)).slice(0,8);
+    if(list.length) s.innerHTML=`<div class="qc-ph" style="margin-top:6px"><h3>You might also like</h3></div><div class="dealrow qc-sugg">${list.map(p=>productCard(p)).join('')}</div>`; }).catch(()=>{});
 };
 
 SCREENS.checkout = async (el) => {
@@ -928,7 +974,7 @@ SCREENS.checkout = async (el) => {
           item_summary:items.map(i=>`${i.qty}× ${i.name}`).join(', '),payment_method:payMethod,
           items_json:items.map(i=>({id:i.id,name:i.name,price:i.price,qty:i.qty,image:i.image||''}))}}).catch(()=>{});
       }
-      cart=[]; saveCart(); toast('Order placed! 🎉'); nav.customer=[{name:'orders'}]; routeRender();
+      track('order_placed',{total:pay}); cart=[]; saveCart(); toast('Order placed! 🎉'); nav.customer=[{name:'orders'}]; routeRender();
     }catch(e){ toast(e.message); }
   };
 };
@@ -939,6 +985,7 @@ SCREENS.account = async (el) => {
     <div class="acard"><h4>${loggedIn?esc(nm):'Welcome to Local Link'}</h4>
       <div class="asub">${loggedIn?esc(me.email||me.phone||''):'Log in to order, save favourites, enquire & review'}</div>
       ${loggedIn?'':`<span class="abtn" id="lg">Log in / Sign up</span>`}</div>
+    <div class="qc-tiles"><button data-tabnav="orders"><span>${GI.package}</span>Orders</button><button data-nav="saved"><span>${I.heart}</span>Saved</button><button data-nav="offers"><span>${GI.percent}</span>Offers</button><button id="helpTile"><span>${GI.chat}</span>Help</button></div>
     <button class="btn block" id="installapp" style="margin:0 0 14px;display:${window.__llInstall?'inline-flex':'none'};gap:8px;align-items:center;justify-content:center">${GI.download||I.plus} Install Local Link app</button>
     <div class="acct-list">
       <button data-tabnav="orders"><span class="ic">${GI.package}</span> My Orders <span class="rt">${I.chev}</span></button>
@@ -969,6 +1016,7 @@ SCREENS.account = async (el) => {
     inst.onclick=async()=>{ const p=window.__llInstall; if(!p){ toast('Open the browser menu → “Add to Home screen”'); return; }
       p.prompt(); try{ await p.userChoice; }catch(e){} window.__llInstall=null; inst.style.display='none'; }; }
   const lg=$('#lg'); if(lg) lg.onclick=()=>go('login');
+  const ht=$('#helpTile'); if(ht) ht.onclick=()=>openAsk('');
   const br=$('#bulkreq'); if(br) br.onclick=()=>{ if(!token){ toast('Please log in to post a requirement'); return go('login'); } openBulkEnquiry(); };
   const out=$('#out'); if(out) out.onclick=()=>{ token=null; me=null; localStorage.removeItem('ll_token'); localStorage.removeItem('ll_user'); toast('Logged out'); routeRender(); };
   const lang=$('#langrow'); if(lang) lang.onclick=()=>{ state.lang=state.lang==='en'?'ml':'en'; localStorage.setItem('ll_lang',state.lang); renderShell(); };
@@ -1034,13 +1082,15 @@ SCREENS.category = async (el, {slug, vfilter, vlabel}) => {
   // Business categories → rich Noon-style landing page
   const kw = vfilter ? vfilter : coverKw({subcategory:cat.name, category_name:cat.name});
   el.innerHTML = `${topbarBack(pageTitle)}
-    <div class="cathero">${photoLayer(pic(kw,900+(cat.id||0),900,360))}<h2>${esc(pageTitle)}</h2></div>
-    <div class="subchips" id="subchips"></div>
-    <div id="catoffers"></div>
-    <div id="cattop"></div>
-    <div id="catitems"></div>
-    <div class="nsec"><h3>All ${esc(catLabel(cat))}</h3></div>
-    <div class="px stack" id="list" style="gap:11px">${skeletonRow(4)}</div><div style="height:90px"></div>`;
+    <div class="qc-split">
+      <aside class="qc-rail subchips" id="subchips" role="tablist" aria-label="Sub-categories"></aside>
+      <main class="qc-pane">
+        <div class="cathero">${photoLayer(pic(kw,900+(cat.id||0),900,360))}<h2>${esc(pageTitle)}</h2></div>
+        <div id="catitems"></div>
+        <div id="catoffers"></div>
+        <div id="cattop"></div>
+        <div class="qc-ph"><h3>All ${esc(catLabel(cat))}</h3><span class="muted" id="qcCount"></span></div>
+        <div class="stack" id="list" style="gap:10px">${skeletonRow(4)}</div></main></div><div style="height:90px"></div>`;
   backWire(el);
   const [biz, prods, offers, places] = await Promise.all([
     api(`/businesses?category=${slug}`), api(`/products?category=${slug}&limit=12`),
@@ -1055,22 +1105,23 @@ SCREENS.category = async (el, {slug, vfilter, vlabel}) => {
   if(vre){ merged = merged.filter(b=>vre.test((b.subcategory||'')+' '+(b.name||''))); }
   // sub-category chips
   const subs=[...new Set(merged.map(b=>b.subcategory).filter(Boolean))].slice(0,10);
-  $('#subchips').innerHTML = `<button class="subchip on" data-sub="">All</button>` + subs.map(s=>`<button class="subchip" data-sub="${esc(s)}">${esc(s)}</button>`).join('');
+  const subIc=(t)=>`<i>${GI[iconKeyFor({subcategory:t,name:t},'store')]||GI.store}</i>`;
+  $('#subchips').innerHTML = `<button class="subchip on" role="tab" aria-selected="true" data-sub=""><i>${catIcon(slug)}</i><span>All</span></button>` + subs.map(s=>`<button class="subchip" role="tab" aria-selected="false" data-sub="${esc(s)}">${subIc(s)}<span>${esc(s)}</span></button>`).join('');
   // category offers
   const catBizIds=new Set(biz.map(b=>b.id));
   const catOffers=(offers||[]).filter(o=>catBizIds.has(o.business_id));
-  if(catOffers.length) $('#catoffers').innerHTML = nsecHead('Offers') + `<div class="promorow">${catOffers.map(promoCard).join('')}</div>`;
+  if(catOffers.length) $('#catoffers').innerHTML = `<div class="qc-ph"><h3>Offers</h3></div><div class="promorow">${catOffers.map(promoCard).join('')}</div>`;
   // top rated
   const top=[...merged].sort((a,b)=>(b.rating||0)-(a.rating||0)).slice(0,8);
-  if(top.length) $('#cattop').innerHTML = nsecHead(slug==='food-grocery'?'Top restaurants & stores':'Top rated') + `<div class="hero" style="padding-top:2px">${top.map(businessCard).join('')}</div>`;
+  if(top.length) $('#cattop').innerHTML = `<div class="qc-ph"><h3>${slug==='food-grocery'?'Top restaurants & stores':'Top rated'}</h3></div><div class="hero qc-toprail">${top.map(b=>`<button class="qc-store" data-nav="${b.source==='google'?'place':'business'}" data-id="${b.id}"><span class="qc-sl" style="background:${grad(b.color1||'#0EA5A4',b.color2||'#0B5A55')}">${dIcon(b)}</span><b>${esc(b.name)}</b><small>${I.star}${Number(b.rating||4.2).toFixed(1)}</small></button>`).join('')}</div>`;
   // popular items / dishes (respect the vertical filter)
   if(vre){ const ids=new Set(merged.map(b=>b.id)); prodsF=(prods||[]).filter(p=>ids.has(p.business_id)); }
-  if(prodsF && prodsF.length) $('#catitems').innerHTML = nsecHead(vfilter==='grocery'?'Popular products':'Popular items') + `<div class="dealrow">${prodsF.map(p=>productCard(p)).join('')}</div>`;
+  if(prodsF && prodsF.length) $('#catitems').innerHTML = `<div class="qc-ph"><h3>${vfilter==='grocery'?'Popular products':'Popular items'}</h3></div><div class="pgrid2 qc-grid">${prodsF.map((p,i)=>productCard(p,null,{best:i<1})).join('')}</div>`;
   // full list + subcategory filter
-  const draw=(items)=> $('#list').innerHTML = items.length? items.map(b=>bizRow(b)).join('') : emptyState('search','Nothing here yet','Try another area.');
+  const draw=(items)=>{ const c=$('#qcCount'); if(c) c.textContent=items.length+' places'; $('#list').innerHTML = items.length? items.map(b=>bizRow(b)).join('') : emptyState('search','Nothing here yet','Try another area.'); };
   draw(merged);
   $('#subchips').addEventListener('click', e=>{ const b=e.target.closest('.subchip'); if(!b)return;
-    el.querySelectorAll('#subchips .subchip').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+    el.querySelectorAll('#subchips .subchip').forEach(x=>{ x.classList.remove('on'); x.setAttribute('aria-selected','false'); }); b.classList.add('on'); b.setAttribute('aria-selected','true');
     const s=b.dataset.sub; draw(s? merged.filter(x=>x.subcategory===s) : merged); });
 };
 function bizRow(b){ const navr=b.source==='google'?'place':'business';
@@ -1299,7 +1350,7 @@ SCREENS.orders = async (el) => {
   el.querySelectorAll('[data-reorder]').forEach(b=>b.onclick=()=>{
     let d={}; try{ d=JSON.parse(b.dataset.reorder); }catch(e){}
     const items = d.items ? (typeof d.items==='string'?safeParse(d.items):d.items) : null;
-    if(items && items.length){ cart=[]; items.forEach(it=>{ for(let n=0;n<(it.qty||1);n++){ const ex=cart.find(x=>x.id===it.id); if(ex)ex.qty++; else cart.push({id:it.id,name:it.name,price:it.price,image:it.image||'',biz:d.biz,bizId:Number(d.bizId),qty:1}); } }); saveCart(); updateCartBadge(); toast('Added to cart'); setTab('cart'); }
+    if(items && items.length){ cart=[]; items.forEach(it=>{ for(let n=0;n<(it.qty||1);n++){ const ex=cart.find(x=>x.id===it.id); if(ex)ex.qty++; else cart.push({id:it.id,name:it.name,price:it.price,image:it.image||'',biz:d.biz,bizId:Number(d.bizId),qty:1}); } }); saveCart(); updateCartBadge(); toast('Added to cart'); go('cart'); }
     else if(d.bizId){ go('business',{id:d.bizId}); }
     else toast('Nothing to reorder');
   });
