@@ -686,12 +686,12 @@ function renderBottomNav(){
   const tab=(r,icon,lab,extra='')=>`<button class="vtab ${cur===r?'on':''}" data-tabnav="${r}" ${cur===r?'aria-current="page"':''}><span class="vico">${icon}${extra}</span><span>${esc(lab)}</span></button>`;
   const talk=(lab,icon)=>`<button class="vtalk" data-tabnav="__talk" aria-label="${esc(lab)}"><span class="t-glow"></span><span class="t-ring"></span><span class="t-core">${icon}</span><span class="t-lab">${esc(lab)}</span></button>`;
   if (state.view==='customer'){
-    if (['splash','location','intro','register','login','cart','checkout','orderDone'].includes(cur)){ holder.innerHTML=''; return; }
+    if (['splash','location','intro','register','login','cart','checkout','orderDone','assistant'].includes(cur)){ holder.innerHTML=''; return; }
     const cb=`<span class="cartbadge" ${cartCount()?'':'hidden'}>${cartCount()}</span>`;
     if (cur==='product'){ holder.innerHTML='<div id="qcCartBar" class="qc-cartwrap onpd" aria-live="polite" hidden></div>'; renderCartBar(); return; }
     const hideBar=['cart','checkout','chat'].includes(cur);
-    const askBtn=`<button class="vtab pd-addtab" data-tabnav="__talk" aria-label="Ask Local Link by voice"><span class="vico pd-add">${GI.mic}</span><span>Ask</span></button>`;
-    holder.innerHTML = `${hideBar?'':'<div id="qcCartBar" class="qc-cartwrap" aria-live="polite" hidden></div>'}<nav class="bnav pdock cxdock" aria-label="Main">${tab('home',I.home,'Home')}${tab('categories',I.grid,'Categories')}${askBtn}${tab('orders',GI.package,'Orders')}${tab('account',I.user,'Profile')}</nav>`;
+    const askBtn=`<button class="lv-askt" data-tabnav="__talk" aria-label="Ask Local Link by voice"><span class="lv-askb"><i></i>${GI.mic}</span><span>Ask</span></button>`;
+    holder.innerHTML = `${hideBar?'':'<div id="qcCartBar" class="qc-cartwrap" aria-live="polite" hidden></div>'}<nav class="bnav lvdock" aria-label="Main"><i class="cx-ind"></i>${tab('home',I.home,'Home')}${tab('categories',I.grid,'Categories')}${askBtn}${tab('orders',GI.package,'Orders')}${tab('account',I.user,'Account')}</nav>`;
     renderCartBar();
   } else if (state.view==='partner'){
     if (cur==='p_login'){ holder.innerHTML=''; return; }
@@ -1096,7 +1096,7 @@ SCREENS.product = async (el, {id}) => {
       <div class="pd-price"><b>${money(p.price)}</b>${disc?`<s>MRP ${money(p.mrp)}</s><em>Save ${money(p.mrp-p.price)}</em>`:''}</div>
       <p class="pd-tax">Inclusive of all taxes</p>
       <button class="pd-store" data-nav="business" data-id="${p.business_id}"><span>${GI.store}</span><div><small>Sold by</small><b>${esc(p.business)}</b></div>${I.chev}</button>
-      <div class="pd-perks"><div>${gi('bolt')}<b>Fast delivery</b><small>from a store near you</small></div><div>${gi('shield')}<b>${oos?'Out of stock':'In stock'}</b><small>${esc(p.category_name||'Local')}</small></div><div>${gi('chat')}<b>Ask the store</b><small>chat or call</small></div></div>
+      <div class="pd-perks"><div>${gi('pin')}<b>Local shop</b><small>right in your area</small></div><div>${gi('shield')}<b>${oos?'Out of stock':'In stock'}</b><small>${esc(p.category_name||'Local')}</small></div><div>${gi('chat')}<b>Ask the store</b><small>chat or call</small></div></div>
       ${p.description?`<h3 class="pd-h">About this item</h3><p class="pd-desc">${esc(p.description)}</p>`:''}
       <div id="related"></div><div style="height:120px"></div></section>
     <div class="pd-bar">${oos?`<button class="btn block" disabled style="opacity:.6">Out of stock</button>`:`
@@ -3131,43 +3131,873 @@ SCREENS.login = (el) => {
 };
 
 
+/* ═══════════════════════════════════════════════════════════════════════
+   CUSTOMER APP v2 (lv) — rebuilt from the Local Link customer UI kit.
+   Same APIs and capabilities. Teal + coral, pin-and-rings logo.
+   No delivery-time claims: distance/area and hours instead of ETAs.
+   ═══════════════════════════════════════════════════════════════════════ */
+const LV_TAB_CATS=['food-grocery','restaurants','services','shopping','workers'];
+function lvHead(title,right=''){ return `<header class="lv-bar"><button class="lv-ib" id="__back" aria-label="Back">${I.back}</button><h1>${esc(title)}</h1><span class="lv-right">${right}</span></header>`; }
+function lvRate(r,c){ return r?`<span class="lv-rate">${I.star}<b>${Number(r).toFixed(1)}</b>${c?`<small>(${c})</small>`:''}</span>`:'<span class="lv-new">New</span>'; }
+function lvOpen(b){ return `<span class="lv-open ${b.is_open?'on':''}">${b.is_open?'Open now':'Closed'}</span>`; }
+function lvStoreCard(b,i=0){ const cover=b.cover_url||pic(coverKw(b),b.id,600,400); const navr=b.source==='google'?'place':'business';
+  return `<button class="lv-scard" data-nav="${navr}" data-id="${b.id}" style="--n:${i}" aria-label="${esc(b.name)}">
+    <span class="lv-sph">${photoLayer(cover)}${dIcon(b)}<span class="lv-heart ${isSaved('business',b.id)?'on':''}" data-fav data-ftype="business" data-fid="${b.id}" data-fname="${esc(b.name)}" data-fsub="${esc(b.subcategory||'')}" data-fimg="${esc(cover)}" role="button" aria-label="Save">${I.heart}</span></span>
+    <span class="lv-sb"><b>${esc(b.name)}</b><span class="lv-sm">${lvRate(b.rating,b.review_count)}<i>·</i><span>${esc(b.subcategory||b.category_name||'')}</span></span>
+      <span class="lv-sm">${lvOpen(b)}${b.area_name?`<span class="lv-dist">${I.pin}${esc(b.area_name)}</span>`:''}</span></span></button>`; }
+function lvStoreRow(b,i=0){ const cover=b.cover_url||pic(coverKw(b),b.id,300,300); const navr=b.source==='google'?'place':'business';
+  return `<button class="lv-srow" data-nav="${navr}" data-id="${b.id}" style="--n:${i}">
+    <span class="lv-rimg">${photoLayer(cover)}${dIcon(b)}</span>
+    <span class="lv-rt"><b>${esc(b.name)}</b><span class="lv-sm">${lvRate(b.rating,b.review_count)}<i>·</i><span>${esc(b.subcategory||b.category_name||'')}</span></span>
+      <span class="lv-sm">${lvOpen(b)}${b.hours_label?`<span class="lv-dist">${gi('clock')}${esc(b.hours_label)}</span>`:''}</span></span>
+    <span class="lv-heart flat ${isSaved('business',b.id)?'on':''}" data-fav data-ftype="business" data-fid="${b.id}" data-fname="${esc(b.name)}" data-fsub="${esc(b.subcategory||'')}" data-fimg="${esc(cover)}" role="button" aria-label="Save">${I.heart}</span></button>`; }
+function lvProd(p,biz,i=0){ const src=p.image_url||pic((p.name||'product').toLowerCase(),500+(p.id||0)); const disc=p.mrp&&p.mrp>p.price; const pct=disc?Math.round((1-p.price/p.mrp)*100):0; const oos=p.stock_status==='out_of_stock';
+  return `<div class="lv-pcard" data-nav="product" data-id="${p.id}" role="link" tabindex="0" style="--n:${i}">
+    <span class="lv-pimg">${photoLayer(src)}${dIcon({name:p.name},'cart')}${p.promo_label?`<em class="lv-off">${esc(p.promo_label)}</em>`:disc?`<em class="lv-off">${pct}% OFF</em>`:''}</span>
+    <b>${esc(p.name)}</b><small>${esc(p.unit||'1 unit')}</small>
+    <span class="lv-pp"><b>${money(p.price)}</b>${disc?`<s>${money(p.mrp)}</s>`:''}</span>
+    <span class="lv-pctl">${oos?'<span class="qc-oos">Out of stock</span>':addCtl(p,src,biz)}</span></div>`; }
+function lvSkyline(){ return `<svg class="lv-sky" viewBox="0 0 400 150" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><path pathLength="1" d="M0 150V120h30V95h18v25h22V70l20-16 20 16v50h16V88h34v32h14V60h10V44h10v16h10v60h18V96l18-14 18 14v24h20V80h40v40h18V100h22v20h20V90h12v30h20v30"/><path pathLength="1" d="M60 104h6M60 112h6M100 82h6M100 94h6M100 106h6M150 98h8M150 108h8M190 70h6M190 82h6M190 94h6M260 92h8M260 104h8M300 92h8M300 104h8"/></svg>`; }
+const lvGreet=()=>{ const h=new Date().getHours(); return h<12?'Good morning':h<17?'Good afternoon':'Good evening'; };
+
+/* ---------- splash ---------- */
+SCREENS.splash = (el) => {
+  el.innerHTML = `<div class="lv-splash"><div class="lv-spc"><div class="lv-slogo">${logoMark(86)}</div><h1><span>Local</span> <span>Link</span></h1><p>Your Neighbourhood.<br>One App.</p></div>${lvSkyline()}</div>`;
+  localStorage.setItem('ll_seen','1');
+  if(!state.onboarded){ state.areaId=state.areaId||1; state.areaName=state.areaName||'Kunnamangalam'; state.onboarded=true;
+    localStorage.setItem('ll_area',state.areaId); localStorage.setItem('ll_area_name',state.areaName); localStorage.setItem('ll_onboarded','1'); }
+  setTimeout(()=>{ if(stack()[stack().length-1].name==='splash'){ nav.customer=[{name: state.introSeen?'home':'intro'}]; routeRender(); } }, 1700);
+};
+/* ---------- onboarding ---------- */
+SCREENS.intro = (el) => {
+  const S=[{ic:'store',t:'Discover Local Businesses',s:'Shop, order, book services and support your neighbourhood — all in one place.'},
+           {ic:'cart',t:'Shop · Eat · Book',s:'Groceries, food, home services and local workers from people you know.'},
+           {ic:'mic',t:'Just ask Local Link',s:'Say what you need in English or Malayalam and we will find it nearby.'}];
+  let i=0, dir=1;
+  const draw=()=>{ el.innerHTML=`<div class="lv-intro">
+      <div class="lv-ill k${i} ${dir>0?'in-r':'in-l'}"><span class="lv-halo"></span><span class="lv-halo h2"></span><span class="lv-iic">${GI[S[i].ic]}</span><i class="f1">${GI.pin}</i><i class="f2">${GI.cart}</i><i class="f3">${I.heart}</i></div>
+      <div class="lv-itx ${dir>0?'in-r':'in-l'}"><h2>${esc(S[i].t)}</h2><p>${esc(S[i].s)}</p></div>
+      <div class="lv-idots">${S.map((_,k)=>`<i class="${k===i?'on':''}"></i>`).join('')}</div>
+      <button class="lv-btn" id="nx">${i===S.length-1?'Get Started':'Next'} ${I.chev}</button>
+      <button class="lv-skip" id="skip">Skip</button></div>`;
+    const done=()=>{ state.introSeen=true; localStorage.setItem('ll_intro','1'); nav.customer=[{name:'home'}]; routeRender(); };
+    $('#skip').onclick=done; $('#nx').onclick=()=>{ if(i<S.length-1){ i++; dir=1; draw(); } else done(); };
+    let x0=null; const w=el.querySelector('.lv-intro'); w.addEventListener('touchstart',e=>x0=e.touches[0].clientX,{passive:true});
+    w.addEventListener('touchend',e=>{ if(x0==null) return; const dx=e.changedTouches[0].clientX-x0; x0=null; if(dx<-50&&i<S.length-1){ i++; dir=1; draw(); } else if(dx>50&&i>0){ i--; dir=-1; draw(); } },{passive:true}); };
+  draw();
+};
+
+/* ---------- HOME ---------- */
+SCREENS.home = async (el) => {
+  const nm = token&&me ? me.name.split(' ')[0] : '';
+  const cats=(ref.categories||[]); const tabs=[{slug:'',name:'All',ic:I.grid}].concat(LV_TAB_CATS.map(s=>cats.find(c=>c.slug===s)).filter(Boolean).map(c=>({slug:c.slug,name:catLabel(c),ic:GI[CAT_ICON[c.slug]||'store']})));
+  if(tabs.length<4) cats.slice(0,5).forEach(c=>{ if(!tabs.find(t=>t.slug===c.slug)) tabs.push({slug:c.slug,name:catLabel(c),ic:GI[CAT_ICON[c.slug]||'store']}); });
+  el.innerHTML = `
+  <header class="lv-head">
+    <div class="lv-htop"><span class="lv-brand">${logoMark(30)}<b>Local</b><b>Link</b></span><span style="flex:1"></span>
+      ${custControls()}
+      <button class="lv-hb" data-nav="notifications" aria-label="Notifications">${I.bell}<i class="lv-dot"></i></button>
+      <button class="lv-av" data-tabnav="account" aria-label="Account">${nm?esc(nm[0]):I.user}</button></div>
+    <button class="lv-loc" data-tabnav-loc>${I.pin}<b>${esc(state.areaName)}</b>${I.chev.replace('m9 6 6 6-6 6','m6 9 6 6 6-6')}</button>
+    <div class="lv-search"><button class="lv-stxt" data-nav="searchScreen">${I.search}<span id="rotsq">Search shops, food, groceries…</span></button><button class="lv-mic" id="askHome" aria-label="Ask by voice">${GI.mic}</button></div>
+    <nav class="lv-tabs" id="lvTabs" role="tablist"><i class="lv-tind"></i>${tabs.map((t,k)=>`<button role="tab" class="${k?'':'on'}" data-hs="${t.slug}" aria-selected="${!k}"><span>${t.ic}</span>${esc(t.name)}</button>`).join('')}</nav>
+  </header>
+  <div id="orderPill"></div>
+  <section class="lv-sec"><div class="lv-banners" id="lvBan"><div class="sk" style="height:150px;flex:0 0 100%;border-radius:22px"></div></div><div class="lv-dots" id="lvDots"></div></section>
+  <section class="lv-sec"><div class="lv-sh"><h2 id="nearT">Open near you</h2><button class="lv-see" data-nav="categories">See all ${I.chev}</button></div><div class="lv-rail" id="lvNear">${skeletonCards(2)}</div></section>
+  <section class="lv-sec lv-greet"><h2>${lvGreet()}${nm?`, ${esc(nm)}`:''} <span class="lv-wave">👋</span></h2><p>Discover local shops, food, services &amp; more around you.</p></section>
+  <button class="lv-ask" data-talk><span class="lv-aorb">${GI.mic}</span><span><b>Just say what you need</b><small>Groceries, food, services or anything local</small></span><span class="lv-wv">${Array.from({length:7},(_,k)=>`<i style="--n:${k}"></i>`).join('')}</span></button>
+  <section class="lv-sec"><div class="lv-sh"><h2>Deals near you</h2><span class="lv-cd" id="megacd">${gi('clock')} --:--:--</span></div><div class="lv-rail" id="lvDeals">${skeletonCards(3)}</div></section>
+  <section class="lv-sec"><div class="lv-sh"><h2>Shop by category</h2><button class="lv-see" data-nav="categories">See all ${I.chev}</button></div>
+    <div class="lv-cmini">${cats.slice(0,8).map((c,k)=>`<button data-nav="category" data-slug="${c.slug}" style="--n:${k}"><span>${photoLayer(catPhoto(c.slug,c.name))}${catIcon(c.slug)}</span>${esc(catLabel(c))}</button>`).join('')}</div></section>
+  <section class="lv-sec"><div class="lv-sh"><h2>Popular nearby stores</h2></div><div class="lv-list" id="lvPop">${skeletonRow(2)}</div></section>
+  <section class="lv-sec"><div class="lv-sh"><h2>${t('localUpdates')}</h2><button class="lv-see" data-nav="news">See all ${I.chev}</button></div><div class="lv-rail" id="lvNews"></div></section>
+  <div style="height:30px"></div>`;
+  wireCustControls(el);
+  $('#askHome').onclick=()=>openAsk('',{voice:true});
+  el.querySelectorAll('[data-talk]').forEach(b=>b.onclick=()=>openAsk('',{voice:true}));
+  el.querySelector('[data-tabnav-loc]').onclick=()=>go('location');
+  el.querySelectorAll('[data-tabnav]').forEach(b=>b.onclick=()=>setTab(b.dataset.tabnav));
+  const rot=$('#rotsq'); let ri=0; const rtm=setInterval(()=>{ if(!document.body.contains(rot)) return clearInterval(rtm); ri=(ri+1)%ROTATE.length; rot.textContent=ROTATE[ri]; rot.classList.remove('fx-swap'); void rot.offsetWidth; rot.classList.add('fx-swap'); },2600);
+  if(token) api('/orders').then(os=>{ const live=(os||[]).find(o=>!['completed','rejected','cancelled'].includes(o.status)); const p=$('#orderPill'); if(!live||!p) return;
+    const MSG={pending:'Waiting for the store',accepted:'Accepted by the store',preparing:'Being prepared',ready:'Ready',out_for_delivery:'On the way'};
+    p.innerHTML=`<button class="lv-pill" id="opGo"><span class="lv-pdot"></span><span><b>${esc(live.business)}</b><small>${MSG[live.status]||live.status.replace(/_/g,' ')}</small></span><em>Track ${I.chev}</em></button>`; $('#opGo').onclick=()=>setTab('orders'); }).catch(()=>{});
+  const [offers, biz, deals, news, places] = await Promise.all([api('/offers'), api('/businesses?featured=1'), api('/products?deal=1&limit=10'), api('/news'), api('/places?area_id='+state.areaId).catch(()=>[])]);
+  // banners: one brand card + offers
+  const B=[{brand:1}].concat(offers.slice(0,4)); const ban=$('#lvBan'), dots=$('#lvDots');
+  ban.innerHTML=B.map((o,k)=>o.brand?`<button class="lv-ban t0" data-nav="categories"><span class="lv-bt"><b>Shop Local,<br>Support Your<br>Neighbourhood</b><em>Explore Now ${I.chev}</em></span><span class="lv-bimg">${photoLayer(pic('vegetables grocery bag',77,400,400))}${GI.cart}</span><i class="lv-spark s1"></i><i class="lv-spark s2"></i></button>`
+    :`<button class="lv-ban t${k%3}" data-nav="business" data-id="${o.business_id}"><span class="lv-bt"><small>${esc(o.business||'')}</small><b>${esc(o.title)}</b><strong>${esc(o.discount_label||'OFFER')}</strong><em>Order Now ${I.chev}</em></span><span class="lv-bimg">${photoLayer(o.image_url||pic(coverKw({subcategory:o.business||''})+','+(o.title||''),700+(o.id||0),400,400))}${GI.percent}</span></button>`).join('');
+  dots.innerHTML=B.map((_,k)=>`<i class="${k?'':'on'}"></i>`).join('');
+  lvCarousel(ban,dots,3600);
+  const near=[]; const seen=new Set(); (places||[]).concat(biz).forEach(b=>{ const k=(b.name||'').toLowerCase(); if(!seen.has(k)){ seen.add(k); near.push(b); } });
+  near.sort((a,b)=>(b.is_open?1:0)-(a.is_open?1:0));
+  const drawNear=(l)=>{ $('#lvNear').innerHTML = l.slice(0,10).map(lvStoreCard).join('') || `<p class="lv-empty-s">Nothing here yet — try another category.</p>`; };
+  drawNear(near);
+  $('#lvDeals').innerHTML = deals.slice(0,10).map((p,k)=>lvProd(p,null,k)).join(''); startCountdown();
+  $('#lvPop').innerHTML = biz.slice().sort((a,b)=>(b.rating||0)-(a.rating||0)).slice(0,4).map(lvStoreRow).join('');
+  $('#lvNews').innerHTML = news.slice(0,5).map(newsCard).join('');
+  // category tabs filter "Open near you" in place
+  const tb=$('#lvTabs'); lvTabInd(tb);
+  tb.onclick=async e=>{ const b=e.target.closest('[data-hs]'); if(!b) return; tb.querySelectorAll('button').forEach(x=>{ x.classList.toggle('on',x===b); x.setAttribute('aria-selected',x===b); }); lvTabInd(tb); buzz();
+    const s=b.dataset.hs; $('#nearT').textContent=s?`${b.textContent.trim()} near you`:'Open near you'; const r=$('#lvNear'); r.classList.add('lv-swap');
+    const l = s ? await api(`/businesses?category=${s}`).catch(()=>[]) : near; drawNear(l); r.scrollLeft=0; requestAnimationFrame(()=>r.classList.remove('lv-swap')); };
+};
+function lvTabInd(tb){ const on=tb.querySelector('button.on'), ind=tb.querySelector('.lv-tind'); if(!on||!ind) return; ind.style.width=on.offsetWidth+'px'; ind.style.transform=`translateX(${on.offsetLeft}px)`; const l=on.offsetLeft-tb.clientWidth/2+on.offsetWidth/2; tb.scrollTo({left:l,behavior:'smooth'}); }
+function lvCarousel(row,dots,ms){
+  const n=row.children.length; let idx=0, paused=0;
+  const mark=()=>{ const w=row.firstElementChild?row.firstElementChild.offsetWidth+12:1; idx=Math.round(row.scrollLeft/w); dots&&dots.querySelectorAll('i').forEach((d,x)=>{ const on=x===idx; if(on&&!d.classList.contains('on')){ d.classList.remove('on'); void d.offsetWidth; } d.classList.toggle('on',on); }); [...row.children].forEach((c,x)=>c.classList.toggle('on',x===idx)); };
+  row.addEventListener('scroll',()=>requestAnimationFrame(mark),{passive:true}); mark();
+  ['pointerdown','touchstart'].forEach(ev=>row.addEventListener(ev,()=>paused=Date.now(),{passive:true}));
+  dots&&dots.addEventListener('click',e=>{ const k=[...dots.children].indexOf(e.target); if(k>=0){ paused=Date.now(); lxGo(row,k); } });
+  if(n>1){ const tm=setInterval(()=>{ if(!document.body.contains(row)) return clearInterval(tm); if(Date.now()-paused<5000||document.hidden) return; lxGo(row,(idx+1)%n); },ms); }
+}
+
+/* ---------- CATEGORIES ---------- */
+SCREENS.categories = async (el) => {
+  const cats=ref.categories||[];
+  el.innerHTML = `<header class="lv-tbar"><h1>Explore Categories</h1></header>
+    <div class="lv-srch"><button class="lv-stxt in" data-nav="searchScreen">${I.search}<span>Search for stores, items or services…</span></button><button class="lv-filt" id="flt" aria-label="Filters">${GI.sliders||I.cog}</button></div>
+    <nav class="lv-chips" id="fchips"><button class="on" data-f="near">${I.pin} Near you</button><button data-f="top">${I.star} Top rated</button><button data-f="offers">${GI.percent} Offers</button><button data-f="open">${gi('clock')} Open now</button></nav>
+    <div class="lv-cgrid">${cats.map((c,k)=>`<button class="lv-ctile c${k%6}" data-nav="category" data-slug="${c.slug}" style="--n:${k}"><span class="lv-cph">${photoLayer(catPhoto(c.slug,c.name))}${catIcon(c.slug)}</span><b>${esc(catLabel(c))}</b><i>${I.chev}</i></button>`).join('')}</div>
+    <div class="lv-sh"><h2>Popular nearby stores</h2></div><div class="lv-list" id="pop">${skeletonRow(3)}</div><div style="height:20px"></div>`;
+  const [biz,offers]=await Promise.all([api('/businesses'),api('/offers').catch(()=>[])]); const oid=new Set((offers||[]).map(o=>o.business_id));
+  const draw=f=>{ let l=biz.slice(); if(f==='top') l.sort((a,b)=>(b.rating||0)-(a.rating||0)); if(f==='offers') l=l.filter(b=>oid.has(b.id)); if(f==='open') l=l.filter(b=>b.is_open);
+    $('#pop').innerHTML=l.slice(0,8).map(lvStoreRow).join('')||`<p class="lv-empty-s">No stores match this filter.</p>`; };
+  draw('near'); $('#flt').onclick=()=>{ const c=$('#fchips'); c.classList.remove('lv-nudge'); void c.offsetWidth; c.classList.add('lv-nudge'); };
+  $('#fchips').onclick=e=>{ const b=e.target.closest('[data-f]'); if(!b) return; el.querySelectorAll('#fchips button').forEach(x=>x.classList.toggle('on',x===b)); buzz(); draw(b.dataset.f); };
+};
+SCREENS.explore = SCREENS.categories;
+
+/* ---------- CATEGORY → nearby stores ---------- */
+SCREENS.category = async (el, {slug, vfilter, vlabel}) => {
+  const cat = ref.categories.find(c=>c.slug===slug) || {name:'Category', slug:'', kind:'business'};
+  const vre = vfilter && VFILTERS[vfilter]; const title = vlabel || catLabel(cat);
+  if (cat.kind==='worker' || cat.kind==='driver' || cat.kind==='info' || slug==='news' || slug==='events'){
+    el.innerHTML = `${lvHead(title)}<div class="px stack" id="list" style="gap:10px">${skeletonRow(4)}</div>`; backWire(el);
+    if (cat.kind==='worker') renderWorkers($('#list'), await api('/workers'));
+    else if (cat.kind==='driver') renderDrivers($('#list'), await api('/drivers'));
+    else if (cat.kind==='info') renderLocalInfo($('#list'), await api('/local-info'));
+    else if (slug==='news') setTab('news');
+    else $('#list').innerHTML=(await api('/events')).map(eventCard).join('');
+    return; }
+  el.innerHTML = `${lvHead(title,`<button class="lv-ib" data-nav="searchScreen" aria-label="Search">${I.search}</button>`)}
+    <nav class="lv-chips" id="fchips"><button class="on" data-f="">All</button><button data-f="top">${I.star} Top rated</button><button data-f="offers">${GI.percent} Offers</button><button data-f="open">${gi('clock')} Open now</button></nav>
+    <nav class="lv-chips sub" id="subchips"></nav>
+    <div class="lv-sh"><h2>Popular items</h2></div><div class="lv-rail" id="catitems">${skeletonCards(2)}</div>
+    <div class="lv-sh"><h2>Nearby stores</h2><small id="qcCount"></small></div><div class="lv-list" id="list">${skeletonRow(3)}</div><div style="height:20px"></div>`;
+  backWire(el);
+  const [biz, prods, offers, places] = await Promise.all([api(`/businesses?category=${slug}`), api(`/products?category=${slug}&limit=12`), api('/offers'), api(`/places?category=${slug}&area_id=${state.areaId}`).catch(()=>[])]);
+  const seen=new Set(); let merged=[];
+  (places||[]).concat(biz).forEach(p=>{ const k=(p.name||'').toLowerCase(); if(!seen.has(k)){ seen.add(k); merged.push(p); } });
+  if(vre) merged = merged.filter(b=>vre.test((b.subcategory||'')+' '+(b.name||'')));
+  let prodsF=prods; if(vre){ const ids=new Set(merged.map(b=>b.id)); prodsF=prods.filter(p=>ids.has(p.business_id)); }
+  const oid=new Set((offers||[]).map(o=>o.business_id));
+  const subs=[...new Set(merged.map(b=>b.subcategory).filter(Boolean))].slice(0,10);
+  $('#subchips').innerHTML = subs.length>1 ? subs.map(s=>`<button data-sub="${esc(s)}">${esc(s)}</button>`).join('') : '';
+  $('#catitems').innerHTML = prodsF.length? prodsF.map((p,k)=>lvProd(p,null,k)).join('') : `<p class="lv-empty-s">No items listed yet.</p>`;
+  let f='', sub='';
+  const draw=()=>{ let l=merged.slice(); if(sub) l=l.filter(b=>b.subcategory===sub); if(f==='top') l.sort((a,b)=>(b.rating||0)-(a.rating||0)); if(f==='offers') l=l.filter(b=>oid.has(b.id)); if(f==='open') l=l.filter(b=>b.is_open);
+    $('#qcCount').textContent=l.length+' places'; $('#list').innerHTML=l.length?l.map(lvStoreRow).join(''):`<p class="lv-empty-s">Nothing here yet — try another filter.</p>`; };
+  draw();
+  $('#fchips').onclick=e=>{ const b=e.target.closest('[data-f]'); if(!b) return; el.querySelectorAll('#fchips button').forEach(x=>x.classList.toggle('on',x===b)); f=b.dataset.f; buzz(); draw(); };
+  $('#subchips').onclick=e=>{ const b=e.target.closest('[data-sub]'); if(!b) return; const on=!b.classList.contains('on'); el.querySelectorAll('#subchips button').forEach(x=>x.classList.toggle('on',on&&x===b)); sub=on?b.dataset.sub:''; buzz(); draw(); };
+};
+
+/* ---------- STORE ---------- */
+SCREENS.business = async (el, {id}) => {
+  el.innerHTML = `<div class="sk" style="height:230px"></div><div class="px" style="margin-top:14px">${skeletonRow(3)}</div>`;
+  const b = await api(`/businesses/${id}`); track('shop_view',{id});
+  const wa = (b.whatsapp||'').replace(/[^0-9]/g,''); const cover = b.cover_url || pic(coverKw(b), b.id, 900, 520);
+  const tabs=[]; if(b.products.length) tabs.push(['products','Products']); if(b.services.length) tabs.push(['services','Services']); if(b.offers.length) tabs.push(['offers','Offers']); tabs.push(['about','About'],['reviews','Reviews']);
+  el.innerHTML = `
+    <div class="lv-shero">${photoLayer(cover)}${dIcon(b)}<span class="lv-shade"></span>
+      <div class="lv-hbar"><button class="lv-cb" id="bk" aria-label="Back">${I.back}</button><span style="flex:1"></span>
+        <button class="lv-cb fav ${isSaved('business',b.id)?'on':''}" data-fav data-ftype="business" data-fid="${b.id}" data-fname="${esc(b.name)}" data-fsub="${esc(b.subcategory||'')}" data-fimg="${esc(cover)}" aria-label="Save store">${I.heart}</button>
+        <button class="lv-cb" id="shareb" aria-label="Share">${I.share}</button></div></div>
+    <section class="lv-scard2">
+      <div class="lv-sid"><span class="lv-slogo">${dIcon(b)}</span><div><h1>${esc(b.name)}</h1>
+        <p class="lv-sm">${lvRate(b.rating,b.review_count)}<i>·</i><span>${esc(b.subcategory||b.category_name||'')}</span></p>
+        <p class="lv-sm">${lvOpen(b)}${b.hours_label?`<span class="lv-dist">${gi('clock')}${esc(b.hours_label)}</span>`:''}${b.area_name?`<span class="lv-dist">${I.pin}${esc(b.area_name)}</span>`:''}</p></div></div>
+      <div class="lv-sacts"><button id="callb">${I.phone}<span>Call</span></button><button id="wab">${I.wa}<span>WhatsApp</span></button>
+        <a href="https://maps.google.com/?q=${encodeURIComponent(b.name+' '+(b.address||''))}" target="_blank" rel="noopener">${I.dir}<span>Directions</span></a>
+        ${b.can_chat?`<button id="chatbtn">${GI.chat}<span>Chat</span></button>`:`<button id="enqtop">${GI.megaphone}<span>Enquire</span></button>`}</div></section>
+    ${b.products.length>3?`<div class="lv-srch st"><label class="lv-stxt in">${I.search}<input id="sq" placeholder="Search in ${esc(b.name)}…" aria-label="Search in store"/></label></div>`:''}
+    ${b.offers.length?`<div class="lv-coupons">${b.offers.map(o=>`<div class="lv-coupon"><span>${GI.percent}</span><div><b>${esc(o.discount_label)}</b><small>${esc(o.title)}</small></div></div>`).join('')}</div>`:''}
+    <nav class="lv-utabs" id="tabs" role="tablist"><i class="lv-uind"></i>${tabs.map(([k,l])=>`<button role="tab" data-t="${k}">${l}${k==='reviews'?` <small>${b.reviews.length}</small>`:''}</button>`).join('')}</nav>
+    <div id="tabbody" class="lv-tbody"></div><div style="height:110px"></div>`;
+  $('#bk').onclick=back; $('#shareb').onclick=(e)=>{e.preventDefault(); try{ navigator.share?navigator.share({title:b.name,url:location.href}):toast('Link copied to share'); }catch(_){} };
+  const chatb=$('#chatbtn'); if(chatb) chatb.onclick=()=>gateAction('chat with this store',()=>go('chat',{id:b.id,name:b.name}));
+  const enqt=$('#enqtop'); if(enqt) enqt.onclick=()=>openEnquiry(b);
+  $('#callb').onclick=()=>gateAction('call this business',()=>{ window.location.href='tel:'+b.phone; });
+  $('#wab').onclick=()=>gateAction('message this business on WhatsApp',()=>{ window.open('https://wa.me/'+wa,'_blank','noopener'); });
+  const avg = b.reviews.length ? b.reviews.reduce((a,r)=>a+(r.rating||0),0)/b.reviews.length : (b.rating||0);
+  const bz={...b};
+  const bodies = {
+    products: (q='')=>{ const l=b.products.filter(p=>!q||(p.name||'').toLowerCase().includes(q)); return l.length?`<div class="lv-pgrid">${l.map((p,k)=>lvProd({...p,business:b.name,business_id:b.id},bz,k)).join('')}</div>`:`<p class="lv-empty-s">No items match “${esc(q)}”.</p>`; },
+    services: ()=>`<div class="lv-list">${b.services.map((sv,k)=>`<article class="lv-srow svc" style="--n:${k}"><span class="lv-rimg">${dIcon(sv,'wrench')}</span><span class="lv-rt"><b>${esc(sv.name)}</b><span class="lv-sm">from <b>${money(sv.starting_price)}</b></span>${sv.description?`<small>${esc(sv.description)}</small>`:''}</span><button class="lv-req" data-req="${esc(sv.name)}">Request</button></article>`).join('')}</div>`,
+    offers: ()=>`<div class="lv-list">${b.offers.map(o=>`<div class="lv-coupon big"><span>${GI.percent}</span><div><b>${esc(o.discount_label)} · ${esc(o.title)}</b><small>${esc(o.description||'')}</small></div></div>`).join('')}</div>`,
+    about: ()=>`<div class="lv-about"><p>${esc(b.description||'')}</p>
+      <div class="lv-info"><div><span>Category</span><b>${esc(b.category_name)}</b></div><div><span>Hours</span><b>${esc(b.hours_label||'')}</b></div><div><span>Address</span><b>${esc(b.address||'')}</b></div>
+        <div><span>Phone</span>${token?`<b>${esc(b.phone)}</b>`:`<button id="revealph">Sign up to view</button>`}</div></div>
+      <button class="lv-btn" style="margin-top:16px" id="enqbtn">${t('enquire')}</button></div>`,
+    reviews: ()=>`<div class="lv-rsum"><div><b>${Number(avg).toFixed(1)}</b>${stars(avg)}<small>${b.reviews.length} review${b.reviews.length===1?'':'s'}</small></div>
+        <div class="lv-bars">${[5,4,3,2,1].map(n=>{ const c=b.reviews.filter(r=>Math.round(r.rating)===n).length; return `<p><span>${n}★</span><i style="--w:${b.reviews.length?Math.round(c/b.reviews.length*100):0}%"></i><span>${c}</span></p>`; }).join('')}</div></div>
+      <button class="lv-btn ghost" id="addrev">${I.star} Write a review</button>
+      <div class="lv-list">${b.reviews.length?b.reviews.map(r=>`<div class="lv-rev"><div><b>${esc(r.author_name)}</b>${stars(r.rating)}</div><p>${esc(r.comment)}</p></div>`).join(''):`<p class="lv-empty-s">No reviews yet — be the first.</p>`}</div>`,
+  };
+  const tbEl=$('#tabs');
+  const showTab=(name)=>{ const body=$('#tabbody'); body.classList.remove('lv-tin'); void body.offsetWidth; body.innerHTML=bodies[name](); body.classList.add('lv-tin'); wireTabBody(b);
+    tbEl.querySelectorAll('button').forEach(x=>{ const on=x.dataset.t===name; x.classList.toggle('on',on); x.setAttribute('aria-selected',on); });
+    const on=tbEl.querySelector('button.on'), ind=tbEl.querySelector('.lv-uind'); ind.style.width=on.offsetWidth+'px'; ind.style.transform=`translateX(${on.offsetLeft}px)`; };
+  showTab(tabs[0][0]);
+  tbEl.addEventListener('click', e=>{ const btn=e.target.closest('button'); if(btn){ buzz(); showTab(btn.dataset.t); } });
+  const sq=$('#sq'); if(sq) sq.oninput=()=>{ if(!tbEl.querySelector('[data-t="products"].on')) showTab('products'); $('#tabbody').innerHTML=bodies.products(sq.value.trim().toLowerCase()); };
+  const hero=el.querySelector('.lv-shero'); el.addEventListener('scroll',()=>{ const y=el.scrollTop; hero.style.setProperty('--py',Math.min(1,y/230).toFixed(3)); },{passive:true});
+};
+
+/* ---------- PRODUCT ---------- */
+SCREENS.product = async (el, {id}) => {
+  el.innerHTML = `<div class="sk" style="height:320px"></div>`;
+  let p; try{ p = await api('/products/'+id); }catch(e){ el.innerHTML=`${lvHead('Product')}<p class="lv-empty-s">This product is unavailable.</p>`; backWire(el); return; }
+  const src = p.image_url || pic((p.name||'product').toLowerCase(), 500+(p.id||0), 800, 800);
+  const disc = p.mrp && p.mrp>p.price; const pct = disc?Math.round((1-p.price/p.mrp)*100):0; const oos = p.stock_status==='out_of_stock';
+  const prod = {...p, business:p.business, business_id:p.business_id};
+  el.innerHTML = `
+    <div class="lv-phero">${photoLayer(src)}${dIcon({name:p.name},'cart')}
+      <div class="lv-hbar"><button class="lv-cb" id="bk" aria-label="Back">${I.back}</button><span style="flex:1"></span>
+        <button class="lv-cb fav ${isSaved('product',p.id)?'on':''}" data-fav data-ftype="product" data-fid="${p.id}" data-fname="${esc(p.name)}" data-fprice="${p.price}" data-fimg="${esc(src)}" aria-label="Save">${I.heart}</button></div>
+      <div class="lv-pdots"><i class="on"></i><i></i><i></i></div></div>
+    <section class="lv-psheet">
+      <h1>${esc(p.name)}</h1><p class="lv-unit">${esc(p.unit||'1 unit')} · ${lvRate(p.rating,p.review_count)}</p>
+      <div class="lv-price"><b>${money(p.price)}</b>${disc?`<s>${money(p.mrp)}</s><em>${pct}% OFF</em>`:''}</div>
+      ${p.description?`<p class="lv-desc">${esc(p.description)}</p>`:''}
+      <div class="lv-perks"><div>${gi('pin')}<b>Local shop</b></div><div>${gi('shield')}<b>${oos?'Out of stock':'In stock'}</b></div><div>${gi('chat')}<b>Ask the store</b></div></div>
+      <button class="lv-sold" data-nav="business" data-id="${p.business_id}"><span>${GI.store}</span><div><small>Sold by</small><b>${esc(p.business)}</b></div>${I.chev}</button>
+      <div id="related"></div><div style="height:120px"></div></section>
+    <div class="lv-pbar">${oos?`<button class="lv-btn" disabled>Out of stock</button>`:`<div><small>${esc(p.unit||'1 unit')}</small><b>${money(p.price)}</b></div><span class="lv-pctl big">${addCtl(prod,src)}</span>`}</div>`;
+  $('#bk').onclick=back;
+  if(p.related && p.related.length) $('#related').innerHTML = `<div class="lv-sh flush"><h2>You may also like</h2></div><div class="lv-rail flush">${p.related.map((r,k)=>lvProd(r,null,k)).join('')}</div>`;
+  const hero=el.querySelector('.lv-phero'); el.addEventListener('scroll',()=>hero.style.setProperty('--py',Math.min(1,el.scrollTop/300).toFixed(3)),{passive:true});
+};
+
+/* ---------- CART ---------- */
+SCREENS.cart = async (el) => {
+  if(!cart.length){
+    el.innerHTML=`${lvHead('Your Cart')}<div class="lv-empty"><div class="lv-eill"><span class="lv-halo"></span>${GI.cart}</div><h2>Your cart is empty</h2><p>Add something from a shop near you and it will show up here.</p><button class="lv-btn" id="shop">Start shopping</button></div><div id="best"></div>`;
+    backWire(el); $('#shop').onclick=()=>setTab('home');
+    const ps=await api('/products?limit=8'); $('#best').innerHTML=`<div class="lv-sh"><h2>Popular near you</h2></div><div class="lv-rail">${ps.map((p,k)=>lvProd(p,null,k)).join('')}</div>`; return; }
+  const FREE=499, sub=cartTotal(), delivery=sub>=FREE?0:29;
+  const save=cart.reduce((t,i)=>t+(i.mrp&&i.mrp>i.price?(i.mrp-i.price)*i.qty:0),0);
+  el.innerHTML = `${lvHead(`Your Cart (${cartCount()})`,`<span class="lv-cbag">${GI.cart}<i>${cartCount()}</i></span>`)}
+    <p class="lv-from">${gi('store')} From <b>${esc(cart[0].biz||'your local store')}</b></p>
+    <div class="lv-lines">${cart.map((it,k)=>`<div class="lv-line" style="--n:${k}"><span class="lv-limg">${photoLayer(it.image||pic((it.name||'x').toLowerCase(),500+it.id,160,160))}${dIcon({name:it.name},'cart')}</span>
+      <div class="lv-lt"><b>${esc(it.name)}</b><small>${esc(it.unit||'')}</small><em>${money(it.price*it.qty)}${it.mrp&&it.mrp>it.price?` <s>${money(it.mrp*it.qty)}</s>`:''}</em></div>
+      <div class="lv-step" role="group" aria-label="Quantity of ${esc(it.name)}"><button data-dec="${it.id}" aria-label="Remove one">${it.qty>1?'−':(I.trash||'×')}</button><b>${it.qty}</b><button data-inc="${it.id}" aria-label="Add one">+</button></div></div>`).join('')}</div>
+    <button class="lv-more" data-nav="business" data-id="${cartBizId()||1}">${I.plus} Add more items</button>
+    <div id="lvSugg"></div>
+    <section class="lv-bill">${save>0?`<div class="lv-saved"><span>You saved</span><b>${money(save)}</b></div>`:''}
+      <div><span>Item total</span><b>${money(sub)}</b></div><div><span>Delivery</span><b>${delivery?money(delivery):'<em>FREE</em>'}</b></div>
+      ${delivery?`<div class="lv-free"><span>Add <b>${money(FREE-sub)}</b> more for free delivery</span><i style="--p:${Math.min(100,Math.round(sub/FREE*100))}%"></i></div>`:''}
+      <div class="tot"><span>Total</span><b>${money(sub+delivery)}</b></div></section>
+    <div style="height:110px"></div>
+    <div class="lv-fbar"><button class="lv-gobar" id="checkout"><span><small>${cartCount()} item${cartCount()>1?'s':''}</small><b>${money(sub+delivery)}</b></span><em>Proceed to Checkout ${I.chev}</em></button></div>`;
+  backWire(el);
+  el.querySelectorAll('[data-inc]').forEach(b=>b.onclick=()=>{ setQty(Number(b.dataset.inc),1); buzz(); routeRender(); });
+  el.querySelectorAll('[data-dec]').forEach(b=>b.onclick=()=>{ setQty(Number(b.dataset.dec),-1); buzz(); routeRender(); });
+  $('#checkout').onclick=()=>{ track('checkout_start'); gateAction('place your order',()=>go('checkout')); };
+  api('/products?limit=10').then(ps=>{ const s=$('#lvSugg'); if(!s) return; const ids=new Set(cart.map(i=>i.id)); const l=(ps||[]).filter(p=>!ids.has(p.id)).slice(0,8);
+    if(l.length) s.innerHTML=`<div class="lv-sh"><h2>You might also like</h2></div><div class="lv-rail">${l.map((p,k)=>lvProd(p,null,k)).join('')}</div>`; }).catch(()=>{});
+};
+
+/* ---------- CHECKOUT ---------- */
+SCREENS.checkout = async (el) => {
+  if(!cart.length){ setTab('home'); return; }
+  if(!token){ toast('Please log in'); return go('login'); }
+  const a = safeParse(localStorage.getItem('ll_addr')) || { name: me?me.name:'', phone: me?me.phone:'', line:'', area: state.areaName };
+  const delivery = cartTotal()>=499?0:29; const pay = cartTotal()+delivery;
+  const bizId = cartBizId() || 1; let bizPay=['cash'], upiId=null, bizName=cart[0]?.biz||'';
+  try{ const b=await api('/businesses/'+bizId); bizPay=(b.payment_methods&&b.payment_methods.length)?b.payment_methods:['cash']; upiId=b.upi_id; bizName=b.name||bizName; }catch(e){}
+  const PM={ cash:['Cash on Delivery','Pay when it arrives',GI.card], card:['Card on Delivery','Swipe at your door',GI.card], upi:['UPI'+(upiId?' · '+upiId:''),'GPay, PhonePe, etc. — pay the shop directly',GI.chat] };
+  const methods=bizPay.filter(m=>PM[m]); if(!methods.length) methods.push('cash');
+  const hasAddr=!!(a.line&&a.phone);
+  el.innerHTML = `${lvHead('Checkout')}
+    <div class="lv-steps"><span class="done"><i>${I.check||'✓'}</i>Cart</span><b class="done"></b><span class="on"><i>2</i>Details</span><b></b><span><i>3</i>Placed</span></div>
+    <button class="lv-row" id="addrRow" ${hasAddr?'':'hidden'}><span class="lv-ri">${I.pin}</span><div><small>Deliver to</small><b>${esc(a.name||'')}</b><span>${esc(a.line||'')}, ${esc(a.area||'')}</span></div>${I.chev}</button>
+    <section class="lv-form" id="addrEdit" ${hasAddr?'hidden':''}><h3>${I.pin} Delivery address</h3>
+      <div class="field"><label for="cn">Full name</label><div class="input"><input id="cn" value="${esc(a.name||'')}" autocomplete="name"/></div></div>
+      <div class="field"><label for="cp">Phone</label><div class="input"><input id="cp" value="${esc(a.phone||'')}" placeholder="+91…" inputmode="tel" autocomplete="tel"/></div></div>
+      <div class="field"><label for="cl">Address</label><div class="input"><textarea id="cl" rows="2" placeholder="House / building, street, landmark">${esc(a.line||'')}</textarea></div></div>
+      <div class="field"><label for="ca">Area</label><div class="input"><input id="ca" value="${esc(a.area||state.areaName)}"/></div></div></section>
+    <div class="lv-sh"><h2>Payment Method</h2><small>accepted by ${esc(bizName)}</small></div>
+    <div class="lv-pays" id="payopts">${methods.map((m,k)=>`<button class="lv-pay ${k===0?'on':''}" data-pay="${m}" style="--n:${k}"><span>${PM[m][2]}</span><div><b>${esc(PM[m][0])}</b><small>${PM[m][1]}</small></div><i>${I.check||''}</i></button>`).join('')}</div>
+    <section class="lv-bill" id="billd" hidden><div><span>${cartCount()} item${cartCount()>1?'s':''}</span><b>${money(cartTotal())}</b></div><div><span>Delivery</span><b>${delivery?money(delivery):'<em>FREE</em>'}</b></div><div class="tot"><span>To pay</span><b>${money(pay)}</b></div></section>
+    <div style="height:110px"></div>
+    <div class="lv-fbar split"><button class="lv-tot" id="vd"><b>${money(pay)}</b><small>View details ${I.chev.replace('m9 6 6 6-6 6','m6 9 6 6 6-6')}</small></button><button class="lv-btn" id="place">Place Order ${I.chev}</button></div>`;
+  backWire(el);
+  $('#addrRow').onclick=()=>{ $('#addrRow').hidden=true; const f=$('#addrEdit'); f.hidden=false; f.classList.add('lv-tin'); };
+  $('#vd').onclick=()=>{ const d=$('#billd'); d.hidden=!d.hidden; if(!d.hidden){ d.classList.add('lv-tin'); d.scrollIntoView({behavior:'smooth',block:'center'}); } };
+  let payMethod=methods[0];
+  el.querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>{ el.querySelectorAll('[data-pay]').forEach(x=>x.classList.toggle('on',x===b)); payMethod=b.dataset.pay; buzz(); });
+  $('#place').onclick=async()=>{
+    const name=$('#cn').value.trim(), phone=$('#cp').value.trim(), line=$('#cl').value.trim(), area=$('#ca').value.trim();
+    if(!name||!phone||!line){ $('#addrRow').hidden=true; $('#addrEdit').hidden=false; return toast('Please fill name, phone and address'); }
+    localStorage.setItem('ll_addr', JSON.stringify({name,phone,line,area}));
+    const btn=$('#place'); btn.disabled=true; btn.classList.add('busy'); btn.textContent='Placing…';
+    const groups={}; cart.forEach(i=>{ (groups[i.bizId||1]=groups[i.bizId||1]||[]).push(i); });
+    try{ let lastId=null;
+      for(const [bId,items] of Object.entries(groups)){
+        const tot=items.reduce((n,i)=>n+i.qty*i.price,0)+(cartTotal()>=499?0:29);
+        const r=await api('/orders',{method:'POST',body:{business_id:Number(bId),total:tot,item_summary:items.map(i=>`${i.qty}× ${i.name}`).join(', '),payment_method:payMethod,
+          items_json:items.map(i=>({id:i.id,name:i.name,price:i.price,qty:i.qty,image:i.image||''}))}}); lastId=r&&r.id; }
+      track('order_placed',{total:pay}); const shop=cart[0]?.biz||''; cart=[]; saveCart(); updateCartBadge(); buzz(30);
+      nav.customer=[{name:'orderDone',params:{shop,total:pay,oid:lastId}}]; routeRender();
+    }catch(e){ btn.disabled=false; btn.classList.remove('busy'); btn.textContent='Place Order'; toast(e.message); }
+  };
+};
+SCREENS.orderDone = (el, {shop, total, oid}) => {
+  el.innerHTML = `<div class="lv-done"><button class="lv-x" id="cls" aria-label="Close">×</button>
+    <div class="lv-conf">${Array.from({length:18},(_,k)=>`<i style="--a:${k*20}deg;--d:${(k%5)*60}ms"></i>`).join('')}</div>
+    <div class="lv-bag"><span class="lv-halo"></span><span class="lv-bagb">${GI.bag||GI.cart}<span class="lv-tick"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="18"/><path d="M12 21l6 6 11-12"/></svg></span></span></div>
+    <h1>Order Placed<br>Successfully!</h1>
+    ${oid?`<p class="lv-oid">Order ID: #LL-${10000+Number(oid)}</p>`:''}
+    <p class="lv-dmsg">${esc(shop||'The shop')} has your order${total?` for <b>${money(total)}</b>`:''}. Follow each step in Orders.</p>
+    <button class="lv-btn" id="trk">Track Order</button><button class="lv-btn ghost" id="cont">Continue Shopping</button></div>`;
+  $('#trk').onclick=()=>setTab('orders'); $('#cont').onclick=()=>setTab('home'); $('#cls').onclick=()=>setTab('home');
+};
+
+/* ---------- ORDERS ---------- */
+SCREENS.orders = async (el, params={}) => {
+  if(!token) return openLoginInline(el, 'Log in to see your orders');
+  el.innerHTML = `<header class="lv-tbar"><h1>My Orders</h1></header>
+    <div class="lv-seg" id="seg"><i></i><button class="on" data-s="on">Ongoing</button><button data-s="past">Past Orders</button></div><div id="l" class="lv-olist">${skeletonRow(3)}</div>`;
+  const orders = await api('/orders');
+  const live = orders.filter(o=>!['completed','rejected','cancelled'].includes(o.status)); const past = orders.filter(o=>!live.includes(o));
+  $('#seg').querySelector('[data-s="on"]').textContent=`Ongoing (${live.length})`;
+  const ST=[['pending','Placed',GI.check||I.star],['accepted','Accepted',GI.store],['preparing','Preparing',GI.bag||GI.cart],['out_for_delivery','On the way',GI.package],['completed','Delivered',I.home]];
+  const idx=s=>({pending:0,accepted:1,preparing:2,ready:2,out_for_delivery:3,completed:4})[s]??0;
+  const MSG={pending:['Waiting for the store','The shop will accept your order shortly.'],accepted:['Order accepted','The shop has confirmed your order.'],preparing:['Your order is being prepared','The merchant is packing your items.'],ready:['Your order is ready','Packed and ready to go.'],out_for_delivery:['Your order is on the way','It has left the shop.']};
+  const items=o=>{ const it=typeof o.items_json==='string'?safeParse(o.items_json):o.items_json; return Array.isArray(it)&&it.length?it:null; };
+  const card=(o)=>{ const k=idx(o.status); const m=MSG[o.status]||[o.status.replace(/_/g,' '),'']; const it=items(o);
+    return `<article class="lv-ocard"><div class="lv-ohead"><span class="lv-oimg">${GI.store}</span><div><b>Order #LL-${10000+o.id}</b><small>${esc(o.business)}</small><small><b>${money(o.total)}</b>${it?` · ${it.reduce((n,i)=>n+(i.qty||1),0)} items`:''}</small></div><span class="lv-ost">${k>=3?'On the way':k>=2?'Preparing':'Placed'}</span></div>
+      <div class="lv-omsg"><span>${GI.bag||GI.cart}</span><div><b>${esc(m[0])}</b><small>${esc(m[1])}</small></div></div>
+      <div class="lv-track" style="--k:${k}">${ST.map((s,x)=>`<span class="${x<k?'done':x===k?'on':''}"><i>${s[2]}</i><b>${s[1]}</b></span>`).join('')}<em></em></div>
+      <div class="lv-map" aria-hidden="true"><svg viewBox="0 0 340 160" preserveAspectRatio="xMidYMid slice"><g class="st"><path d="M-10 36H350M-10 112H350M64 -10V180M178 -10V180M286 -10V180M-10 150L120 -10M210 180L350 20"/></g><g class="pk"><rect x="200" y="60" width="60" height="36" rx="8"/><rect x="20" y="10" width="34" height="20" rx="6"/></g>
+        <path id="rt${o.id}" class="rt" d="M50 44 C90 44 100 112 178 110 S260 80 296 124" pathLength="1"/>
+        ${k>=3?`<g class="rider"><circle r="13"/><text y="5" text-anchor="middle">🛵</text><animateMotion dur="6s" repeatCount="indefinite" rotate="0"><mpath href="#rt${o.id}"/></animateMotion></g>`:''}</svg>
+        <span class="lv-mp s">${gi('store')}</span><span class="lv-mp h">${I.home}</span></div>
+      ${it?`<details class="lv-oitems" open><summary>Order Items (${it.length})</summary>${it.map(i=>`<p><span>${esc(i.name)}${i.qty>1?` × ${i.qty}`:''}</span><b>${money((i.price||0)*(i.qty||1))}</b></p>`).join('')}</details>`:`<p class="lv-osum">${esc(o.item_summary||'')}</p>`}
+      <div class="lv-oacts"><button class="lv-btn soft" data-chat="${o.business_id}" data-bn="${esc(o.business)}">${GI.chat} Chat with Merchant</button><button class="lv-btn ghost" data-nav="business" data-id="${o.business_id}">${I.phone} Call Merchant</button></div></article>`; };
+  const pastRow=(o,k)=>`<article class="lv-prow" style="--n:${k}"><span class="lv-oimg">${GI.package}</span><div><b>${esc(o.business)}</b><small>${esc(o.item_summary)}</small><small class="st-${o.status}">${o.status==='completed'?'Delivered':o.status.replace(/_/g,' ')} · ${money(o.total)}</small></div>
+      <button class="lv-reo" data-reorder='${esc(JSON.stringify({items:o.items_json,biz:o.business,bizId:o.business_id}))}'>Reorder</button></article>`;
+  const empty=(t,s)=>`<div class="lv-empty"><div class="lv-eill"><span class="lv-halo"></span>${GI.package}</div><h2>${t}</h2><p>${s}</p><button class="lv-btn" id="shop">Find a shop</button></div>`;
+  const draw=s=>{ const l=$('#l'); l.classList.remove('lv-tin'); void l.offsetWidth; l.classList.add('lv-tin');
+    l.innerHTML = s==='on' ? (live.length? live.map(card).join('') + (past.length?`<div class="lv-sh flush"><h2>Order Again</h2></div>${past.slice(0,3).map(pastRow).join('')}`:'') : empty('No ongoing orders','Your live orders and tracking will appear here.'))
+      : (past.length? past.map(pastRow).join('') : empty('No past orders yet','Orders you complete will show up here.'));
+    const sh=$('#shop'); if(sh) sh.onclick=()=>setTab('home');
+    l.querySelectorAll('[data-chat]').forEach(b=>b.onclick=()=>go('chat',{id:Number(b.dataset.chat),name:b.dataset.bn}));
+    l.querySelectorAll('[data-reorder]').forEach(b=>b.onclick=()=>{ let d={}; try{ d=JSON.parse(b.dataset.reorder); }catch(e){}
+      const its = d.items ? (typeof d.items==='string'?safeParse(d.items):d.items) : null;
+      if(its && its.length){ cart=[]; its.forEach(it=>cart.push({id:it.id,name:it.name,price:it.price,image:it.image||'',biz:d.biz,bizId:Number(d.bizId),qty:it.qty||1})); saveCart(); updateCartBadge(); toast('Added to cart'); go('cart'); }
+      else if(d.bizId) go('business',{id:d.bizId}); else toast('Nothing to reorder'); }); };
+  const seg=$('#seg'); seg.onclick=e=>{ const b=e.target.closest('[data-s]'); if(!b) return; seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); seg.classList.toggle('r',b.dataset.s==='past'); buzz(); draw(b.dataset.s); };
+  if(!live.length&&past.length){ seg.querySelector('[data-s="past"]').click(); } else draw('on');
+};
+
+/* ---------- ACCOUNT ---------- */
+SCREENS.account = async (el) => {
+  const loggedIn=!!token; const nm=loggedIn?me.name:'Guest';
+  const row=(attr,ic,label,right='',k=0)=>`<button ${attr} style="--n:${k}"><span class="lv-mi">${ic}</span><b>${label}</b>${right?`<small>${right}</small>`:''}${I.chev}</button>`;
+  el.innerHTML = `<header class="lv-tbar"><h1>My Account</h1>${custControls()}</header>
+    <section class="lv-me">${loggedIn?`<span class="lv-mav">${esc(nm[0])}</span><div><b>${esc(nm)}</b><small>${esc(me.email||me.phone||'')}</small></div><button class="lv-ib" data-tabnav="profile" aria-label="Edit profile">${I.edit||I.cog}</button>`
+      :`<span class="lv-mav">${logoMark(30)}</span><div><b>Welcome to Local Link</b><small>Log in to order, save favourites and review</small></div><button class="lv-btn sm" id="lg">Log in</button>`}</section>
+    <button class="lv-btn" id="installapp" style="margin:0 16px 14px;width:calc(100% - 32px);display:${window.__llInstall?'flex':'none'}">${GI.download||I.plus} Install Local Link</button>
+    <div class="lv-menu">
+      ${row('data-tabnav="orders"',GI.package,'My Orders','',0)}${row('data-nav="location"',I.pin,'My Addresses',esc(state.areaName),1)}
+      ${row('data-nav="saved"',I.heart,'Favourites','',2)}${row('data-nav="offers"',GI.percent,'Offers & promo codes','',3)}${row('id="bulkreq"',GI.megaphone||I.tag,'Post a requirement','',4)}</div>
+    <div class="lv-menu">
+      ${row('data-nav="localinfo"',GI.building,t('localInfo'),'',5)}${row('data-nav="events"',GI.calendar,t('events'),'',6)}
+      ${row('id="langrow"',I.globe,'Language',state.lang==='ml'?'മലയാളം':'English',7)}${row('data-tabnav="notifications"',I.bell,'Notifications','',8)}
+      <a href="/partner" style="--n:9"><span class="lv-mi">${GI.store}</span><b>Sell on Local Link</b>${I.chev}</a>${row('id="help"',GI.chat,'Help & Support','',10)}</div>
+    ${loggedIn?`<button class="lv-logout" id="out">${I.logout} Log Out</button>`:''}
+    <p class="lv-ver">${logoMark(18)} Local Link · Your Neighbourhood. One App.</p>`;
+  wireCustControls(el);
+  const inst=$('#installapp'); if(inst) inst.onclick=async()=>{ const p=window.__llInstall; if(!p) return; p.prompt(); try{ await p.userChoice; }catch(e){} window.__llInstall=null; inst.style.display='none'; };
+  const lg=$('#lg'); if(lg) lg.onclick=()=>go('login');
+  const br=$('#bulkreq'); if(br) br.onclick=()=>{ if(typeof openBulkReq==='function') openBulkReq(); else go('offers'); };
+  $('#help').onclick=()=>openAsk('',{voice:false});
+  $('#langrow').onclick=()=>{ state.lang=state.lang==='en'?'ml':'en'; localStorage.setItem('ll_lang',state.lang); renderShell(); };
+  const out=$('#out'); if(out) out.onclick=async()=>{ const ok=await confirmDialog({title:'Log out?',message:'Your cart stays on this phone.',ok:'Log out',cancel:'Stay',danger:true,icon:I.logout}); if(!ok) return;
+    token=null; me=null; localStorage.removeItem('ll_token'); localStorage.removeItem('ll_user'); toast('Logged out'); routeRender(); };
+  el.querySelectorAll('[data-tabnav]').forEach(b=>b.onclick=()=>setTab(b.dataset.tabnav));
+};
+
+/* ---------- LOGIN ---------- */
+SCREENS.login = (el) => {
+  el.innerHTML = `<div class="lv-login"><button class="lv-ib" id="ab" aria-label="Back">${I.back}</button>
+    <div class="lv-lbrand">${logoMark(40)}<b>Local</b><b>Link</b></div>
+    <h2>Login or Sign up</h2><p>Order from shops around ${esc(state.areaName)}.</p>
+    <div class="field"><label for="lid">Email or phone</label><div class="input">${I.user}<input id="lid" value="customer@locallink.app" autocomplete="username"/></div></div>
+    <div class="field"><label for="lpw">Password</label><div class="input"><span class="gi">${GI.lock}</span><input id="lpw" type="password" value="password" autocomplete="current-password"/></div></div>
+    <button class="lv-btn" id="lsubmit">Continue ${I.chev}</button>
+    <div class="lv-or"><span>Demo accounts</span></div>
+    <div class="lv-demo"><button data-d="customer@locallink.app">Customer</button><button data-d="partner@locallink.app">Partner</button><button data-d="admin@locallink.app">Admin</button></div>
+    <p class="lv-alt">New to Local Link? <a href="#" id="goreg">Create an account</a></p>
+    <p class="lv-terms">By continuing, you agree to our Terms &amp; Privacy Policy</p></div>`;
+  $('#ab').onclick=back; $('#goreg').onclick=(e)=>{ e.preventDefault(); go('register'); };
+  el.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{ $('#lid').value=b.dataset.d; $('#lpw').value='password'; buzz(); });
+  const submit=async()=>{ const btn=$('#lsubmit'); btn.disabled=true; btn.classList.add('busy');
+    try{ const r=await api('/auth/login',{method:'POST',body:{identifier:$('#lid').value.trim(),password:$('#lpw').value}});
+      token=r.token; me=r.user; localStorage.setItem('ll_token',token); localStorage.setItem('ll_user',JSON.stringify(me)); toast('Welcome, '+me.name.split(' ')[0]); routeAfterLogin(); }
+    catch(e){ btn.disabled=false; btn.classList.remove('busy'); const c=$('.lv-login'); c.classList.remove('fx-shake'); void c.offsetWidth; c.classList.add('fx-shake'); toast(e.message||'Login failed'); } };
+  $('#lsubmit').onclick=submit; $('#lpw').onkeydown=e=>{ if(e.key==='Enter') submit(); };
+};
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CUSTOMER APP v3 (lw) — every remaining screen rebuilt + spec modules:
+   assistant, search, location, notifications, wishlist, offers, community,
+   support, profile/addresses/preferences, register, bookings, workers,
+   rides, local info, recently viewed, map view, pickup, coupons, notes,
+   cancel, rate, invoice.
+   ═══════════════════════════════════════════════════════════════════════ */
+const lwLS=(k,d)=>{ try{ const v=JSON.parse(localStorage.getItem(k)); return v==null?d:v; }catch(e){ return d; } };
+const lwSet=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} };
+function lwRecent(b){ if(!b||!b.id) return; let r=lwLS('ll_recent',[]).filter(x=>x.id!==b.id); r.unshift({id:b.id,name:b.name,subcategory:b.subcategory||b.category_name||'',rating:b.rating,review_count:b.review_count,is_open:b.is_open,cover_url:b.cover_url,area_name:b.area_name,color1:b.color1,color2:b.color2}); lwSet('ll_recent',r.slice(0,10)); }
+function lwPrefs(){ return Object.assign({orders:true,offers:true,stores:true,bookings:true},lwLS('ll_notif',{})); }
+function lwPct(label){ const m=String(label||'').match(/(\d{1,2})\s*%/); return m?Number(m[1]):0; }
+function lwField(id,label,val='',attrs=''){ return `<div class="field"><label for="${id}">${label}</label><div class="input"><input id="${id}" value="${esc(val||'')}" ${attrs}/></div></div>`; }
+
+/* track recently viewed stores */
+const _lvBiz=SCREENS.business;
+SCREENS.business=async(el,p)=>{ await _lvBiz(el,p); try{ const b=await api('/businesses/'+p.id); lwRecent(b);
+  // services: book with date + time instead of a bare request
+  el.querySelectorAll('[data-req]').forEach(x=>x.onclick=()=>lwBook(b,x.dataset.req)); 
+  const tabs=$('#tabs'); if(tabs) tabs.addEventListener('click',()=>setTimeout(()=>el.querySelectorAll('[data-req]').forEach(x=>x.onclick=()=>lwBook(b,x.dataset.req)),30)); }catch(e){} };
+
+/* ---------- service booking (sent to the provider as an enquiry) ---------- */
+function lwBook(b,svc){
+  if(!token) return gateAction('book this service',()=>{});
+  const d=new Date(); const days=Array.from({length:6},(_,i)=>{ const x=new Date(d); x.setDate(d.getDate()+i); return x; });
+  const slots=['9:00 AM','11:00 AM','1:00 PM','3:00 PM','5:00 PM','7:00 PM'];
+  showSheet(`Book ${esc(svc)}`,`<div class="lw-book"><p class="lw-bp">${GI.store} ${esc(b.name)}</p>
+    <h4>Pick a day</h4><div class="lw-days" id="bd">${days.map((x,i)=>`<button class="${i?'':'on'}" data-d="${x.toDateString()}"><small>${i?x.toLocaleDateString('en-IN',{weekday:'short'}):'Today'}</small><b>${x.getDate()}</b></button>`).join('')}</div>
+    <h4>Pick a time</h4><div class="lw-slots" id="bt">${slots.map((s,i)=>`<button class="${i?'':'on'}" data-t="${s}">${s}</button>`).join('')}</div>
+    <div class="field"><label for="bn">Notes for ${esc(b.name)}</label><div class="input"><textarea id="bn" rows="2" placeholder="What needs doing? Any landmark?"></textarea></div></div>
+    <button class="lv-btn" id="bgo">Send booking request</button><p class="lw-fine">${esc(b.name)} will confirm the slot by call or chat.</p></div>`,()=>{
+    const pick=(id)=>$('#'+id).onclick=e=>{ const x=e.target.closest('button'); if(!x) return; $('#'+id).querySelectorAll('button').forEach(y=>y.classList.toggle('on',y===x)); buzz(); };
+    pick('bd'); pick('bt');
+    $('#bgo').onclick=async()=>{ const day=$('#bd .on').dataset.d, tm=$('#bt .on').dataset.t, note=$('#bn').value.trim(); const btn=$('#bgo'); btn.classList.add('busy'); btn.disabled=true;
+      try{ await api('/enquiries',{method:'POST',body:{business_id:b.id,message:`Booking request: ${svc} on ${day} at ${tm}.${note?' Notes: '+note:''}`}});
+        const bk=lwLS('ll_bookings',[]); bk.unshift({id:Date.now(),svc,biz:b.name,bizId:b.id,day,tm,note,status:'requested'}); lwSet('ll_bookings',bk.slice(0,30));
+        closeSheet(); lwConfirm('Booking requested',`${esc(svc)} · ${esc(day)}, ${esc(tm)}<br>${esc(b.name)} will confirm with you.`); }
+      catch(e){ btn.classList.remove('busy'); btn.disabled=false; toast(e.message); } };
+  });
+}
+function lwConfirm(title,html){ showSheet('',`<div class="lw-ok"><div class="lw-okc"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="18"/><path d="M12 21l6 6 11-12"/></svg></div><h3>${title}</h3><p>${html}</p><button class="lv-btn" id="okx">Done</button></div>`,()=>{ $('#okx').onclick=closeSheet; buzz(25); }); }
+
+/* ---------- AI ASSISTANT (full screen) ---------- */
+const _openAsk=openAsk;
+openAsk=function(prefill,opts={}){ if(state.view!=='customer') return _openAsk(prefill,opts); closeSheet(); go('assistant',{q:prefill||'',voice:!!opts.voice}); };
+SCREENS.assistant=(el,{q,voice})=>{
+  const nm=token&&me?me.name.split(' ')[0]:'';
+  const S=[[I.store,'Find a nearby restaurant','biriyani restaurant'],[GI.cart,'Get groceries','vegetables and milk'],[GI.wrench||I.cog,'Book a home service','electrician'],[GI.package,'Track my order','__track'],[GI.percent,'Discover local offers','__offers']];
+  el.innerHTML=`<div class="lw-ai"><header class="lw-aih"><button class="lv-ib" id="__back" aria-label="Back">${I.back}</button><span class="lw-aiw">${Array.from({length:9},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span><div class="lw-ailang" id="ail"><button data-vl="en-IN">EN</button><button data-vl="ml-IN">മ</button></div></header>
+    <div class="lw-aititle"><h1>Ask Local Link</h1><p>Your local shopping assistant</p></div>
+    <div class="lw-msgs" id="msgs"><div class="lw-b bot">Hi${nm?' '+esc(nm):''}! 👋<br>How can I help you today? You can ask for several things at once — like “vegetables, chicken biryani and an electrician”.</div>
+      <div class="lw-sugg" id="sugg">${S.map((s,i)=>`<button data-s="${esc(s[2])}" style="--n:${i}"><span>${s[0]}</span>${esc(s[1])}</button>`).join('')}</div></div>
+    <div class="lw-orbz" id="orbz"><button class="lw-orb" id="orb" aria-label="Speak"><span class="h1"></span><span class="h2"></span><span class="c">${GI.mic}</span></button><small id="ost">Tap to speak</small></div>
+    <div class="lw-in"><input id="aq" placeholder="Type or speak…" autocomplete="off"/><button class="lw-mic" id="amic" aria-label="Voice">${GI.mic}</button><button class="lw-send" id="asend" aria-label="Send">${GI.send}</button></div></div>`;
+  backWire(el);
+  const msgs=$('#msgs'), inp=$('#aq'); const down=()=>msgs.scrollTo({top:msgs.scrollHeight,behavior:'smooth'});
+  $('#ail').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.vl===aiVoiceLang); b.onclick=()=>{ aiVoiceLang=b.dataset.vl; localStorage.setItem('ll_voicelang',aiVoiceLang); $('#ail').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); }; });
+  const card=x=>{ const bizId=x.type==='business'?x.id:x.business_id; const ic={business:I.store,product:GI.cart,service:GI.wrench||I.cog,worker:GI.helmet||I.user,driver:GI.car||I.pin}[x.type]||I.pin;
+    const sub=x.type==='business'?`${esc(x.subcategory||'')}${x.rating?` · ★ ${Number(x.rating).toFixed(1)}`:''}`:x.type==='product'?`${money(x.price)} · ${esc(x.business||'')}`:x.type==='service'?`from ${money(x.starting_price)} · ${esc(x.business||'')}`:x.type==='worker'?`${esc(x.skills||'')}${x.rate?' · '+esc(x.rate):''}`:esc(x.fare_note||x.service_type||'');
+    const acts=[x.type==='product'?`<button class="lw-ac hot" data-add="1" data-pid="${x.id}" data-pname="${esc(x.name)}" data-pprice="${x.price}" data-pmrp="${x.mrp||''}" data-pimg="${esc(x.image_url||'')}" data-pbiz="${esc(x.business||'')}" data-pbizid="${x.business_id||''}">${I.plus} Add to cart</button>`:'',
+      x.type==='service'?`<button class="lw-ac hot" data-book="${bizId}" data-svc="${esc(x.name)}">${GI.calendar||I.plus} Book</button>`:'',
+      x.phone?`<a class="lw-ac" href="tel:${esc(x.phone)}">${I.phone} Call</a>`:'',
+      bizId?`<button class="lw-ac" data-open="${bizId}">Open ${I.chev}</button>`:''].join('');
+    return `<div class="lw-rc t-${x.type}"><span class="lw-ri">${ic}</span><div><small>${esc(x.type)}</small><b>${esc(x.name)}</b><p>${sub}</p>${acts?`<div class="lw-acts">${acts}</div>`:''}</div></div>`; };
+  const add=(cls,html)=>{ const d=document.createElement('div'); d.className=cls; d.innerHTML=html; msgs.appendChild(d); down(); return d; };
+  const run=async(text)=>{ text=(text||inp.value).trim(); if(!text) return; inp.value=''; const sg=$('#sugg'); if(sg) sg.remove(); $('#orbz').classList.add('mini');
+    add('lw-b me',esc(text)); const ld=add('lw-turn',`<div class="lw-b bot"><span class="ai-typing"><i></i><i></i><i></i></span></div>`); el.classList.add('thinking');
+    try{
+      if(text==='__track'||/\b(my order|track|where is)\b/i.test(text)){ if(!token){ ld.innerHTML=`<div class="lw-b bot">Log in to see your orders.</div><div class="lw-acts"><button class="lw-ac hot" data-login>Log in</button></div>`; }
+        else { const os=await api('/orders'); const live=os.filter(o=>!['completed','rejected','cancelled'].includes(o.status));
+          ld.innerHTML=`<div class="lw-b bot">${live.length?`You have ${live.length} active order${live.length>1?'s':''}:`:'You have no active orders right now.'}</div>`+live.map(o=>`<div class="lw-rc"><span class="lw-ri">${GI.package}</span><div><small>Order #LL-${10000+o.id}</small><b>${esc(o.business)}</b><p>${esc(o.status.replace(/_/g,' '))} · ${money(o.total)}</p><div class="lw-acts"><button class="lw-ac hot" data-tab="orders">Track ${I.chev}</button></div></div></div>`).join(''); } }
+      else if(text==='__offers'){ const of=await api('/offers'); ld.innerHTML=`<div class="lw-b bot">Here are offers from shops near ${esc(state.areaName)}:</div>`+of.slice(0,5).map(o=>`<div class="lw-rc"><span class="lw-ri">${GI.percent}</span><div><small>${esc(o.business||'')}</small><b>${esc(o.discount_label)} · ${esc(o.title)}</b>${o.code?`<p>Code <b>${esc(o.code)}</b></p>`:''}<div class="lw-acts"><button class="lw-ac" data-open="${o.business_id}">Open ${I.chev}</button></div></div></div>`).join(''); }
+      else { const parts=text.split(/\s*(?:,|\band\b|&|\+|\bplus\b|\balso\b)\s*/i).map(s=>s.trim()).filter(s=>s.length>1).slice(0,4); const qs=parts.length>1?parts:[text];
+        const rs=await Promise.all(qs.map(x=>api('/ask',{method:'POST',body:{query:x,lang:state.lang}}).catch(()=>({answer:'',results:[]}))));
+        ld.innerHTML = qs.length>1 ? `<div class="lw-b bot">I split that into ${qs.length} things — here's what I found nearby:</div>`+rs.map((r,i)=>`<div class="lw-grp"><h5>${esc(qs[i])}</h5>${(r.results||[]).slice(0,3).map(card).join('')||`<p class="lw-none">Nothing nearby for this yet.</p>`}</div>`).join('')
+          : `<div class="lw-b bot">${esc(rs[0].answer||'Here is what I found.')}</div>`+(rs[0].results||[]).slice(0,6).map(card).join(''); track('ask_used'); }
+    }catch(e){ ld.innerHTML=`<div class="lw-b bot">${esc(e.message||'Something went wrong')}</div>`; }
+    el.classList.remove('thinking'); down();
+    ld.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>go('business',{id:Number(b.dataset.open)}));
+    ld.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+    ld.querySelectorAll('[data-login]').forEach(b=>b.onclick=()=>go('login'));
+    ld.querySelectorAll('[data-book]').forEach(b=>b.onclick=async()=>{ try{ lwBook(await api('/businesses/'+b.dataset.book),b.dataset.svc); }catch(e){ toast(e.message); } }); };
+  el.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>run(b.dataset.s==='__track'||b.dataset.s==='__offers'?b.dataset.s:b.dataset.s));
+  $('#asend').onclick=()=>run(); inp.onkeydown=e=>{ if(e.key==='Enter') run(); };
+  setupVoice($('#amic'),inp,run); $('#orb').onclick=()=>$('#amic').click();
+  new MutationObserver(()=>{ const on=$('#amic')&&$('#amic').classList.contains('listening'); el.classList.toggle('listening',!!on); const s=$('#ost'); if(s) s.textContent=on?(aiVoiceLang==='ml-IN'?'കേൾക്കുന്നു…':'Listening…'):'Tap to speak'; }).observe($('#amic'),{attributes:true,attributeFilter:['class']});
+  if(q) run(q); else if(voice && (window.SpeechRecognition||window.webkitSpeechRecognition)) setTimeout(()=>$('#amic').click(),400);
+};
+
+/* ---------- SEARCH ---------- */
+SCREENS.searchScreen=async(el)=>{
+  const rec=lwLS('ll_srch',[]);
+  el.innerHTML=`<header class="lw-sh"><button class="lv-ib" id="__back" aria-label="Back">${I.back}</button><label class="lw-sbox">${I.search}<input id="sq" placeholder="Search shops, food, services…" autocomplete="off"/><button id="sx" hidden aria-label="Clear">×</button></label><button class="lw-smic" id="smic" aria-label="Voice search">${GI.mic}</button></header>
+    <div id="sbody"></div>`;
+  backWire(el); const inp=$('#sq'), body=$('#sbody'); setTimeout(()=>inp.focus(),300);
+  const idle=()=>{ const r=lwLS('ll_srch',[]); body.innerHTML=`${r.length?`<div class="lv-sh"><h2>Recent searches</h2><button class="lv-see" id="clr">Clear</button></div><div class="lw-recent">${r.map((x,i)=>`<button data-q="${esc(x)}" style="--n:${i}">${gi('clock')}${esc(x)}</button>`).join('')}</div>`:''}
+    <div class="lv-sh"><h2>Trending near you</h2></div><div class="lw-trend">${ROTATE.map(x=>x.replace(/^Search\s*"?|"$/g,'')).concat(['electrician','pharmacy','cake']).slice(0,9).map((x,i)=>`<button data-q="${esc(x)}" style="--n:${i}">${I.search}<span>${esc(x)}</span></button>`).join('')}</div>
+    <button class="lv-ask" data-ask><span class="lv-aorb">${GI.mic}</span><span><b>Not sure what to search?</b><small>Ask Local Link in your own words</small></span></button>`;
+    const c=$('#clr'); if(c) c.onclick=()=>{ lwSet('ll_srch',[]); idle(); };
+    body.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{ inp.value=b.dataset.q; find(); });
+    body.querySelector('[data-ask]').onclick=()=>openAsk('',{voice:false}); };
+  let tm=null, seq=0;
+  const find=async()=>{ const q=inp.value.trim(); $('#sx').hidden=!q; if(!q) return idle(); const my=++seq;
+    body.innerHTML=`<div class="px">${skeletonRow(3)}</div>`;
+    const r=await api('/search?q='+encodeURIComponent(q)).catch(()=>null); if(my!==seq||!r) return;
+    const n=r.businesses.length+r.products.length+r.services.length+r.workers.length+r.drivers.length;
+    if(n){ const s=lwLS('ll_srch',[]).filter(x=>x.toLowerCase()!==q.toLowerCase()); s.unshift(q); lwSet('ll_srch',s.slice(0,8)); }
+    body.innerHTML = !n ? `<div class="lv-empty"><div class="lv-eill"><span class="lv-halo"></span>${I.search}</div><h2>No match for “${esc(q)}”</h2><p>Try a different word, or ask the assistant to look for you.</p><button class="lv-btn" id="askq">Ask Local Link</button></div>`
+      : `${r.businesses.length?`<div class="lv-sh"><h2>Stores</h2><small>${r.businesses.length}</small></div><div class="lv-list">${r.businesses.map(lvStoreRow).join('')}</div>`:''}
+         ${r.products.length?`<div class="lv-sh"><h2>Products</h2><small>${r.products.length}</small></div><div class="lv-rail">${r.products.map((p,i)=>lvProd(p,null,i)).join('')}</div>`:''}
+         ${r.services.length?`<div class="lv-sh"><h2>Services</h2></div><div class="lv-list">${r.services.map((s,i)=>`<button class="lv-srow" data-nav="business" data-id="${s.business_id}" style="--n:${i}"><span class="lv-rimg">${dIcon(s,'wrench')}</span><span class="lv-rt"><b>${esc(s.name)}</b><span class="lv-sm"><span>from <b>${money(s.starting_price)}</b> · ${esc(s.business)}</span></span></span></button>`).join('')}</div>`:''}
+         ${r.workers.length?`<div class="lv-sh"><h2>Local workers</h2></div><div class="lv-list" id="sw"></div>`:''}${r.drivers.length?`<div class="lv-sh"><h2>Rides</h2></div><div class="lv-list" id="sd"></div>`:''}<div style="height:20px"></div>`;
+    if(r.workers.length) renderWorkers($('#sw'),r.workers); if(r.drivers.length) renderDrivers($('#sd'),r.drivers);
+    const aq=$('#askq'); if(aq) aq.onclick=()=>openAsk(q,{}); };
+  inp.oninput=()=>{ clearTimeout(tm); tm=setTimeout(find,260); };
+  $('#sx').onclick=()=>{ inp.value=''; find(); inp.focus(); };
+  $('#smic').onclick=()=>openAsk('',{voice:true});
+  idle();
+};
+
+/* ---------- LOCATION ---------- */
+SCREENS.location=(el)=>{
+  const first=!localStorage.getItem('ll_area_set');
+  el.innerHTML=`<div class="lw-loc">${first?'':`<button class="lv-ib" id="__back" aria-label="Back">${I.back}</button>`}
+    <div class="lw-lmap"><svg viewBox="0 0 260 200" aria-hidden="true"><g class="st"><path d="M0 60H260M0 140H260M70 0V200M180 0V200M0 190L120 0M150 200L260 40"/></g><g class="pk"><rect x="190" y="70" width="50" height="50" rx="10"/><rect x="10" y="150" width="40" height="30" rx="8"/></g></svg>
+      <span class="lw-pin">${I.pin}</span><span class="lw-pr"></span><span class="lw-pr r2"></span></div>
+    <h1>Find what's near you</h1><p>Allow location to explore local shops, restaurants, services and offers.</p>
+    <button class="lv-btn" id="gps">${I.dir} Use my location</button>
+    <div class="lv-or"><span>or choose your area</span></div>
+    <label class="lw-sbox in">${I.search}<input id="af" placeholder="Search area or panchayath"/></label>
+    <div class="lw-areas" id="al"></div></div>`;
+  backWire(el);
+  const draw=f=>{ const l=ref.areas.filter(a=>{ const p=ref.panchayaths.find(x=>x.id===a.panchayath_id); return !f||(a.name+' '+(p?p.name:'')).toLowerCase().includes(f); });
+    $('#al').innerHTML=l.slice(0,30).map((a,i)=>{ const p=ref.panchayaths.find(x=>x.id===a.panchayath_id); return `<button data-area="${a.id}" data-name="${esc(a.name)}" style="--n:${Math.min(i,8)}" class="${a.id==state.areaId?'on':''}"><span>${I.pin}</span><div><b>${esc(a.name)}</b><small>${esc(p?p.name:'')}, Kozhikode</small></div>${a.id==state.areaId?`<em>Current</em>`:I.chev}</button>`; }).join('')||`<p class="lv-empty-s">No area matches that.</p>`;
+    el.querySelectorAll('[data-area]').forEach(b=>b.onclick=()=>{ localStorage.setItem('ll_area_set','1'); pickArea(Number(b.dataset.area),b.dataset.name); }); };
+  draw(''); $('#af').oninput=e=>draw(e.target.value.trim().toLowerCase());
+  $('#gps').onclick=()=>{ const b=$('#gps'); b.classList.add('busy'); b.disabled=true;
+    const nearest=(lat,lng)=>{ let best=null,bd=1e9; ref.areas.forEach(a=>{ if(a.lat==null) return; const d=(a.lat-lat)**2+(a.lng-lng)**2; if(d<bd){bd=d;best=a;} }); return best; };
+    const done=a=>{ localStorage.setItem('ll_area_set','1'); if(a) pickArea(a.id,a.name); else { b.classList.remove('busy'); b.disabled=false; toast('Could not match your location — please pick your area'); } };
+    if(!navigator.geolocation) return done(null);
+    navigator.geolocation.getCurrentPosition(p=>done(nearest(p.coords.latitude,p.coords.longitude)),()=>{ b.classList.remove('busy'); b.disabled=false; toast('Location is off — please pick your area below'); },{timeout:6000,maximumAge:600000}); };
+};
+// onboarding ends at location the first time
+const _lvIntro=SCREENS.intro;
+SCREENS.intro=(el)=>{ _lvIntro(el); const hook=()=>{ const nx=$('#nx'), sk=$('#skip'); if(!nx) return;
+    const fin=()=>{ state.introSeen=true; localStorage.setItem('ll_intro','1'); nav.customer=[{name: localStorage.getItem('ll_area_set')?'home':'location'}]; routeRender(); };
+    sk.onclick=fin; if(/Get Started/.test(nx.textContent)){ nx.onclick=fin; const lg=document.createElement('div'); lg.className='lw-lang'; lg.innerHTML=`<small>Choose your language</small><div><button data-l="en" class="${state.lang==='en'?'on':''}">English</button><button data-l="ml" class="${state.lang==='ml'?'on':''}">മലയാളം</button></div>`; nx.before(lg);
+      lg.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{ state.lang=b.dataset.l; localStorage.setItem('ll_lang',state.lang); lg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); buzz(); }); } };
+  hook(); new MutationObserver(hook).observe(el,{childList:true}); };
+
+/* ---------- NOTIFICATIONS ---------- */
+SCREENS.notifications=async(el)=>{
+  el.innerHTML=`${lvHead('Notifications',`<button class="lv-ib" data-nav="prefs" aria-label="Notification settings">${I.cog}</button>`)}<div class="lv-list" id="l">${skeletonRow(3)}</div>`; backWire(el);
+  if(!token){ $('#l').innerHTML=`<div class="lv-empty"><div class="lv-eill"><span class="lv-halo"></span>${I.bell}</div><h2>Stay in the loop</h2><p>Log in to get order updates, booking reminders and offers from shops you follow.</p><button class="lv-btn" id="lg">Log in</button></div>`; $('#lg').onclick=()=>go('login'); return; }
+  const n=await api('/notifications').catch(()=>[]); const pr=lwPrefs();
+  const ic=t=>({order:GI.package,offer:GI.percent,booking:GI.calendar||I.bell,store:I.store})[t]||I.bell;
+  const show=n.filter(x=>x.type==='order'?pr.orders:x.type==='offer'?pr.offers:true);
+  const ago=s=>{ const d=(Date.now()-new Date((s||'').replace(' ','T')+'Z'))/6e4; return isNaN(d)?'':d<60?Math.max(1,Math.round(d))+'m ago':d<1440?Math.round(d/60)+'h ago':Math.round(d/1440)+'d ago'; };
+  $('#l').innerHTML=show.length?show.map((x,i)=>`<div class="lw-nt t-${esc(x.type||'info')} ${x.read?'':'new'}" style="--n:${Math.min(i,8)}"><span>${ic(x.type)}</span><div><b>${esc(x.title)}</b><p>${esc(x.body||'')}</p><small>${ago(x.created_at)}</small></div></div>`).join('')
+    :`<div class="lv-empty"><div class="lv-eill"><span class="lv-halo"></span>${I.bell}</div><h2>All caught up</h2><p>Order updates and offers from your favourite shops will show up here.</p></div>`;
+};
+
+/* ---------- WISHLIST ---------- */
+SCREENS.saved=async(el)=>{
+  el.innerHTML=`${lvHead('Wishlist')}<div class="lv-seg" id="seg"><i></i><button class="on" data-s="business">Stores</button><button data-s="product">Products</button></div><div id="l"></div>`; backWire(el);
+  const draw=t=>{ const l=saved.filter(s=>s.type===t); const box=$('#l'); box.classList.remove('lv-tin'); void box.offsetWidth; box.classList.add('lv-tin');
+    if(!l.length){ box.innerHTML=`<div class="lv-empty"><div class="lv-eill"><span class="lv-halo"></span>${I.heart}</div><h2>Nothing saved yet</h2><p>Tap the heart on any ${t==='business'?'store':'product'} to keep it here.</p><button class="lv-btn" id="ex">Explore</button></div>`; $('#ex').onclick=()=>setTab('home'); return; }
+    box.innerHTML = t==='business' ? `<div class="lv-list">${l.map((s,i)=>lvStoreRow({id:s.id,name:s.name,subcategory:s.sub,cover_url:s.image},i)).join('')}</div>`
+      : `<div class="lv-pgrid">${l.map((s,i)=>lvProd({id:s.id,name:s.name,price:s.price,image_url:s.image},null,i)).join('')}</div>`; };
+  const seg=$('#seg'); seg.onclick=e=>{ const b=e.target.closest('[data-s]'); if(!b) return; seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); seg.classList.toggle('r',b.dataset.s==='product'); draw(b.dataset.s); }; draw('business');
+};
+
+/* ---------- OFFERS & COUPONS ---------- */
+SCREENS.offers=async(el)=>{
+  el.innerHTML=`${lvHead('Offers & Coupons')}<div id="l" class="lv-list">${skeletonRow(3)}</div>`; backWire(el);
+  const of=await api('/offers');
+  $('#l').innerHTML=of.length?of.map((o,i)=>`<div class="lw-cpn" style="--n:${Math.min(i,8)}"><div class="lw-cl"><b>${esc(o.discount_label||'OFFER')}</b><small>${esc(o.business||'')}</small></div><div class="lw-cr"><b>${esc(o.title)}</b><p>${esc(o.description||'')}</p>
+      <div class="lw-cact">${o.code?`<button class="lw-code" data-code="${esc(o.code)}">${esc(o.code)} <span>Copy</span></button>`:''}<button class="lv-btn sm" data-nav="business" data-id="${o.business_id}">Shop ${I.chev}</button></div></div></div>`).join('')
+    :`<div class="lv-empty"><div class="lv-eill"><span class="lv-halo"></span>${GI.percent}</div><h2>No offers right now</h2><p>Check back soon — local shops add deals every week.</p></div>`;
+  el.querySelectorAll('[data-code]').forEach(b=>b.onclick=()=>{ try{ navigator.clipboard.writeText(b.dataset.code); }catch(e){} b.classList.add('ok'); b.querySelector('span').textContent='Copied'; buzz(); toast('Code copied — apply it at checkout'); });
+};
+
+/* ---------- COMMUNITY ---------- */
+SCREENS.community=async(el)=>{
+  el.innerHTML=`${lvHead('Your Neighbourhood')}<div class="lw-chero"><h2>Shop local.<br>Grow local.</h2><p>Every order keeps a neighbourhood business going.</p><span class="lw-cb1"></span><span class="lw-cb2"></span></div>
+    <div class="lv-sh"><h2>New in ${esc(state.areaName)}</h2></div><div class="lv-rail" id="nw">${skeletonCards(2)}</div>
+    <div class="lv-sh"><h2>Neighbourhood favourites</h2></div><div class="lv-list" id="fav">${skeletonRow(2)}</div>
+    <div class="lv-sh"><h2>Events &amp; announcements</h2><button class="lv-see" data-nav="events">See all ${I.chev}</button></div><div class="lv-list" id="ev"></div>
+    <div class="lv-sh"><h2>Local news</h2><button class="lv-see" data-nav="news">See all ${I.chev}</button></div><div class="lv-rail" id="nwz"></div>
+    <div class="lv-sh"><h2>Latest reviews</h2></div><div class="lv-list" id="rv"></div>
+    <section class="lw-refer"><span>${I.store}</span><div><b>Know a great local business?</b><p>Refer them to Local Link and help them get found.</p></div><button class="lv-btn sm" id="ref">Refer</button></section><div style="height:24px"></div>`;
+  backWire(el);
+  const [biz,ev,news]=await Promise.all([api('/businesses'),api('/events'),api('/news')]);
+  $('#nw').innerHTML=biz.slice().sort((a,b)=>b.id-a.id).slice(0,8).map((b,i)=>lvStoreCard(b,i).replace('lv-scard"','lv-scard" data-new="1"')).join('');
+  $('#fav').innerHTML=biz.slice().sort((a,b)=>(b.review_count||0)-(a.review_count||0)).slice(0,4).map(lvStoreRow).join('');
+  $('#ev').innerHTML=ev.slice(0,3).map(eventCard).join(''); $('#nwz').innerHTML=news.slice(0,5).map(newsCard).join('');
+  const withRev=await Promise.all(biz.slice().sort((a,b)=>(b.review_count||0)-(a.review_count||0)).slice(0,3).map(b=>api('/businesses/'+b.id).catch(()=>null)));
+  const rv=[]; withRev.forEach(b=>b&&(b.reviews||[]).slice(0,2).forEach(r=>rv.push({...r,biz:b.name,bizId:b.id})));
+  $('#rv').innerHTML=rv.length?rv.slice(0,4).map(r=>`<button class="lw-rv" data-nav="business" data-id="${r.bizId}"><div><b>${esc(r.author_name)}</b>${stars(r.rating)}</div><p>“${esc(r.comment)}”</p><small>${esc(r.biz)}</small></button>`).join(''):`<p class="lv-empty-s">No reviews yet.</p>`;
+  $('#ref').onclick=()=>gateAction('refer a business',()=>showSheet('Refer a local business',`<div class="lw-book">${lwField('rn','Business name')}${lwField('rp','Their phone (optional)','','inputmode="tel"')}<div class="field"><label for="rw">What do they do?</label><div class="input"><textarea id="rw" rows="2" placeholder="e.g. Home bakery near the temple"></textarea></div></div><button class="lv-btn" id="rgo">Send referral</button></div>`,()=>{
+    $('#rgo').onclick=async()=>{ const n=$('#rn').value.trim(); if(!n) return toast('Please add the business name'); try{ await api('/leads',{method:'POST',body:{type:'enquiry',area_id:state.areaId,query:'Business referral: '+n,message:[$('#rw').value.trim(),$('#rp').value.trim()].filter(Boolean).join(' · ')}}); closeSheet(); lwConfirm('Thanks for the referral!',`We'll reach out to <b>${esc(n)}</b> about joining Local Link.`); }catch(e){ toast(e.message); } }; }));
+};
+
+/* ---------- HELP & SUPPORT ---------- */
+SCREENS.support=async(el)=>{
+  const F=[['How do I track my order?','Open Orders. Your live order shows each step — placed, accepted, preparing, on the way — and you can chat with or call the shop.'],
+    ['Can I cancel an order?','Yes, until the shop accepts it. Open the order and tap Cancel order. After that, chat with the shop.'],
+    ['How do I pay?','Each shop chooses what it accepts — usually cash on delivery, card on delivery or UPI directly to the shop. You will see the options at checkout.'],
+    ['Can I pick up instead of delivery?','Yes. Choose Pickup at checkout and collect from the shop.'],
+    ['How do coupons work?','Copy a code from Offers & Coupons and apply it at checkout for that shop.'],
+    ['How do I book a service?','Open a service provider, pick a day and time, and send the request. The provider confirms by call or chat.']];
+  el.innerHTML=`${lvHead('Help & Support')}<button class="lv-ask" data-ask><span class="lv-aorb">${GI.mic}</span><span><b>Ask Local Link</b><small>Get instant answers about orders and shops</small></span></button>
+    <div class="lw-sgrid"><button data-k="order">${GI.package}<b>Order issue</b></button><button data-k="refund">${GI.card}<b>Refund / payment</b></button><button data-k="shop">${I.store}<b>Contact a shop</b></button><button data-k="complaint">${GI.megaphone||I.bell}<b>Raise a complaint</b></button></div>
+    <div class="lv-sh"><h2>FAQs</h2></div><div class="lw-faq">${F.map((f,i)=>`<details style="--n:${i}"><summary>${esc(f[0])}<i>${I.plus}</i></summary><p>${esc(f[1])}</p></details>`).join('')}</div><div style="height:24px"></div>`;
+  backWire(el); el.querySelector('[data-ask]').onclick=()=>openAsk('',{});
+  el.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>gateAction('get help',async()=>{ const os=await api('/orders').catch(()=>[]); const k=b.dataset.k;
+    if(k==='shop'){ const seen=new Map(); os.forEach(o=>seen.set(o.business_id,o.business)); if(!seen.size) return toast('Order from a shop first, or open any store to call or chat');
+      return showSheet('Contact a shop',`<div class="lv-list" style="padding:0">${[...seen].map(([id,n])=>`<button class="lv-row" style="width:100%;margin:0" data-sid="${id}" data-sn="${esc(n)}"><span class="lv-ri">${I.store}</span><div><b>${esc(n)}</b><small>Chat or call</small></div>${I.chev}</button>`).join('')}</div>`,()=>document.querySelectorAll('[data-sid]').forEach(x=>x.onclick=()=>{ closeSheet(); go('business',{id:Number(x.dataset.sid)}); })); }
+    if(!os.length) return toast('You have no orders yet');
+    const title={order:'Order issue',refund:'Refund or payment',complaint:'Raise a complaint'}[k];
+    showSheet(title,`<div class="lw-book"><div class="field"><label for="so">Which order?</label><div class="input"><select id="so">${os.slice(0,12).map(o=>`<option value="${o.id}" data-b="${o.business_id}">#LL-${10000+o.id} · ${esc(o.business)} · ${money(o.total)}</option>`).join('')}</select></div></div>
+      <div class="field"><label for="sm">Tell us what happened</label><div class="input"><textarea id="sm" rows="3" placeholder="Describe the issue"></textarea></div></div><button class="lv-btn" id="sgo">Send to the shop</button><p class="lw-fine">The shop receives this straight away and will reply in chat.</p></div>`,()=>{
+      $('#sgo').onclick=async()=>{ const s=$('#so'), m=$('#sm').value.trim(); if(!m) return toast('Please describe the issue'); const bid=Number(s.selectedOptions[0].dataset.b);
+        try{ await api('/enquiries',{method:'POST',body:{business_id:bid,message:`${title} — order #LL-${10000+Number(s.value)}: ${m}`}}); closeSheet(); lwConfirm('Sent to the shop','They will reply in chat. You can also call them from the store page.'); }catch(e){ toast(e.message); } }; }); }));
+};
+
+/* ---------- PROFILE / ADDRESSES / PREFERENCES / PAYMENTS ---------- */
+SCREENS.profile=(el)=>{
+  if(!token) return go('login');
+  el.innerHTML=`${lvHead('Edit Profile')}<div class="lw-pf"><span class="lv-mav big">${esc((me.name||'?')[0])}</span>${lwField('pn','Full name',me.name,'autocomplete="name"')}${lwField('pp','Phone',me.phone,'inputmode="tel" autocomplete="tel"')}<div class="field"><label>Email</label><div class="input dis"><input value="${esc(me.email||'')}" disabled/></div></div><button class="lv-btn" id="psv">Save changes</button></div>`;
+  backWire(el); $('#psv').onclick=async()=>{ const b=$('#psv'); b.classList.add('busy'); b.disabled=true;
+    try{ const r=await api('/me',{method:'PATCH',body:{name:$('#pn').value,phone:$('#pp').value}}); me=r.user; localStorage.setItem('ll_user',JSON.stringify(me)); toast('Profile updated'); back(); }
+    catch(e){ b.classList.remove('busy'); b.disabled=false; toast(e.message); } };
+};
+SCREENS.addresses=(el)=>{
+  const list=()=>{ let l=lwLS('ll_addrs',null); if(!l){ const a=lwLS('ll_addr',null); l=a&&a.line?[{...a,label:'Home',id:1}]:[]; lwSet('ll_addrs',l); } return l; };
+  const draw=()=>{ const l=list(); const def=lwLS('ll_addr',{});
+    el.innerHTML=`${lvHead('My Addresses')}<div class="lv-list">${l.map((a,i)=>`<div class="lw-adr ${a.line===def.line?'on':''}" style="--n:${i}"><span>${a.label==='Work'?I.store:I.home}</span><div><b>${esc(a.label||'Address')}</b><p>${esc(a.name||'')} · ${esc(a.phone||'')}</p><p>${esc(a.line)}, ${esc(a.area||'')}</p>
+      <div class="lw-aact">${a.line===def.line?'<em>Default</em>':`<button data-def="${a.id}">Set default</button>`}<button data-del="${a.id}">Remove</button></div></div></div>`).join('')||`<p class="lv-empty-s">No saved addresses yet.</p>`}</div>
+      <button class="lv-btn ghost" id="addA" style="margin:16px;width:calc(100% - 32px)">${I.plus} Add new address</button>`;
+    backWire(el);
+    el.querySelectorAll('[data-def]').forEach(b=>b.onclick=()=>{ const a=l.find(x=>x.id==b.dataset.def); lwSet('ll_addr',a); buzz(); draw(); });
+    el.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ lwSet('ll_addrs',l.filter(x=>x.id!=b.dataset.del)); draw(); });
+    $('#addA').onclick=()=>showSheet('New address',`<div class="lw-book"><div class="lw-slots" id="lb"><button class="on" data-t="Home">Home</button><button data-t="Work">Work</button><button data-t="Other">Other</button></div>${lwField('an','Full name',me?me.name:'')}${lwField('ap','Phone',me?me.phone:'','inputmode="tel"')}<div class="field"><label for="al2">Address</label><div class="input"><textarea id="al2" rows="2" placeholder="House / building, street, landmark"></textarea></div></div>${lwField('aa','Area',state.areaName)}<button class="lv-btn" id="asv">Save address</button></div>`,()=>{
+      $('#lb').onclick=e=>{ const x=e.target.closest('button'); if(x) $('#lb').querySelectorAll('button').forEach(y=>y.classList.toggle('on',y===x)); };
+      $('#asv').onclick=()=>{ const a={id:Date.now(),label:$('#lb .on').dataset.t,name:$('#an').value.trim(),phone:$('#ap').value.trim(),line:$('#al2').value.trim(),area:$('#aa').value.trim()}; if(!a.name||!a.phone||!a.line) return toast('Please fill name, phone and address');
+        const l2=list(); l2.push(a); lwSet('ll_addrs',l2); if(!lwLS('ll_addr',{}).line) lwSet('ll_addr',a); closeSheet(); draw(); toast('Address saved'); }; }); };
+  draw();
+};
+SCREENS.prefs=(el)=>{
+  const p=lwPrefs(); const row=(k,t,s)=>`<label class="lw-tg"><div><b>${t}</b><small>${s}</small></div><input type="checkbox" data-k="${k}" ${p[k]?'checked':''}/><i></i></label>`;
+  el.innerHTML=`${lvHead('Preferences')}<div class="lv-sh"><h2>Language</h2></div><div class="lw-langs"><button data-l="en" class="${state.lang==='en'?'on':''}"><b>English</b><small>English</small></button><button data-l="ml" class="${state.lang==='ml'?'on':''}"><b>മലയാളം</b><small>Malayalam</small></button></div>
+    <div class="lv-sh"><h2>Notifications</h2></div><div class="lv-menu lw-tgs">${row('orders','Order updates','Accepted, preparing, on the way')}${row('bookings','Booking reminders','Service bookings you request')}${row('offers','New local offers','Deals from shops near you')}${row('stores','Favourite store updates','When saved stores post something new')}</div>
+    <div class="lv-sh"><h2>Appearance</h2></div><div class="lv-menu lw-tgs"><label class="lw-tg"><div><b>Dark mode</b><small>Easier on the eyes at night</small></div><input type="checkbox" id="dk" ${state.custTheme==='dark'?'checked':''}/><i></i></label></div>`;
+  backWire(el);
+  el.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{ state.lang=b.dataset.l; localStorage.setItem('ll_lang',state.lang); renderShell(); });
+  el.querySelectorAll('[data-k]').forEach(c=>c.onchange=()=>{ const q=lwPrefs(); q[c.dataset.k]=c.checked; lwSet('ll_notif',q); buzz(); });
+  $('#dk').onchange=()=>{ toggleCustTheme(); routeRender(); };
+};
+SCREENS.payments=(el)=>{
+  el.innerHTML=`${lvHead('Payment Methods')}<div class="lw-pay-i"><span>${GI.card}</span><p>You pay the shop directly. Each shop chooses what it accepts, and you'll see the options at checkout.</p></div>
+    <div class="lv-menu">${[['Cash on Delivery','Pay when your order arrives',GI.card],['Card on Delivery','Swipe at your door',GI.card],['UPI to the shop','GPay, PhonePe, Paytm and more',GI.chat]].map(m=>`<div class="lw-pm"><span class="lv-mi">${m[2]}</span><div><b>${m[0]}</b><small>${m[1]}</small></div></div>`).join('')}</div>`;
+  backWire(el);
+};
+
+/* ---------- ACCOUNT (adds the new pages) ---------- */
+const _lvAcct=SCREENS.account;
+SCREENS.account=async(el)=>{ await _lvAcct(el);
+  const m=el.querySelectorAll('.lv-menu');
+  const row=(attr,ic,label,right='')=>`<button ${attr}><span class="lv-mi">${ic}</span><b>${label}</b>${right?`<small>${right}</small>`:''}${I.chev}</button>`;
+  if(m[0]){ m[0].querySelector('[data-nav="location"]').outerHTML=row('data-nav="addresses"',I.pin,'My Addresses'); m[0].insertAdjacentHTML('beforeend',row('data-nav="payments"',GI.card,'Payment Methods')+row('data-nav="community"',I.users||I.heart,'Your Neighbourhood')); }
+  if(m[1]){ const lr=m[1].querySelector('#langrow'); if(lr) lr.outerHTML=row('data-nav="prefs"',I.globe,'Language & notifications',state.lang==='ml'?'മലയാളം':'English'); const h=m[1].querySelector('#help'); if(h) h.outerHTML=row('data-nav="support"',GI.chat,'Help & Support'); }
+  const pe=el.querySelector('.lv-me [data-tabnav="profile"]'); if(pe){ pe.removeAttribute('data-tabnav'); pe.onclick=()=>go('profile'); }
+  el.querySelectorAll('[data-tabnav]').forEach(b=>b.onclick=()=>setTab(b.dataset.tabnav));
+};
+
+/* ---------- REGISTER ---------- */
+SCREENS.register=(el)=>{
+  el.innerHTML=`<div class="lv-login"><button class="lv-ib" id="rb" aria-label="Back">${I.back}</button><div class="lv-lbrand">${logoMark(40)}<b>Local</b><b>Link</b></div>
+    <h2>Create your account</h2><p>Order, book services and support your neighbourhood.</p>
+    <div class="field"><label for="rn">Full name</label><div class="input">${I.user}<input id="rn" placeholder="Your name" autocomplete="name"/></div></div>
+    <div class="field"><label for="rp">Mobile number</label><div class="input"><span class="lw-cc">+91</span><input id="rp" type="tel" inputmode="tel" placeholder="98765 43210" autocomplete="tel"/></div></div>
+    <div class="field"><label for="re">Email</label><div class="input"><span class="gi">${GI.chat}</span><input id="re" type="email" placeholder="you@email.com" autocomplete="email"/></div></div>
+    <div class="field"><label for="rpw">Password</label><div class="input"><span class="gi">${GI.lock}</span><input id="rpw" type="password" placeholder="At least 6 characters" autocomplete="new-password"/><button class="lw-eye" id="eye" type="button">Show</button></div><div class="lw-str" id="str"><i></i><i></i><i></i></div></div>
+    <button class="lv-btn" id="rsubmit">Create account ${I.chev}</button><p class="lv-alt">Already have an account? <a href="#" id="gologin">Log in</a></p><p class="lv-terms">By continuing, you agree to our Terms &amp; Privacy Policy</p></div>`;
+  $('#rb').onclick=back; $('#gologin').onclick=e=>{ e.preventDefault(); go('login'); };
+  $('#eye').onclick=()=>{ const i=$('#rpw'); i.type=i.type==='password'?'text':'password'; $('#eye').textContent=i.type==='password'?'Show':'Hide'; };
+  $('#rpw').oninput=e=>{ const v=e.target.value; const s=(v.length>=6)+(/[0-9]/.test(v)&&/[a-z]/i.test(v))+(v.length>=10); $('#str').dataset.s=s; };
+  $('#rsubmit').onclick=async()=>{ const name=$('#rn').value.trim(), email=$('#re').value.trim(), ph=$('#rp').value.replace(/\s/g,''), pw=$('#rpw').value;
+    if(!name||!email||!ph||!pw) return toast('Please fill in all fields'); if(pw.length<6) return toast('Password must be at least 6 characters');
+    const btn=$('#rsubmit'); btn.classList.add('busy'); btn.disabled=true;
+    try{ const r=await api('/auth/register',{method:'POST',body:{name,email,phone:ph.startsWith('+')?ph:'+91'+ph,password:pw}}); token=r.token; me=r.user; localStorage.setItem('ll_token',token); localStorage.setItem('ll_user',JSON.stringify(me)); toast('Welcome to Local Link, '+me.name.split(' ')[0]+'!'); routeAfterLogin(); }
+    catch(e){ btn.classList.remove('busy'); btn.disabled=false; const c=$('.lv-login'); c.classList.remove('fx-shake'); void c.offsetWidth; c.classList.add('fx-shake'); toast(e.message); } };
+};
+
+/* ---------- workers / rides / local info ---------- */
+renderWorkers=function(elm,data){ elm.innerHTML=data.map((w,i)=>`<div class="lw-pro" style="--n:${Math.min(i,8)}"><span class="lw-pav">${esc((w.name||'?')[0])}<i class="${w.available?'on':''}"></i></span><div class="lw-pt"><b>${esc(w.name)}</b><p>${esc(w.skills||'')}</p>
+  <div class="lv-sm">${lvRate(w.rating)}<i>·</i><span>${w.experience_years||0} yrs exp</span>${w.area_name?`<i>·</i><span>${esc(w.area_name)}</span>`:''}</div><div class="lw-ptags"><em>${esc(w.rate||'')}</em><em class="${w.available?'ok':''}">${w.available?'Available':'Busy'}</em></div>
+  <div class="lw-pact"><a class="lv-btn sm" href="tel:${esc(w.phone||'')}">${I.phone} Call</a><a class="lv-btn sm soft" href="https://wa.me/${(w.whatsapp||'').replace(/[^0-9]/g,'')}" target="_blank" rel="noopener">${I.wa} WhatsApp</a></div></div></div>`).join('')||`<p class="lv-empty-s">No workers listed here yet.</p>`; };
+renderDrivers=function(elm,data){ elm.innerHTML=data.map((d,i)=>`<div class="lw-pro" style="--n:${Math.min(i,8)}"><span class="lw-pav car">${driverIcon(d.service_type)}<i class="${d.available?'on':''}"></i></span><div class="lw-pt"><b>${esc(d.name)}</b><p>${esc(d.vehicle_model||'')} · ${esc(d.vehicle_number||'')}</p>
+  <div class="lv-sm">${lvRate(d.rating)}<i>·</i><span>${esc(d.service_type||'')}</span></div><div class="lw-ptags"><em>${esc(d.fare_note||'')}</em><em class="${d.available?'ok':''}">${d.available?'Available':'Offline'}</em></div>
+  <div class="lw-pact"><a class="lv-btn sm" href="tel:${esc(d.phone||'')}">${I.phone} Call</a><a class="lv-btn sm soft" href="https://wa.me/${(d.whatsapp||'').replace(/[^0-9]/g,'')}" target="_blank" rel="noopener">${I.wa} Book</a></div></div></div>`).join('')||`<p class="lv-empty-s">No rides listed here yet.</p>`; };
+renderLocalInfo=function(elm,data){ const g={}; data.forEach(i=>(g[i.category]=g[i.category]||[]).push(i));
+  elm.innerHTML=Object.entries(g).map(([k,items])=>`<h3 class="lw-ig">${esc(k)}</h3>${items.map((i,x)=>`<div class="lw-li ${i.emergency?'sos':''}" style="--n:${Math.min(x,6)}"><span>${i.emergency?GI.warning||I.bell:GI.building}</span><div><b>${esc(i.name)}</b><p>${esc(i.description||'')}</p>${i.hours?`<small>${esc(i.hours)}</small>`:''}</div>${i.phone?`<a href="tel:${esc(i.phone)}" aria-label="Call ${esc(i.name)}">${I.phone}</a>`:''}</div>`).join('')}`).join(''); };
+SCREENS.localinfo=async(el)=>{ el.innerHTML=`${lvHead('Local Info')}<div class="lv-list" id="l">${skeletonRow(3)}</div>`; backWire(el); renderLocalInfo($('#l'),await api('/local-info')); };
+SCREENS.events=async(el)=>{ el.innerHTML=`${lvHead('Events')}<div class="lv-list" id="l">${skeletonRow(3)}</div>`; backWire(el); $('#l').innerHTML=(await api('/events')).map(eventCard).join('')||`<p class="lv-empty-s">No upcoming events.</p>`; };
+SCREENS.news=async(el)=>{ el.innerHTML=`${lvHead('Local News')}<div class="lv-list" id="l">${skeletonRow(3)}</div>`; backWire(el); $('#l').innerHTML=(await api('/news')).map(n=>newsCard(n)).join(''); };
+
+/* ---------- CATEGORY: map / list toggle ---------- */
+const _lvCat=SCREENS.category;
+SCREENS.category=async(el,p)=>{ await _lvCat(el,p); const list=$('#list'); if(!list||!el.querySelector('#qcCount')) return;
+  const head=el.querySelector('#qcCount').parentNode; head.insertAdjacentHTML('beforeend',`<div class="lw-vt" id="vt"><i></i><button class="on" data-v="list" aria-label="List view">${I.grid}</button><button data-v="map" aria-label="Map view">${I.pin}</button></div>`);
+  const mapBox=document.createElement('div'); mapBox.className='lw-mapv'; mapBox.hidden=true; list.before(mapBox);
+  const drawMap=()=>{ const rows=[...list.querySelectorAll('.lv-srow')].slice(0,12);
+    mapBox.innerHTML=`<svg viewBox="0 0 340 220" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g class="st"><path d="M-10 50H350M-10 130H350M-10 190H350M60 -10V230M170 -10V230M280 -10V230M-10 220L140 -10M200 230L350 30"/></g><g class="pk"><rect x="190" y="64" width="70" height="50" rx="10"/><rect x="18" y="146" width="36" height="30" rx="8"/></g></svg>
+      <span class="lw-me">${I.user}</span>${rows.map((r,i)=>{ let h=0; const s=r.querySelector('b').textContent; for(const c of s) h=(h*31+c.charCodeAt(0))%9973; const x=12+(h%76), y=12+((h>>3)%70);
+      return `<button class="lw-mpin" style="left:${x}%;top:${y}%;--n:${i}" data-i="${i}"><span>${i+1}</span></button>`; }).join('')}
+      <p class="lw-mnote">Pins show stores in ${esc(state.areaName)} · tap a pin</p><div class="lw-mcard" id="mc"></div>`;
+    mapBox.querySelectorAll('.lw-mpin').forEach(b=>b.onclick=()=>{ mapBox.querySelectorAll('.lw-mpin').forEach(x=>x.classList.toggle('on',x===b)); const c=$('#mc'); c.innerHTML=rows[b.dataset.i].outerHTML; c.classList.remove('in'); void c.offsetWidth; c.classList.add('in'); buzz(); }); };
+  $('#vt').onclick=e=>{ const b=e.target.closest('[data-v]'); if(!b) return; const v=b.dataset.v; $('#vt').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); $('#vt').classList.toggle('r',v==='map');
+    if(v==='map'){ drawMap(); mapBox.hidden=false; list.hidden=true; } else { mapBox.hidden=true; list.hidden=false; } buzz(); };
+};
+
+/* ---------- HOME: recently viewed, recommended services, community ---------- */
+const _lvHome=SCREENS.home;
+SCREENS.home=async(el)=>{ await _lvHome(el);
+  const rec=lwLS('ll_recent',[]); const pop=$('#lvPop'); if(!pop) return; const anchor=pop.closest('.lv-sec');
+  let html='';
+  if(rec.length) html+=`<section class="lv-sec"><div class="lv-sh"><h2>Recently viewed</h2><button class="lv-see" id="rclr">Clear</button></div><div class="lv-rail">${rec.map(lvStoreCard).join('')}</div></section>`;
+  html+=`<section class="lv-sec"><div class="lv-sh"><h2>Recommended services</h2><button class="lv-see" data-nav="category" data-slug="services">See all ${I.chev}</button></div><div class="lv-list" id="lwSvc">${skeletonRow(2)}</div></section>
+    <button class="lw-comm" data-nav="community"><span class="lw-cav">${['A','R','S'].map(x=>`<i>${x}</i>`).join('')}</span><span><b>Your Neighbourhood</b><small>New shops, events, reviews &amp; local news</small></span>${I.chev}</button>`;
+  anchor.insertAdjacentHTML('afterend',html);
+  const rc=$('#rclr'); if(rc) rc.onclick=()=>{ lwSet('ll_recent',[]); rc.closest('.lv-sec').remove(); };
+  const sv=await api('/services').catch(()=>[]); const box=$('#lwSvc'); if(box) box.innerHTML=sv.slice(0,3).map((s,i)=>`<button class="lv-srow" data-svc="${esc(s.name)}" data-bid="${s.business_id}" style="--n:${i}"><span class="lv-rimg">${dIcon(s,'wrench')}</span><span class="lv-rt"><b>${esc(s.name)}</b><span class="lv-sm"><span>from <b>${money(s.starting_price)}</b>${s.business?' · '+esc(s.business):''}</span></span></span><span class="lv-req">Book</span></button>`).join('');
+  el.querySelectorAll('[data-svc]').forEach(b=>b.onclick=async e=>{ if(e.target.closest('.lv-req')){ e.stopPropagation(); try{ lwBook(await api('/businesses/'+b.dataset.bid),b.dataset.svc); }catch(x){ toast(x.message); } } else go('business',{id:Number(b.dataset.bid)}); });
+};
+
+/* ---------- CHECKOUT: pickup / delivery, coupon, note, per-store split ---------- */
+const _lvChk=SCREENS.checkout;
+SCREENS.checkout=async(el)=>{ await _lvChk(el); const place=$('#place'); if(!place) return;
+  const groups={}; cart.forEach(i=>{ (groups[i.bizId||1]=groups[i.bizId||1]||{name:i.biz,items:[]}).items.push(i); });
+  const offers=await api('/offers').catch(()=>[]); const bid=Number(cartBizId()||0); const avail=offers.filter(o=>o.business_id===bid);
+  const steps=el.querySelector('.lv-steps');
+  steps.insertAdjacentHTML('afterend',`<div class="lw-ful" id="ful"><i></i><button class="on" data-f="delivery">${GI.package} Delivery</button><button data-f="pickup">${I.store} Pickup</button></div><p class="lw-pick" id="pk" hidden>${I.store} Collect from <b>${esc(cart[0]?.biz||'the shop')}</b>. They'll tell you when it's ready.</p>`);
+  const paySh=el.querySelector('.lv-pays').previousElementSibling;
+  paySh.insertAdjacentHTML('beforebegin',`${Object.keys(groups).length>1?`<div class="lv-sh"><h2>${Object.keys(groups).length} separate orders</h2></div><div class="lv-list">${Object.values(groups).map(g=>`<div class="lw-split">${I.store}<b>${esc(g.name||'Shop')}</b><small>${g.items.length} item${g.items.length>1?'s':''} · delivered separately</small></div>`).join('')}</div>`:''}
+    <div class="lv-sh"><h2>Coupon</h2></div><div class="lw-cpin"><label class="lv-stxt in">${GI.percent}<input id="cc" placeholder="Enter coupon code" autocapitalize="characters"/></label><button class="lv-btn sm" id="ccgo">Apply</button></div>
+    ${avail.filter(o=>o.code).length?`<div class="lw-cpsug">${avail.filter(o=>o.code).map(o=>`<button data-cc="${esc(o.code)}">${esc(o.code)} · ${esc(o.discount_label)}</button>`).join('')}</div>`:''}
+    <div class="lv-sh"><h2>Note for the shop</h2></div><div class="lw-note"><textarea id="note" rows="2" placeholder="e.g. less spicy, call on arrival"></textarea></div>`);
+  let ful='delivery', disc=0, code='';
+  const bill=$('#billd'), tot=el.querySelector('.lv-tot b'); const base=cartTotal(); const deliv=()=>ful==='pickup'?0:(base>=499?0:29);
+  const redraw=()=>{ const pay=Math.max(0,base-disc+deliv()); tot.textContent=money(pay); tot.classList.remove('lw-tick'); void tot.offsetWidth; tot.classList.add('lw-tick');
+    bill.innerHTML=`<div><span>Items</span><b>${money(base)}</b></div>${disc?`<div class="lw-dl"><span>Coupon ${esc(code)}</span><b>−${money(disc)}</b></div>`:''}<div><span>${ful==='pickup'?'Pickup':'Delivery'}</span><b>${deliv()?money(deliv()):'<em>FREE</em>'}</b></div><div class="tot"><span>To pay</span><b>${money(pay)}</b></div>`; };
+  redraw();
+  $('#ful').onclick=e=>{ const b=e.target.closest('[data-f]'); if(!b) return; ful=b.dataset.f; $('#ful').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); $('#ful').classList.toggle('r',ful==='pickup'); $('#pk').hidden=ful!=='pickup'; const ar=$('#addrRow'); if(ar&&!ar.hidden&&ful==='pickup') ar.classList.add('dim'); else ar&&ar.classList.remove('dim'); buzz(); redraw(); };
+  const apply=c=>{ c=(c||$('#cc').value).trim().toUpperCase(); const o=avail.find(x=>(x.code||'').toUpperCase()===c); if(!o){ disc=0; code=''; redraw(); const i=$('#cc').closest('.lv-stxt'); i.classList.remove('fx-shake'); void i.offsetWidth; i.classList.add('fx-shake'); return toast(c?'That code isn’t valid for this shop':'Enter a code'); }
+    const pct=lwPct(o.discount_label); disc=pct?Math.round(base*pct/100):0; code=c; $('#cc').value=c; redraw(); buzz(20); toast(disc?`${c} applied — you save ${money(disc)}`:`${c} applied — the shop will apply this offer`); };
+  $('#ccgo').onclick=()=>apply(); el.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>apply(b.dataset.cc));
+  // replace the order submit to include fulfilment, coupon and note
+  const np=place.cloneNode(true); place.replaceWith(np);
+  np.onclick=async()=>{ const name=$('#cn').value.trim(), phone=$('#cp').value.trim(), line=$('#cl').value.trim(), area=$('#ca').value.trim();
+    if(ful==='delivery'&&(!name||!phone||!line)){ $('#addrRow').hidden=true; $('#addrEdit').hidden=false; return toast('Please fill name, phone and address'); }
+    if(ful==='delivery') localStorage.setItem('ll_addr',JSON.stringify({name,phone,line,area}));
+    const pm=(el.querySelector('.lv-pay.on')||{}).dataset?.pay||'cash'; np.disabled=true; np.classList.add('busy');
+    try{ let last=null; const n=Object.keys(groups).length;
+      for(const [b,g] of Object.entries(groups)){ const sub=g.items.reduce((s,i)=>s+i.qty*i.price,0); const d=Number(b)===bid?disc:0;
+        const r=await api('/orders',{method:'POST',body:{business_id:Number(b),total:Math.max(0,sub-d+(ful==='pickup'?0:(sub>=499?0:29))),item_summary:g.items.map(i=>`${i.qty}× ${i.name}`).join(', ')+(ful==='pickup'?' · PICKUP':''),payment_method:pm,
+          items_json:g.items.map(i=>({id:i.id,name:i.name,price:i.price,qty:i.qty,image:i.image||''})),fulfilment:ful,address:ful==='delivery'?`${name}, ${phone}, ${line}, ${area}`:null,note:$('#note').value.trim()||null,discount:d}}); last=r&&r.id; }
+      const pay=Math.max(0,base-disc+deliv()); track('order_placed',{total:pay,fulfilment:ful}); const shop=n>1?`${n} shops`:(cart[0]?.biz||''); cart=[]; saveCart(); updateCartBadge(); buzz(30);
+      nav.customer=[{name:'orderDone',params:{shop,total:pay,oid:last,pickup:ful==='pickup'}}]; routeRender(); }
+    catch(e){ np.disabled=false; np.classList.remove('busy'); toast(e.message); } };
+};
+
+/* ---------- ORDERS: cancel, rate, invoice, bookings tab ---------- */
+function lwInvoice(o){ const it=(typeof o.items_json==='string'?safeParse(o.items_json):o.items_json)||[]; const w=window.open('','_blank'); if(!w) return toast('Allow pop-ups to download the invoice');
+  w.document.write(`<!doctype html><title>Invoice #LL-${10000+o.id}</title><style>body{font:14px system-ui;max-width:560px;margin:32px auto;color:#14161A}h1{color:#07594F;font-size:22px}table{width:100%;border-collapse:collapse;margin:16px 0}td,th{padding:8px;border-bottom:1px solid #ddd;text-align:left}td:last-child,th:last-child{text-align:right}.t{font-weight:800;font-size:16px}small{color:#666}</style>
+  <h1>Local Link</h1><p><b>Invoice #LL-${10000+o.id}</b><br><small>${esc(o.created_at||'')}</small></p><p>Sold by <b>${esc(o.business)}</b><br>${o.fulfilment==='pickup'?'Pickup from shop':'Delivery'}${o.address?'<br>'+esc(o.address):''}</p>
+  <table><tr><th>Item</th><th>Qty</th><th>Amount</th></tr>${it.length?it.map(i=>`<tr><td>${esc(i.name)}</td><td>${i.qty||1}</td><td>₹${((i.price||0)*(i.qty||1)).toFixed(2)}</td></tr>`).join(''):`<tr><td colspan=3>${esc(o.item_summary||'')}</td></tr>`}
+  ${o.discount?`<tr><td colspan=2>Discount</td><td>−₹${Number(o.discount).toFixed(2)}</td></tr>`:''}<tr class="t"><td colspan=2>Total</td><td>₹${Number(o.total).toFixed(2)}</td></tr></table>
+  <p><small>Paid via ${esc(o.payment_method||'cash')} to the shop · Status: ${esc(o.status)}</small></p><script>setTimeout(()=>print(),300)<\/script>`); w.document.close(); }
+const _lvOrders=SCREENS.orders;
+SCREENS.orders=async(el,p)=>{ await _lvOrders(el,p); const seg=$('#seg'); if(!seg) return;
+  const os=await api('/orders').catch(()=>[]); const byId=Object.fromEntries(os.map(o=>[o.id,o]));
+  seg.style.gridTemplateColumns='1fr 1fr 1fr'; seg.querySelector('i').style.width='calc(33.3% - 3px)'; seg.insertAdjacentHTML('beforeend',`<button data-s="book">Bookings</button>`);
+  const enhance=()=>{ const l=$('#l');
+    l.querySelectorAll('.lv-ocard').forEach(c=>{ if(c.dataset.lw) return; c.dataset.lw=1; const id=Number((c.querySelector('.lv-ohead b').textContent.match(/\d+/)||[0])[0])-10000; const o=byId[id]; if(!o) return;
+      const extra=[]; if(o.status==='pending') extra.push(`<button class="lw-x" data-cancel="${o.id}">Cancel order</button>`); extra.push(`<button class="lw-x g" data-inv="${o.id}">${GI.download||''} Invoice</button>`);
+      if(o.fulfilment==='pickup') c.querySelector('.lv-ost').textContent='Pickup';
+      c.insertAdjacentHTML('beforeend',`<div class="lw-oextra">${extra.join('')}</div>`); });
+    l.querySelectorAll('.lv-prow').forEach(r=>{ if(r.dataset.lw) return; r.dataset.lw=1; const btn=r.querySelector('[data-reorder]'); let d={}; try{ d=JSON.parse(btn.dataset.reorder); }catch(e){}
+      const o=os.find(x=>x.business_id===d.bizId&&x.item_summary===r.querySelector('small').textContent)||null; if(!o) return;
+      r.insertAdjacentHTML('beforeend',`<div class="lw-prx">${o.status==='completed'?(o.rating?`<span class="lw-rated">${'★'.repeat(o.rating)}</span>`:`<span class="lw-stars" data-rate="${o.id}">${[1,2,3,4,5].map(n=>`<button data-n="${n}" aria-label="${n} stars">★</button>`).join('')}</span>`):''}<button class="lw-x g" data-inv="${o.id}">Invoice</button>${o.status==='cancelled'?'<small class="lw-ref">Cancelled · nothing was charged</small>':''}</div>`); });
+    l.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=async()=>{ const ok=await confirmDialog({title:'Cancel this order?',message:'The shop has not accepted it yet, so it will be cancelled straight away.',ok:'Cancel order',cancel:'Keep it',danger:true,icon:GI.package}); if(!ok) return;
+      try{ await api(`/orders/${b.dataset.cancel}/cancel`,{method:'POST'}); toast('Order cancelled'); routeRender(); }catch(e){ toast(e.message); } });
+    l.querySelectorAll('[data-inv]').forEach(b=>b.onclick=()=>lwInvoice(byId[b.dataset.inv]));
+    l.querySelectorAll('[data-rate]').forEach(s=>s.onclick=async e=>{ const n=Number(e.target.dataset.n); if(!n) return; s.querySelectorAll('button').forEach(x=>x.classList.toggle('on',Number(x.dataset.n)<=n)); buzz(20);
+      try{ await api(`/orders/${s.dataset.rate}/rate`,{method:'POST',body:{rating:n}}); const o=byId[s.dataset.rate]; o.rating=n; setTimeout(()=>{ s.outerHTML=`<span class="lw-rated">${'★'.repeat(n)}</span>`; toast('Thanks for rating!'); },400);
+        if(n>=4) setTimeout(async()=>{ try{ openReview(await api('/businesses/'+o.business_id)); }catch(_){} },700); }catch(x){ toast(x.message); } }); };
+  enhance(); new MutationObserver(enhance).observe($('#l'),{childList:true});
+  seg.addEventListener('click',e=>{ const b=e.target.closest('[data-s]'); if(!b) return; const k=['on','past','book'].indexOf(b.dataset.s); seg.querySelector('i').style.transform=`translateX(${k*100}%)`;
+    if(b.dataset.s!=='book') return; e.stopImmediatePropagation(); seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+    const bk=lwLS('ll_bookings',[]); const l=$('#l'); l.classList.remove('lv-tin'); void l.offsetWidth; l.classList.add('lv-tin');
+    l.innerHTML=bk.length?bk.map((x,i)=>`<article class="lv-prow" style="--n:${i}"><span class="lv-oimg">${GI.calendar||I.bell}</span><div><b>${esc(x.svc)}</b><small>${esc(x.biz)}</small><small>${esc(x.day)} · ${esc(x.tm)} · <span class="lw-req">Requested</span></small></div><button class="lv-reo" data-bk="${x.bizId}">Contact</button></article>`).join('')
+      :`<div class="lv-empty"><div class="lv-eill"><span class="lv-halo"></span>${GI.calendar||I.bell}</div><h2>No bookings yet</h2><p>Book electricians, plumbers, cleaning and more from local providers.</p><button class="lv-btn" id="bs">Find a service</button></div>`;
+    const bs=$('#bs'); if(bs) bs.onclick=()=>go('category',{slug:'services'}); l.querySelectorAll('[data-bk]').forEach(x=>x.onclick=()=>go('business',{id:Number(x.dataset.bk)})); },true);
+};
+const _lvDone=SCREENS.orderDone;
+SCREENS.orderDone=(el,p)=>{ _lvDone(el,p); if(p&&p.pickup){ const m=el.querySelector('.lv-dmsg'); if(m) m.innerHTML=`${esc(p.shop||'The shop')} will tell you when it's ready to collect${p.total?` · <b>${money(p.total)}</b>`:''}.`; } };
+
 /* ================= CUSTOMER MOTION LAYER ================= */
 const CX_TABS=['home','categories','orders','account'];
 let cxIndX=null;
 function cxMotion(screen){
   if(state.view!=='customer') return;
   // 1. scroll reveal
-  const rv=screen.querySelectorAll('.cx-sec,.cx-store,.cx-po,.cx-menu,.cx-card,.cx-bill,.cx-ask,.cx-track,.brow,.cx-grid > *');
+  const rv=screen.querySelectorAll('.lv-sec,.lv-srow,.lv-ocard,.lv-prow,.lv-menu,.lv-bill,.lv-ask,.lv-sh,.lv-pays,.lv-row');
   if('IntersectionObserver' in window){
     const io=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } }),{root:screen,rootMargin:'0px 0px -6% 0px'});
     rv.forEach((n,i)=>{ n.classList.add('rv'); n.style.setProperty('--rd',(i%4)*60+'ms'); io.observe(n); });
   }
   // 2. depth on horizontal rails
-  screen.querySelectorAll('.cx-offers,.cx-rail,.cx-cats').forEach(r=>{
+  screen.querySelectorAll('.lv-banners,.lv-rail,.lv-cmini').forEach(r=>{
     if(r.__d) return; r.__d=1;
     const f=()=>{ const rb=r.getBoundingClientRect(), c=rb.left+rb.width/2;
       [...r.children].forEach(ch=>{ const b=ch.getBoundingClientRect(); const d=Math.max(-1,Math.min(1,((b.left+b.width/2)-c)/rb.width)); ch.style.setProperty('--d',d.toFixed(3)); }); };
     r.addEventListener('scroll',()=>requestAnimationFrame(f),{passive:true}); setTimeout(f,60); new MutationObserver(()=>setTimeout(f,30)).observe(r,{childList:true});
   });
   // 3. home: compact sticky bar once the hero scrolls away
-  const hero=screen.querySelector('.cx-hero');
+  const hero=screen.querySelector('.lv-head');
   if(hero && !screen.querySelector('.cx-mini')){
     const mini=document.createElement('div'); mini.className='cx-mini';
     mini.innerHTML=`<span class="cx-mlogo">${logoMark(26)}</span><button class="cx-msearch" aria-label="Search">${I.search||''}<span>Search shops, food, services…</span></button><button class="cx-mmic" aria-label="Ask by voice">${GI.mic}</button>`;
     screen.prepend(mini);
-    mini.querySelector('.cx-msearch').onclick=()=>{ const t=screen.querySelector('.cx-stxt'); t?t.click():go('search'); };
+    mini.querySelector('.cx-msearch').onclick=()=>{ const t=screen.querySelector('.lv-stxt'); t?t.click():go('search'); };
     mini.querySelector('.cx-mmic').onclick=()=>{ const m=screen.querySelector('#askHome'); m&&m.click(); };
-    const onS=()=>{ const y=screen.scrollTop, h=hero.offsetHeight; hero.style.setProperty('--hs',Math.min(1,y/h).toFixed(3)); mini.classList.toggle('on',y>h-70); };
+    const onS=()=>{ const y=screen.scrollTop, h=hero.offsetHeight; hero.style.setProperty('--hs',Math.min(1,y/h).toFixed(3)); mini.classList.toggle('on',y>h-40); };
     screen.addEventListener('scroll',()=>requestAnimationFrame(onS),{passive:true});
   }
   cxDockInd();
 }
 function cxDockInd(){
-  const nav=document.querySelector('.cxdock'); if(!nav) return;
+  const nav=document.querySelector('.lvdock'); if(!nav) return;
   const on=nav.querySelector('.vtab.on'); let ind=nav.querySelector('.cx-ind');
   if(!ind){ ind=document.createElement('i'); ind.className='cx-ind'; nav.prepend(ind); }
   if(!on){ ind.style.opacity=0; return; }
-  const x=on.offsetLeft+on.offsetWidth/2-24;
+  const x=on.offsetLeft+on.offsetWidth/2-30;
   ind.style.transition='none'; ind.style.transform=`translateX(${cxIndX==null?x:cxIndX}px)`; void ind.offsetWidth;
   ind.style.transition=''; ind.style.opacity=1; ind.style.transform=`translateX(${x}px)`; cxIndX=x;
 }
@@ -3175,7 +4005,7 @@ function cxDockInd(){
 (function(){
   document.addEventListener('pointerdown',e=>{
     if(state.view!=='customer') return;
-    const b=e.target.closest('.cx-cat,.cx-ccard,.cx-store,.cx-offer,.cx-menu > *,.cx-pay,.cx-chip,.btn,.cx-po,.vtab,.qc-add,.cx-again,.cx-ask');
+    const b=e.target.closest('.lv-ctile,.lv-scard,.lv-srow,.lv-ban,.lv-menu > *,.lv-pay,.lv-chips button,.lv-btn,.lv-tabs button,.vtab,.qc-add,.lv-reo,.lv-ask,.lv-row,.lv-cmini button');
     if(!b) return; const r=b.getBoundingClientRect(); const s=document.createElement('span'); s.className='cx-rip';
     const d=Math.max(r.width,r.height)*1.2; s.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;
     if(getComputedStyle(b).position==='static') b.style.position='relative'; b.style.overflow='hidden'; b.appendChild(s); setTimeout(()=>s.remove(),600);
@@ -3184,9 +4014,9 @@ function cxDockInd(){
     if(state.view!=='customer') return;
     const a=e.target.closest('.qc-add[data-add]'); if(!a) return;
     try{ navigator.vibrate&&navigator.vibrate(12); }catch(_){}
-    const card=a.closest('.qc-card,.cx-line,article,.pd-sheet'); const src=(card&&card.querySelector('.pimg,img'))||a;
+    const card=a.closest('.lv-pcard,.qc-card,article,.lv-pbar'); const src=(card&&card.querySelector('.pimg,img'))||a;
     const r=src.getBoundingClientRect(); setTimeout(()=>{
-      const t=document.querySelector('#qcCartBar:not([hidden]) .qc-cartbar, .cxdock [data-tabnav="orders"]'); if(!t) return;
+      const t=document.querySelector('#qcCartBar:not([hidden]) .qc-cartbar, .lvdock [data-tabnav="orders"]'); if(!t) return;
       const tr=t.getBoundingClientRect(); const f=document.createElement('div'); f.className='cx-fly';
       const img=card&&card.querySelector('img'); if(img) f.style.backgroundImage=`url("${img.src}")`;
       f.style.left=(r.left+r.width/2-22)+'px'; f.style.top=(r.top+r.height/2-22)+'px'; document.body.appendChild(f);
@@ -3197,7 +4027,7 @@ function cxDockInd(){
   let sx=null, sy=0, edge=false, inRail=false;
   document.addEventListener('touchstart',e=>{ if(state.view!=='customer') return; const t=e.touches[0]; sx=t.clientX; sy=t.clientY;
     const ph=document.querySelector('.phone'); const pl=ph?ph.getBoundingClientRect().left:0; edge=(sx-pl)<24;
-    inRail=!!e.target.closest('.cx-offers,.cx-rail,.cx-cats,.cx-chips,.pt-kpis,input,textarea,.sheet,[data-noswipe]'); },{passive:true});
+    inRail=!!e.target.closest('.lv-banners,.lv-rail,.lv-tabs,.lv-chips,.lv-cmini,.lv-utabs,.pt-kpis,input,textarea,.sheet,[data-noswipe]'); },{passive:true});
   document.addEventListener('touchend',e=>{ if(sx===null||state.view!=='customer') return; const t=e.changedTouches[0]; const dx=t.clientX-sx, dy=t.clientY-sy; sx=null;
     if(Math.abs(dx)<70||Math.abs(dy)>Math.abs(dx)*.6) return;
     const cur=(stack()[stack().length-1]||{}).name;
