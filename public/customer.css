@@ -1,0 +1,372 @@
+/* =====================================================================
+   Local Link — CUSTOMER APP (high-fidelity rebuild)
+   Same scheme and logo as the partner app: teal #0C8F82 / deep #0A5C55,
+   coral #F0523A, sun #F7C948, pin-and-rings logo + italic wordmark.
+   Mobile rules: 12px min text, 15px body, ≥44px targets, 8/16/24 spacing.
+   ===================================================================== */
+body[data-app="customer"]{font-size:15px}
+body[data-app="customer"] .phone{background:#F6F8F7}
+body[data-app="customer"].cdark .phone{background:var(--bg)}
+body[data-app="customer"] .phone .screen{padding-bottom:110px}
+.px2{padding-left:16px; padding-right:16px}
+
+/* ---------- screen transitions ---------- */
+body[data-app="customer"] .phone .screen > *{animation:none}
+.screen.cx-fwd > *{animation:cxFwd .42s var(--ease) both}
+.screen.cx-back > *{animation:cxBack .42s var(--ease) both}
+.screen.cx-tab > *{animation:cxTab .38s var(--ease) both}
+.screen.cx-fwd > *:nth-child(2),.screen.cx-tab > *:nth-child(2){animation-delay:.04s} .screen.cx-fwd > *:nth-child(3),.screen.cx-tab > *:nth-child(3){animation-delay:.08s}
+.screen.cx-fwd > *:nth-child(4),.screen.cx-tab > *:nth-child(4){animation-delay:.12s} .screen.cx-fwd > *:nth-child(n+5),.screen.cx-tab > *:nth-child(n+5){animation-delay:.16s}
+@keyframes cxFwd{from{opacity:0; transform:translateX(28px)}}
+@keyframes cxBack{from{opacity:0; transform:translateX(-28px)}}
+@keyframes cxTab{from{opacity:0; transform:translateY(12px)}}
+
+/* ---------- top bar (inner screens) ---------- */
+.cx-bar{position:sticky; top:0; z-index:9; display:grid; grid-template-columns:44px 1fr auto; align-items:center; gap:8px; padding:calc(12px + var(--top)) 16px 12px;
+  background:color-mix(in srgb,#F6F8F7 92%,transparent); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px)}
+body.cdark .cx-bar{background:color-mix(in srgb,var(--bg) 92%,transparent)}
+.cx-bar h1{text-align:center; font-family:var(--display); font-style:italic; text-transform:uppercase; font-weight:800; font-size:24px; line-height:1; letter-spacing:0}
+.cx-bar .mini-ctrl,.cx-bar .clang{justify-self:end}
+.cx-ib{width:44px; height:44px; flex:none; border-radius:14px; display:grid; place-items:center; background:var(--surface); color:var(--ink); box-shadow:var(--shadow); transition:transform .25s var(--spring)}
+.cx-ib:active{transform:scale(.9)}
+.cx-ib svg{width:20px; height:20px}
+.cx-ib.ghost{background:transparent; box-shadow:none}
+.cx-ib.glass{background:rgba(255,255,255,.18); color:#fff; box-shadow:none; border:1px solid rgba(255,255,255,.25); backdrop-filter:blur(8px)}
+.cx-cnt{min-width:44px; height:44px; border-radius:14px; display:grid; place-items:center; background:var(--brand); color:#fff; font-weight:800}
+
+/* ---------- section heads ---------- */
+.cx-sec{margin-top:24px}
+.cx-sh{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:0 16px 12px}
+.cx-sh h2{font-size:18px; font-weight:800; letter-spacing:-.03em}
+.cx-sh.px2{padding-top:20px}
+.cx-see{min-height:44px; padding:0 4px; color:var(--brand); font-weight:700; font-size:14px}
+.cx-rail{display:flex; gap:12px; overflow-x:auto; padding:2px 16px 20px; scroll-snap-type:x mandatory; scrollbar-width:none}
+.cx-rail::-webkit-scrollbar{display:none}
+.cx-rail > *{flex:none; scroll-snap-align:start}
+
+/* ---------- HOME hero ---------- */
+.cx-hero{position:relative; isolation:isolate; overflow:hidden; padding:calc(14px + var(--top)) 16px 20px; border-radius:0 0 32px 32px; color:#fff;
+  background:linear-gradient(160deg,#0C8F82,#0A5C55); box-shadow:0 20px 40px -24px rgba(7,63,58,.8)}
+.cx-hero > img.ph{z-index:-2; opacity:0; transform:scale(1.1); animation:none}
+.cx-hero > img.ph.on{opacity:.55; transform:scale(1.04); transition:opacity .8s var(--ease), transform 8s ease-out}
+.cx-hshade{position:absolute; inset:0; z-index:-1; background:linear-gradient(180deg,rgba(7,63,58,.55) 0%,rgba(10,92,85,.82) 55%,#0A5C55 100%)}
+.cx-htop{display:flex; align-items:center; gap:10px}
+.cx-av{width:44px; height:44px; flex:none; border-radius:50%; display:grid; place-items:center; background:#fff; color:var(--brand); font-weight:800; font-size:17px; box-shadow:0 0 0 3px rgba(255,255,255,.3)}
+.cx-loc{display:grid; text-align:left; color:#fff; min-width:0; min-height:44px; align-content:center}
+.cx-loc small{font-size:12px; color:#CFF1EC}
+.cx-loc b{display:flex; align-items:center; gap:4px; font-size:15px; font-weight:800; white-space:nowrap}
+.cx-loc b svg{width:14px; height:14px} .cx-loc b > svg:first-child{fill:#FFD86B}
+.cx-htop .hicon{width:40px; height:40px; background:rgba(255,255,255,.16); color:#fff; box-shadow:none}
+.cx-htop .clang{background:rgba(255,255,255,.16); box-shadow:none; border:0}
+.cx-htop .clang button{color:#fff; min-height:34px} .cx-htop .clang button.on{background:#fff; color:var(--brand); box-shadow:none}
+.cx-hello{margin-top:20px}
+.cx-brandline{display:inline-flex; align-items:center; gap:5px; font-family:var(--display); font-style:italic; font-weight:800; font-size:15px; text-transform:uppercase; background:rgba(255,255,255,.14); border-radius:999px; padding:4px 10px 4px 5px}
+.cx-brandline b:last-child{color:#FFD86B}
+.cx-hello h1{margin-top:10px; font-family:var(--display); font-style:italic; text-transform:uppercase; font-weight:800; font-size:34px; line-height:.95; letter-spacing:0; color:#fff; animation:rise .6s var(--ease) .1s both}
+.cx-search{display:flex; align-items:center; gap:8px; margin-top:16px; padding:5px 5px 5px 14px; border-radius:18px; background:#fff; box-shadow:0 16px 30px -16px rgba(0,0,0,.55)}
+.cx-stxt{flex:1; min-width:0; display:flex; align-items:center; gap:8px; min-height:44px; color:#6E777E; font-size:15px; text-align:left; white-space:nowrap; overflow:hidden}
+.cx-stxt svg{width:19px; height:19px; flex:none}
+.cx-mic{position:relative; width:44px; height:44px; flex:none; border-radius:14px; display:grid; place-items:center; background:var(--hot); color:#fff; box-shadow:0 8px 16px -8px rgba(240,82,58,.8)}
+.cx-mic svg{width:20px; height:20px}
+.cx-mic::after{content:""; position:absolute; inset:-4px; border-radius:17px; border:2px solid rgba(240,82,58,.4); animation:ringpulse 2.2s ease-out infinite}
+/* live order pill */
+.cx-pill{display:flex; align-items:center; gap:10px; width:calc(100% - 32px); margin:16px 16px 0; padding:12px 14px; border-radius:18px; text-align:left; font-size:14px; background:var(--surface); box-shadow:var(--shadow); animation:rise .5s var(--spring) both}
+.cx-pill > span:nth-child(2){flex:1; min-width:0}
+.cx-pill em{font-style:normal; font-weight:800; color:#fff; background:var(--brand); border-radius:999px; padding:6px 12px; font-size:13px}
+.cx-pdot{width:10px; height:10px; flex:none; border-radius:50%; background:var(--brand); animation:fcLive 1.6s ease-out infinite}
+/* category pills with photos */
+.cx-cats{display:flex; gap:10px; overflow-x:auto; padding:2px 16px 4px; scrollbar-width:none}
+.cx-cats::-webkit-scrollbar{display:none}
+.cx-cat{flex:none; display:flex; align-items:center; gap:8px; min-height:48px; padding:4px 14px 4px 4px; border-radius:999px; background:var(--surface); box-shadow:var(--shadow); font-size:13.5px; font-weight:700;
+  animation:moodIn .5s var(--spring) both; animation-delay:calc(.1s + var(--n) * 40ms); transition:transform .25s var(--spring)}
+.cx-cat:active{transform:scale(.95)}
+.cx-cat > span{position:relative; width:40px; height:40px; border-radius:50%; overflow:hidden; display:grid; place-items:center; background:var(--brand-50); color:var(--brand)}
+.cx-cat > span .gi svg{width:18px; height:18px}
+/* offer banners (coral / teal / sun) */
+.cx-offers{display:flex; gap:12px; overflow-x:auto; padding:2px 16px 4px; scroll-snap-type:x mandatory; scrollbar-width:none}
+.cx-offers::-webkit-scrollbar{display:none}
+.cx-offer{position:relative; overflow:hidden; isolation:isolate; flex:0 0 calc(100% - 40px); scroll-snap-align:start; display:flex; align-items:stretch; min-height:150px; border-radius:24px; padding:16px; text-align:left; color:#fff;
+  background:radial-gradient(220px 160px at 100% 100%, #FF9A80, transparent 70%), linear-gradient(135deg,#F0523A,#C7341F); box-shadow:0 18px 30px -20px rgba(199,52,31,.8);
+  transform:scale(.96); opacity:.85; transition:transform .45s var(--spring), opacity .35s}
+.cx-offer.on{transform:none; opacity:1}
+.cx-offer.t1{background:radial-gradient(220px 160px at 100% 100%, #2CCBBA, transparent 70%), linear-gradient(135deg,#0C8F82,#0A5C55); box-shadow:0 18px 30px -20px rgba(10,92,85,.8)}
+.cx-offer.t2{background:radial-gradient(220px 160px at 100% 100%, #FFE9A6, transparent 70%), linear-gradient(135deg,#F7C948,#E8A912); color:#2B2100}
+.cx-offer::before{content:""; position:absolute; right:-40px; top:-40px; width:160px; height:160px; border-radius:50%; border:1.5px dashed rgba(255,255,255,.3); z-index:-1; animation:spin 30s linear infinite}
+.cx-ot{flex:1; display:flex; flex-direction:column; align-items:flex-start; gap:4px; min-width:0; padding-right:8px}
+.cx-ot small{font-size:12px; font-weight:700; opacity:.9}
+.cx-ot b{font-size:18px; font-weight:800; line-height:1.15; letter-spacing:-.02em}
+.cx-ot em{font-style:normal; font-family:var(--display); font-style:italic; font-weight:800; font-size:30px; line-height:1; text-transform:uppercase}
+.cx-octa{margin-top:auto; display:inline-flex; align-items:center; gap:4px; background:#fff; color:#14161A; border-radius:999px; padding:7px 12px; font-size:12.5px; font-weight:800}
+.cx-octa svg{width:14px; height:14px}
+.cx-oimg{position:relative; flex:none; align-self:center; width:110px; height:110px; border-radius:50%; overflow:hidden; display:grid; place-items:center; background:rgba(255,255,255,.2); border:4px solid rgba(255,255,255,.35); box-shadow:0 14px 26px -12px rgba(0,0,0,.5)}
+.cx-offer.on .cx-oimg{animation:cxSpinIn .8s var(--spring)}
+@keyframes cxSpinIn{from{transform:rotate(-30deg) scale(.8)}}
+.cx-oimg .gi svg{width:34px; height:34px; opacity:.6}
+.cx-odots{display:flex; justify-content:center; gap:6px; margin-top:10px}
+.cx-odots i{width:7px; height:7px; border-radius:4px; background:var(--border-strong); transition:width .35s var(--spring), background .3s}
+.cx-odots i.on{width:22px; background:var(--hot)}
+.cx-offers.small .cx-offer{flex-basis:calc(100% - 64px); min-height:120px} .cx-offers.small .cx-oimg{width:86px; height:86px}
+/* store cards */
+.cx-store{width:240px; display:flex; flex-direction:column; text-align:left; border-radius:22px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden; transition:transform .3s var(--spring)}
+.cx-store:active{transform:scale(.97)}
+.cx-sph{position:relative; height:132px; display:grid; place-items:center; background:linear-gradient(150deg,#E2F5F1,#CDEDE7); color:var(--brand); overflow:hidden}
+body.cdark .cx-sph{background:var(--surface-2)}
+.cx-sph > .gi svg{width:34px; height:34px; opacity:.5}
+.cx-sph .fav{top:10px; right:10px; width:36px; height:36px}
+.cx-sopen{position:absolute; left:10px; top:10px; z-index:3; font-size:12px; font-weight:800; border-radius:999px; padding:4px 10px; background:rgba(20,22,26,.7); color:#fff}
+.cx-sopen.on{background:#0A9F64}
+.cx-sb{display:grid; gap:2px; padding:12px 14px 14px}
+.cx-sb b{font-size:16px; font-weight:800; letter-spacing:-.02em}
+.cx-sb small{font-size:12.5px; color:var(--muted)}
+.cx-smeta{display:flex; align-items:center; gap:10px; margin-top:6px}
+.cx-smeta em{font-style:normal; display:inline-flex; align-items:center; gap:4px; font-size:12.5px; font-weight:700; color:var(--ink2)}
+.cx-smeta svg{width:13px; height:13px}
+.cx-rate{background:var(--ok-50); color:var(--ok) !important; border-radius:8px; padding:3px 7px} .cx-rate svg{fill:var(--ok)}
+.cx-call{margin-left:auto; width:40px; height:40px; border-radius:12px; justify-content:center; background:var(--brand-50); color:var(--brand) !important}
+.cx-call svg{width:17px; height:17px; fill:var(--brand)}
+/* voice strip */
+.cx-ask{display:flex; align-items:center; gap:12px; width:calc(100% - 32px); margin:24px 16px 0; padding:14px; border-radius:22px; text-align:left; color:#fff;
+  background:radial-gradient(200px 120px at 90% 0%, #2CCBBA, transparent 70%), linear-gradient(120deg,#0C8F82,#0A5C55); box-shadow:0 14px 26px -16px rgba(10,92,85,.8)}
+.cx-aorb{width:48px; height:48px; flex:none; border-radius:50%; display:grid; place-items:center; background:conic-gradient(from 0deg,#0C8F82,#17B6A6,#F7C948,#FF6B4A,#0C8F82); animation:spin 6s linear infinite; box-shadow:0 0 0 3px rgba(255,255,255,.25)}
+.cx-aorb svg{width:21px; height:21px; animation:spin 6s linear infinite reverse}
+.cx-ask b{display:block; font-size:15px} .cx-ask small{display:block; font-size:12px; color:#CFF1EC}
+.cx-ask .wave{margin-left:auto; display:flex; gap:3px; align-items:center; height:22px}
+.cx-ask .wave i{width:3px; height:30%; border-radius:2px; background:#fff; animation:wv 1.1s ease-in-out infinite; animation-delay:calc(var(--n) * -120ms)}
+
+/* ---------- product cards (shared look, warmer) ---------- */
+body[data-app="customer"] .qc-card{width:156px; border:0; box-shadow:var(--shadow); border-radius:20px; background:var(--surface)}
+body[data-app="customer"] .qc-card .pimg{background:linear-gradient(150deg,#FFF1EC,#FFE3D9); border-radius:18px 18px 14px 14px}
+body[data-app="customer"] .qc-card:nth-child(3n+2) .pimg{background:linear-gradient(150deg,#E2F5F1,#CDEDE7)}
+body[data-app="customer"] .qc-card:nth-child(3n+3) .pimg{background:linear-gradient(150deg,#FFF6DC,#FDEBB5)}
+body[data-app="customer"].cdark .qc-card .pimg{background:var(--surface-2) !important}
+body[data-app="customer"] .qc-card .pimg > .gi svg{opacity:.45}
+body[data-app="customer"] .qc-add{border-radius:12px; min-height:36px}
+body[data-app="customer"] .qc-card h4{font-size:14px !important}
+body[data-app="customer"] :is(.qc-time,.qc-new,.punit,.prate){font-size:12px}
+.cx-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px 12px; padding:0 16px}
+.cx-grid .qc-card{width:auto}
+
+/* ---------- categories grid ---------- */
+.cx-cgrid{display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:4px 16px 16px}
+.cx-ccard{position:relative; display:flex; flex-direction:column; text-align:left; border-radius:22px; overflow:hidden; background:var(--surface); box-shadow:var(--shadow); animation:catIn .5s var(--spring) both; animation-delay:calc(var(--n) * 40ms); transition:transform .25s var(--spring)}
+.cx-ccard:active{transform:scale(.96)}
+.cx-cimg{position:relative; height:104px; display:grid; place-items:center; color:var(--brand); background:var(--brand-50)}
+.cx-ccard:nth-child(4n+2) .cx-cimg{background:var(--hot-50); color:var(--hot)} .cx-ccard:nth-child(4n+3) .cx-cimg{background:var(--sun-50); color:#B07800} .cx-ccard:nth-child(4n+4) .cx-cimg{background:#E6F0FF; color:#2F5FD0}
+body.cdark .cx-cimg{background:var(--surface-2) !important}
+.cx-cimg .gi svg{width:32px; height:32px}
+.cx-ccard b{padding:12px 14px; font-size:14.5px; font-weight:800}
+
+/* ---------- category chips (icon pills) ---------- */
+.cx-chips{display:flex; gap:10px; overflow-x:auto; padding:4px 16px 8px; scrollbar-width:none}
+.cx-chips::-webkit-scrollbar{display:none}
+.cx-chip{flex:none; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:68px; font-size:12px; font-weight:700; color:var(--ink2)}
+.cx-chip span{width:56px; height:56px; border-radius:18px; display:grid; place-items:center; background:var(--surface); color:var(--brand); box-shadow:var(--shadow); transition:transform .3s var(--spring), background .25s, color .25s}
+.cx-chip span svg{width:24px; height:24px}
+.cx-chip.on{color:var(--hot)} .cx-chip.on span{background:var(--hot); color:#fff; box-shadow:0 10px 20px -10px rgba(240,82,58,.8); transform:translateY(-3px)}
+#catoffers{margin-top:8px}
+
+/* ---------- empty states ---------- */
+.cx-empty{display:flex; flex-direction:column; align-items:center; text-align:center; padding:24px 32px 8px}
+.cx-eill{position:relative; width:150px; height:150px; display:grid; place-items:center; color:var(--brand); margin-bottom:16px}
+.cx-eill svg{position:relative; width:56px; height:56px; animation:logoBob 3.5s ease-in-out infinite}
+.cx-blob{position:absolute; inset:0; background:var(--brand-50); border-radius:42% 58% 63% 37% / 41% 44% 56% 59%; animation:cxBlob 8s ease-in-out infinite}
+@keyframes cxBlob{50%{border-radius:58% 42% 37% 63% / 59% 56% 44% 41%; transform:rotate(18deg)}}
+.cx-empty h2{font-family:var(--display); font-style:italic; text-transform:uppercase; font-weight:800; font-size:28px; letter-spacing:0}
+.cx-empty p{font-size:14px; color:var(--muted); margin:8px 0 20px; max-width:260px}
+.cx-empty .btn{min-height:48px; padding:0 28px}
+
+/* ---------- cart ---------- */
+.cx-from{display:flex; align-items:center; gap:6px; padding:0 16px 12px; font-size:13.5px; color:var(--muted)}
+.cx-from .gi svg{width:16px; height:16px; color:var(--brand)}
+.cx-lines{display:grid; gap:10px; padding:0 16px}
+.cx-line{display:grid; grid-template-columns:72px minmax(0,1fr) 44px; gap:12px; align-items:center; padding:10px; border-radius:20px; background:var(--hot-50); animation:rise .4s var(--ease) both; animation-delay:calc(var(--n) * 50ms)}
+.cx-line:nth-child(3n+2){background:var(--brand-50)} .cx-line:nth-child(3n+3){background:var(--sun-50)}
+.cx-limg{position:relative; width:72px; height:72px; border-radius:50%; overflow:hidden; display:grid; place-items:center; background:var(--surface); color:var(--brand); box-shadow:0 8px 16px -10px rgba(0,0,0,.4)}
+.cx-limg img.ph{border-radius:50%}
+.cx-lt b{display:block; font-size:15px; font-weight:800; line-height:1.25}
+.cx-lt small{display:block; font-size:12.5px; color:var(--muted)}
+.cx-lt em{display:block; margin-top:4px; font-style:normal; font-size:15px; font-weight:800; color:var(--hot)}
+.cx-lt s{font-size:12px; color:var(--faint); font-weight:500}
+.cx-vstep{display:flex; flex-direction:column; align-items:center; border-radius:999px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden}
+.cx-vstep button{width:44px; height:36px; display:grid; place-items:center; font-size:18px; font-weight:700; color:var(--brand)}
+.cx-vstep button:first-child{background:var(--brand); color:#fff}
+.cx-vstep button svg{width:15px; height:15px; color:var(--bad)}
+.cx-vstep b{font-size:14px; font-weight:800; padding:2px 0}
+.cx-more{display:flex; align-items:center; gap:6px; min-height:48px; margin:8px 16px 0; color:var(--brand); font-weight:800; font-size:14px}
+.cx-more svg{width:17px; height:17px}
+.cx-save{display:flex; align-items:center; gap:8px; margin:8px 16px 0; padding:12px 14px; border-radius:16px; background:var(--ok-50); color:var(--ok); font-size:14px; font-weight:600}
+.cx-save .gi svg{width:18px; height:18px}
+.cx-bill{margin:16px 16px 0; padding:16px; border-radius:22px; background:var(--surface); box-shadow:var(--shadow); display:grid; gap:10px}
+.cx-bill > div{display:flex; justify-content:space-between; font-size:14.5px; color:var(--ink2)}
+.cx-bill b{color:var(--ink)} .cx-bill em{font-style:normal; color:var(--ok); font-weight:800}
+.cx-bill .tot{border-top:1.5px dashed var(--line); padding-top:12px; font-size:17px} .cx-bill .tot span{font-weight:800; color:var(--ink)} .cx-bill .tot b{font-size:20px; color:var(--hot)}
+.cx-free{display:block !important; font-size:13px !important}
+.cx-free i{display:block; height:6px; margin-top:6px; border-radius:3px; background:linear-gradient(90deg,var(--brand) var(--p),var(--line) var(--p))}
+.cx-paybar{position:absolute; left:0; right:0; bottom:0; z-index:22; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px calc(14px + var(--bottom)); border-radius:26px 26px 0 0; background:#14161A; color:#fff; box-shadow:0 -16px 30px -18px rgba(0,0,0,.5); animation:qcBarIn .5s var(--spring) both}
+.cx-paybar small{display:block; font-size:12px; color:#9AA3A1} .cx-paybar b{font-size:22px; font-weight:800}
+.cx-paybar .btn{min-height:52px; padding:0 26px; background:var(--hot); box-shadow:0 10px 22px -10px rgba(240,82,58,.8); font-size:16px}
+.cx-paybar .btn svg{width:18px; height:18px}
+
+/* ---------- checkout ---------- */
+.cx-steps{display:flex; align-items:center; gap:6px; padding:0 16px 16px}
+.cx-steps span{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; color:var(--muted)}
+.cx-steps i{width:24px; height:24px; border-radius:50%; display:grid; place-items:center; font-style:normal; font-size:12px; font-weight:800; background:var(--surface); box-shadow:var(--shadow)}
+.cx-steps span.done i{background:var(--ok); color:#fff} .cx-steps span.on{color:var(--ink)} .cx-steps span.on i{background:var(--brand); color:#fff}
+.cx-steps b{flex:1; height:2px; background:var(--line)}
+.cx-card{margin:0 16px 12px; padding:16px; border-radius:22px; background:var(--surface); box-shadow:var(--shadow)}
+.cx-ch{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px}
+.cx-ch h3{display:flex; align-items:center; gap:8px; font-size:16px; font-weight:800}
+.cx-ch h3 svg{width:18px; height:18px; color:var(--brand); fill:currentColor}
+.cx-ch button{min-height:44px; color:var(--brand); font-weight:800}
+.cx-ch small{font-size:12px}
+.cx-addr{display:flex; gap:12px; align-items:flex-start}
+.cx-addr > span{width:44px; height:44px; flex:none; border-radius:14px; display:grid; place-items:center; background:var(--brand-50); color:var(--brand)}
+.cx-addr > span svg{width:20px; height:20px}
+.cx-addr b{display:block; font-size:15px} .cx-addr small{display:block; font-size:13px; color:var(--muted)}
+.cx-pays{display:grid; gap:8px}
+.cx-pay{display:flex; align-items:center; gap:12px; width:100%; min-height:60px; padding:10px 12px; border-radius:16px; border:1.5px solid var(--line); text-align:left; transition:border-color .2s, background .2s}
+.cx-pay > span{width:40px; height:40px; border-radius:12px; display:grid; place-items:center; background:var(--surface-2); color:var(--muted)}
+.cx-pay > span svg{width:19px; height:19px}
+.cx-pay div{flex:1} .cx-pay b{display:block; font-size:14.5px} .cx-pay small{font-size:12px; color:var(--muted)}
+.cx-pay i{width:22px; height:22px; border-radius:50%; border:2px solid var(--border-strong); transition:border .2s}
+.cx-pay.on{border-color:var(--brand); background:var(--brand-50)} .cx-pay.on > span{background:var(--brand); color:#fff} .cx-pay.on i{border:7px solid var(--brand)}
+
+/* ---------- order placed ---------- */
+.cx-done{position:relative; min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:calc(40px + var(--top)) 28px 40px; color:#fff; overflow:hidden;
+  background:radial-gradient(420px 420px at 50% 36%, #17B6A6, #0A5C55 75%)}
+.cx-check{position:relative; width:140px; height:140px; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.14); box-shadow:0 0 0 18px rgba(255,255,255,.06); animation:pop .6s var(--spring) both}
+.cx-check svg{width:100px; height:100px}
+.cx-check circle{fill:#fff} .cx-check path{fill:none; stroke:#0C8F82; stroke-width:6; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:60; stroke-dashoffset:60; animation:cxTick .5s var(--ease) .45s forwards}
+@keyframes cxTick{to{stroke-dashoffset:0}}
+.cx-burst{position:absolute; top:calc(50% - 120px); left:50%; width:0; height:0}
+.cx-burst i{position:absolute; width:8px; height:16px; border-radius:4px; background:#FFD86B; transform:rotate(var(--a)) translateY(-90px); opacity:0; animation:cxBurst .9s var(--ease) .4s forwards}
+.cx-burst i:nth-child(3n){background:#FF8A6B} .cx-burst i:nth-child(3n+1){background:#fff}
+@keyframes cxBurst{0%{opacity:1; transform:rotate(var(--a)) translateY(-70px)} 100%{opacity:0; transform:rotate(var(--a)) translateY(-150px)}}
+.cx-done h1{margin-top:28px; font-family:var(--display); font-style:italic; text-transform:uppercase; font-weight:800; font-size:40px; color:#fff; animation:rise .5s var(--ease) .5s both}
+.cx-done p{margin-top:8px; font-size:15px; color:#CFF1EC; max-width:300px; animation:rise .5s var(--ease) .6s both}
+.cx-done .btn{margin-top:28px; min-height:52px; width:100%; max-width:300px; background:#fff; color:var(--brand); box-shadow:none; animation:rise .5s var(--ease) .7s both}
+.cx-link{margin-top:10px; min-height:48px; color:#fff; font-weight:700; text-decoration:underline; text-underline-offset:4px}
+
+/* ---------- orders / tracking ---------- */
+.cx-track{border-radius:24px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden}
+.cx-map{position:relative; height:170px; background:#E7EFEC; overflow:hidden}
+body.cdark .cx-map{background:#18211F}
+.cx-map svg{width:100%; height:100%}
+.cx-map .st path{fill:none; stroke:#fff; stroke-width:9; stroke-linecap:round} body.cdark .cx-map .st path{stroke:#24302D}
+.cx-map .rt{fill:none; stroke:var(--hot); stroke-width:4; stroke-linecap:round; stroke-dasharray:1; stroke-dashoffset:1; animation:draw 1.4s var(--ease) .3s forwards}
+.cx-map .a{fill:var(--brand)} .cx-map .b{fill:var(--hot)}
+.cx-mp{position:absolute; width:38px; height:38px; border-radius:50% 50% 50% 0; display:grid; place-items:center; color:#fff; box-shadow:0 8px 16px -8px rgba(0,0,0,.5); transform:rotate(-45deg)}
+.cx-mp > *{transform:rotate(45deg)} .cx-mp svg{width:17px; height:17px}
+.cx-mp.s{left:calc(17% - 19px); top:calc(75% - 46px); background:var(--brand)}
+.cx-mp.h{left:calc(83% - 19px); top:calc(27% - 48px); background:var(--hot); animation:pinFloat 2.5s ease-in-out infinite}
+.cx-tb{display:flex; justify-content:space-between; align-items:flex-start; padding:16px 16px 0}
+.cx-tb small{font-size:12px; color:var(--muted)} .cx-tb b{display:block; font-size:17px; font-weight:800}
+.cx-track .otl{padding:0 16px}
+.cx-titems{padding:10px 16px 0; font-size:14px; color:var(--ink2)}
+.cx-tf{display:flex; justify-content:space-between; align-items:center; padding:12px 16px 16px}
+.cx-tf b{font-size:18px}
+.cx-po{display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:12px; align-items:center; padding:12px; border-radius:20px; background:var(--surface); box-shadow:var(--shadow); animation:rise .4s var(--ease) both; animation-delay:calc(var(--n) * 50ms)}
+.cx-poi{width:44px; height:44px; border-radius:14px; display:grid; place-items:center; background:var(--brand-50); color:var(--brand)} .cx-poi svg{width:20px; height:20px}
+.cx-po b{display:block; font-size:15px} .cx-po small{display:block; font-size:12.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.cx-po em{font-style:normal; font-size:13px; font-weight:700} .cx-po em span{text-transform:capitalize}
+.st-completed{color:var(--ok)} .st-rejected,.st-cancelled{color:var(--bad)}
+.cx-again{min-height:44px; padding:0 14px; border-radius:14px; background:var(--hot-50); color:var(--hot); font-weight:800; font-size:13px}
+
+/* ---------- profile ---------- */
+.cx-me{display:flex; align-items:center; gap:14px; margin:4px 16px 16px; padding:16px; border-radius:24px; color:#fff;
+  background:radial-gradient(240px 180px at 100% 0%, #2CCBBA, transparent 70%), linear-gradient(140deg,#0C8F82,#0A5C55); box-shadow:0 18px 32px -20px rgba(10,92,85,.8)}
+.cx-mav{width:60px; height:60px; flex:none; border-radius:50%; display:grid; place-items:center; background:#fff; color:var(--brand); font-size:24px; font-weight:800; box-shadow:0 0 0 4px rgba(255,255,255,.25)}
+.cx-me div{flex:1; min-width:0} .cx-me b{display:block; font-size:18px; font-weight:800} .cx-me small{display:block; font-size:13px; color:#CFF1EC}
+.cx-me .btn{background:#fff; color:var(--brand); box-shadow:none}
+.cx-menu{margin:0 16px 12px; border-radius:22px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden}
+.cx-menu > :is(a,button){display:flex; align-items:center; gap:12px; width:100%; min-height:58px; padding:8px 14px; text-align:left; border-bottom:1px solid var(--line); transition:background .2s}
+.cx-menu > :is(a,button):last-child{border-bottom:0}
+.cx-menu > :is(a,button):active{background:var(--surface-2)}
+.cx-mi{width:40px; height:40px; flex:none; border-radius:12px; display:grid; place-items:center; background:var(--brand-50); color:var(--brand)}
+.cx-mi svg{width:19px; height:19px}
+.cx-menu b{flex:1; font-size:15px; font-weight:600}
+.cx-menu small{font-size:13px; color:var(--muted)}
+.cx-menu > :is(a,button) > svg:last-child{width:17px; height:17px; color:var(--faint)}
+.cx-menu .danger .cx-mi{background:var(--bad-50); color:var(--bad)} .cx-menu .danger b{color:var(--bad)}
+.cx-ver{display:flex; align-items:center; justify-content:center; gap:6px; padding:12px; font-size:12px; color:var(--faint)}
+
+/* ---------- auth (customer) ---------- */
+.cx-auth{position:relative; min-height:100%; overflow:hidden; isolation:isolate; padding:calc(14px + var(--top)) 16px 30px; color:#fff;
+  background:radial-gradient(360px 280px at 100% 0%, #2CCBBA, transparent 70%), linear-gradient(160deg,#0C8F82,#073F3A)}
+.cx-aglow i{position:absolute; border-radius:50%; z-index:-1; background:radial-gradient(circle,rgba(255,255,255,.18),transparent 70%); animation:lxFloat 9s ease-in-out infinite}
+.cx-aglow i:first-child{width:220px; height:220px; left:-60px; top:120px} .cx-aglow i:last-child{width:160px; height:160px; right:-40px; top:20px; animation-delay:-4s}
+.cx-abrand{display:flex; flex-direction:column; align-items:center; gap:8px; margin:18px 0 22px; animation:pop .6s var(--spring) both}
+.cx-abrand h1{font-family:var(--display); font-style:italic; text-transform:uppercase; font-weight:800; font-size:38px; color:#fff; letter-spacing:0}
+.cx-abrand h1 span:last-child{color:#FFD86B}
+.cx-acard{border-radius:28px; padding:22px 18px; background:var(--surface); color:var(--ink); box-shadow:0 30px 60px -30px rgba(0,0,0,.6); animation:rise .55s var(--spring) .1s both}
+.cx-acard h2{font-size:24px; font-weight:800; text-align:center} .cx-acard > p{text-align:center; font-size:14px; color:var(--muted); margin:4px 0 18px}
+.cx-acard .input{border-radius:16px; min-height:52px; background:var(--surface-2); border-color:transparent}
+.cx-acard .input svg{width:18px; height:18px; color:var(--muted)}
+.cx-acard .btn{min-height:52px; margin-top:6px; background:var(--hot); box-shadow:0 12px 24px -12px rgba(240,82,58,.8)}
+.cx-or{display:flex; align-items:center; gap:10px; margin:18px 0 10px; font-size:12px; color:var(--muted)}
+.cx-or::before,.cx-or::after{content:""; flex:1; height:1px; background:var(--line)}
+.cx-acard .demo-pill button{min-height:40px}
+.cx-alt{margin-top:16px; text-align:center; font-size:14px; color:var(--ink2)} .cx-alt a{color:var(--brand); font-weight:800}
+/* register keeps its logic; give it the same canvas */
+body[data-app="customer"] .auth-wrap{background:radial-gradient(360px 280px at 100% 0%, #2CCBBA, transparent 70%), linear-gradient(160deg,#0C8F82,#073F3A); min-height:100%}
+body[data-app="customer"] .auth-wrap > *:not(.auth-hero):not(.tb-btn){background:var(--surface)}
+body[data-app="customer"] .auth-wrap .field{padding:0 14px; margin:0} body[data-app="customer"] .auth-wrap .field:first-of-type{padding-top:18px; border-radius:24px 24px 0 0}
+
+/* ---------- splash + onboarding ---------- */
+.cx-splash{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#fff; overflow:hidden;
+  background:radial-gradient(420px 420px at 50% 44%, #17B6A6, #0A5C55 75%)}
+.cx-rings{position:absolute; top:44%; left:50%}
+.cx-rings i{position:absolute; transform:translate(-50%,-50%); border:2px solid rgba(255,255,255,.3); border-radius:50%; animation:splashring 2.2s ease-out infinite}
+.cx-rings i:nth-child(2){animation-delay:.6s} .cx-rings i:nth-child(3){animation-delay:1.2s}
+.cx-logo{animation:pop .9s var(--spring) both} .cx-logo svg{filter:drop-shadow(0 18px 30px rgba(0,0,0,.35))}
+.cx-splash h1{font-family:var(--display); font-style:italic; text-transform:uppercase; font-weight:800; font-size:50px; color:#fff; animation:rise .6s var(--ease) .3s both}
+.cx-splash h1 span:last-child{color:#FFD86B}
+.cx-splash p{color:#CFF1EC; font-size:15px; animation:rise .6s var(--ease) .45s both}
+.cx-load{width:140px; height:5px; border-radius:3px; background:rgba(255,255,255,.22); overflow:hidden; margin-top:14px}
+.cx-load i{display:block; height:100%; width:0; background:linear-gradient(90deg,#fff,#FFD86B); animation:spbar 1.2s var(--ease) forwards}
+.cx-intro{position:relative; min-height:100%; display:flex; flex-direction:column; align-items:center; text-align:center; padding:calc(70px + var(--top)) 28px 30px}
+.cx-skip{position:absolute; top:calc(14px + var(--top)); right:16px; min-height:44px; padding:0 16px; border-radius:999px; background:var(--hot); color:#fff; font-weight:800; font-size:14px}
+.cx-ill{position:relative; width:250px; height:250px; display:grid; place-items:center; animation:pop .6s var(--spring) both}
+.cx-ill .cx-blob{background:var(--hot-50)} .cx-ill.k1 .cx-blob{background:var(--brand-50)} .cx-ill.k2 .cx-blob{background:var(--sun-50)}
+.cx-ic{position:relative; width:120px; height:120px; border-radius:36px; display:grid; place-items:center; color:#fff; background:linear-gradient(135deg,#17B6A6,#0A5C55); box-shadow:0 26px 40px -20px rgba(10,92,85,.8); animation:logoBob 3.5s ease-in-out infinite}
+.cx-ill.k0 .cx-ic{background:linear-gradient(135deg,#FF8A6B,#E0422A)} .cx-ill.k2 .cx-ic{background:linear-gradient(135deg,#F7C948,#E8A912); color:#2B2100}
+.cx-ic svg{width:54px; height:54px}
+.cx-ill > i{position:absolute; width:16px; height:16px; border-radius:50%; background:var(--brand); animation:lxFloat 4s ease-in-out infinite}
+.cx-ill .o1{top:22px; left:40px} .cx-ill .o2{bottom:34px; right:24px; width:22px; height:22px; background:var(--hot); animation-delay:-1.5s} .cx-ill .o3{top:60px; right:30px; width:10px; height:10px; background:var(--sun); animation-delay:-3s}
+.cx-intro h2{margin-top:30px; font-family:var(--display); font-style:italic; text-transform:uppercase; font-weight:800; font-size:32px; line-height:1; letter-spacing:0; animation:rise .5s var(--ease) .1s both}
+.cx-intro p{margin-top:12px; font-size:15px; color:var(--muted); max-width:290px; animation:rise .5s var(--ease) .2s both}
+.cx-idots{display:flex; gap:6px; margin-top:24px} .cx-idots i{width:8px; height:8px; border-radius:4px; background:var(--border-strong); transition:width .3s var(--spring)} .cx-idots i.on{width:24px; background:var(--hot)}
+.cx-next{position:relative; margin-top:auto; width:72px; height:72px; border-radius:50%; display:grid; place-items:center; color:#fff; background:var(--hot); box-shadow:0 14px 26px -12px rgba(240,82,58,.8); transition:transform .25s var(--spring)}
+.cx-next:active{transform:scale(.92)}
+.cx-next > svg:last-child{width:26px; height:26px}
+.cx-prog{position:absolute; inset:-8px; width:88px; height:88px; transform:rotate(-90deg)}
+.cx-prog circle{fill:none; stroke:var(--hot); stroke-width:2.5; stroke-dasharray:126; stroke-dashoffset:calc(126 - 126 * var(--p) / 100); transition:stroke-dashoffset .5s var(--ease); opacity:.5}
+.cx-gs{margin-top:10px; font-size:14px; font-weight:700; color:var(--ink2)}
+
+/* ---------- floating cart bar (customer) ---------- */
+body[data-app="customer"] .qc-cartbar{background:#14161A; border-radius:20px; padding:10px 10px 12px 10px}
+body[data-app="customer"] .qc-cgo{background:var(--hot); color:#fff; border-radius:14px; padding:10px 14px}
+body[data-app="customer"] .qc-thumbs i{border-color:#14161A}
+body[data-app="customer"] .qc-cartwrap{bottom:calc(84px + var(--bottom))}
+
+/* ---------- bottom nav: same compact system as the partner app ---------- */
+body[data-app="customer"] .cxdock .pd-add{background:linear-gradient(135deg,#FF8A6B,#F0523A); box-shadow:0 6px 14px -6px rgba(240,82,58,.8)}
+body[data-app="customer"] .cxdock .pd-addtab{color:var(--hot)}
+
+/* ---------- shared inner screens, toned to match ---------- */
+body[data-app="customer"] .st-card,body[data-app="customer"] .pd-sheet .pd-store{border-radius:24px}
+body[data-app="customer"] .st-tabs button.on{background:var(--hot); color:#fff}
+body[data-app="customer"] .pd-bar{background:#14161A; color:#fff} body[data-app="customer"] .pd-bar small,body[data-app="customer"] .pd-bar s{color:#9AA3A1}
+body[data-app="customer"] .pd-ctl .qc-add{background:var(--hot); border-color:var(--hot)}
+body[data-app="customer"] .pd-ctl .qc-step{background:var(--hot)}
+body[data-app="customer"] .brow{border:0; box-shadow:var(--shadow); border-radius:20px}
+
+/* dark mode */
+body.cdark .cx-line{background:var(--surface-2) !important}
+body.cdark .cx-paybar,body.cdark .qc-cartbar,body.cdark .pd-bar{background:#000}
+@media (prefers-reduced-motion:reduce){ .screen > *{animation:none !important} }
+html.lite .cx-hero > img.ph{display:none} html.lite .cx-offer::before,html.lite .cx-blob{animation:none}
+/* no delivery-time claims; keep bars tidy */
+body[data-app="customer"] .qc-time{display:none !important}
+.cx-bar > .clang{display:none}
+.cx-splash p{color:#E6FAF6}
