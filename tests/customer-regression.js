@@ -15,22 +15,22 @@ const log=(t,m)=>{ out.push(`[${step}] ${t}: ${m}`); };
   const txt=async(sel)=>(await p.locator(sel).first().textContent({timeout:3000}).catch(()=>''))||'';
 
   await T('splash',async()=>{ await p.goto(B); await p.waitForTimeout(600); await S('splash'); await p.waitForTimeout(2000); await S('after_splash'); });
-  await T('intro',async()=>{ await vis('.lv-intro','onboarding'); await c('#nx'); await c('#nx'); await vis('.lw-lang','language picker'); await S('intro3'); await c('#nx',{w:1500}); await S('after_intro'); });
-  await T('location',async()=>{ await vis('.lw-loc','location screen'); await p.fill('#af','kunna'); await p.waitForTimeout(400); await S('loc_search'); await c('#al [data-area]',{w:2500}); await S('home'); });
-  await T('home',async()=>{ await vis('.lv-head','home header'); await vis('.lv-ban','banners'); await vis('.lv-scard','near stores'); await vis('.lv-pcard','deals');
-    const t=p.locator('#lvTabs button'); if(await t.count()>1){ await t.nth(1).click(); await p.waitForTimeout(1500); await S('home_tab'); await t.nth(0).click(); await p.waitForTimeout(1200); }
+  await T('intro',async()=>{ await vis('.lx-intro','onboarding'); await c('#nx'); await c('#nx'); await vis('.lw-lang','language picker'); await S('intro3'); await c('#nx',{w:1500}); await S('after_intro'); });
+  await T('location',async()=>{ await vis('.lw-loc','location screen'); await c('#man'); await p.fill('#af','kunna'); await p.waitForTimeout(400); await S('loc_search'); await c('#al [data-area]',{w:2500}); await S('home'); });
+  await T('home',async()=>{ await vis('.lx-head','home header'); await vis('.lx-ban','banners'); await vis('.lx-scard','near stores'); await vis('.lx-pcard','deals'); await c('.lx-quick button',{w:1500}); await S('quick_shops'); await c('#__back',{w:1200});
+    
     await p.locator('#screen').evaluate(e=>e.scrollTo(0,900)); await p.waitForTimeout(900); await S('home_scrolled'); await vis('.cx-mini.on','compact sticky bar');
     await p.locator('#screen').evaluate(e=>e.scrollTo(0,2400)); await p.waitForTimeout(900); await S('home_bottom'); await p.locator('#screen').evaluate(e=>e.scrollTo(0,0)); });
-  await T('search',async()=>{ await c('.lv-stxt',{w:1200}); await vis('#sq','search input'); await p.fill('#sq','biriyani'); await p.waitForTimeout(1500); await S('search_results'); await vis('.lv-srow, .lv-pcard','search results');
+  await T('search',async()=>{ await c('.lx-stxt',{w:1200}); await vis('#sq','search input'); await p.fill('#sq','biriyani'); await p.waitForTimeout(1500); await S('search_results'); await vis('.lv-srow, .lv-pcard','search results');
     await p.fill('#sq','zzzzqqq'); await p.waitForTimeout(1200); await S('search_empty'); await p.fill('#sq',''); await p.waitForTimeout(600); await vis('.lw-recent','recent searches'); await c('#__back'); });
-  await T('store',async()=>{ await c('.lv-scard',{w:2000}); await S('store'); await vis('.lv-scard2','store card'); await vis('.lv-utabs','tabs');
+  await T('store',async()=>{ await c('.lx-scard',{w:2000}); await S('store'); await vis('.lx-scard2','store card'); await vis('#fc','filter chips');
     const tabs=p.locator('#tabs button'); const n=await tabs.count(); for(let i=n-1;i>=0;i--){ await tabs.nth(i).click(); await p.waitForTimeout(500); } await S('store_tabs');
     const add=p.locator('#tabbody .qc-add'); if(await add.count()){ await add.first().click(); await p.waitForTimeout(1200); await S('store_added'); await vis('#qcCartBar:not([hidden])','cart bar after add'); } else log('MISSING','products with ADD in store'); });
-  await T('product',async()=>{ await c('#tabbody .lv-pcard .lv-pimg',{w:1800}); await S('product'); await vis('.lv-phero','product hero'); await vis('.lv-pbar','product bar');
-    const pa=p.locator('.lv-pbar .qc-add, .lv-pbar [data-qinc]'); if(await pa.count()){ await pa.first().click(); await p.waitForTimeout(800); } await S('product_added'); await c('#bk'); await c('#bk',{w:1500}); });
-  await T('categories',async()=>{ await c('.bnav [data-tabnav="categories"]',{w:1500}); await S('categories'); for(const f of ['top','offers','open','near']){ await c(`#fchips [data-f="${f}"]`,{w:500}); } await S('cat_filtered');
-    await c('.lv-ctile',{w:2000}); await S('category'); await vis('#list .lv-srow','category store list'); await c('#vt [data-v="map"]'); await S('cat_map'); const pin=p.locator('.lw-mpin'); if(await pin.count()){ await pin.first().click(); await p.waitForTimeout(600); await S('cat_map_pin'); } await c('#vt [data-v="list"]'); await c('#__back'); });
-  await T('workers',async()=>{ const w=p.locator('.lv-ctile',{hasText:/Worker/i}); if(await w.count()){ await w.first().click(); await p.waitForTimeout(1800); await S('workers'); await vis('.lw-pro','worker cards'); await c('#__back'); } else log('MISSING','Workers tile'); });
+  await T('product',async()=>{ await c('#tabbody .lx-pcard .lx-pimg',{w:1800}); await S('product'); await vis('.lx-phero','product hero'); await vis('.lx-qty','quantity');
+    await c('#qp',{w:300}); await c('#atc',{w:1200}); await S('product_added'); await c('#bk'); await c('#bk',{w:1500}); });
+  await T('categories',async()=>{ await c('.bnav [data-tabnav="categories"]',{w:1500}); await S('categories'); 
+    await c('.lx-ctile',{w:2000}); await S('category'); await vis('#list .lv-srow','category store list'); await c('#vt [data-v="map"]'); await S('cat_map'); const pin=p.locator('.lw-mpin'); if(await pin.count()){ await pin.first().click(); await p.waitForTimeout(600); await S('cat_map_pin'); } await c('#vt [data-v="list"]'); await c('#__back'); });
+  await T('workers',async()=>{ const w=p.locator('.lx-ctile',{hasText:/Worker/i}); if(await w.count()){ await w.first().click(); await p.waitForTimeout(1800); await S('workers'); await vis('.lw-pro','worker cards'); await c('#__back'); } else log('MISSING','Workers tile'); });
   await T('cart_guest',async()=>{ await c('.bnav [data-tabnav="home"]',{w:2500}); const cb=p.locator('#qcGoCart'); if(await cb.count()){ await cb.click(); await p.waitForTimeout(1500); } else { log('MISSING','cart bar on home'); return; } await S('cart'); await vis('.lv-line','cart lines');
     await c('[data-inc]'); await c('[data-dec]'); await S('cart_qty'); await c('#checkout',{w:1500}); await S('checkout_gate'); });
   await T('login',async()=>{ const g=p.locator('button',{hasText:/^Continue$/}); if(await g.count()){ await g.last().click(); await p.waitForTimeout(1500);}  await S('login'); await vis('#lid','login form');
@@ -46,7 +46,7 @@ const log=(t,m)=>{ out.push(`[${step}] ${t}: ${m}`); };
     p.once('dialog',d=>d.accept()); const cn=p.locator('[data-cancel]'); if(await cn.count()){ await cn.first().click(); await p.waitForTimeout(800); const ok=p.locator('button',{hasText:/^Cancel order$/}); if(await ok.count()){ await ok.last().click(); } await p.waitForTimeout(2000); await S('orders_cancelled'); }
     await c('#seg [data-s="past"]'); await S('orders_past'); await c('#seg [data-s="book"]'); await S('orders_book'); });
   await T('assistant',async()=>{ await c('.bnav [data-tabnav="__talk"]',{w:1500}); await S('assistant'); const dl=p.locator('button',{hasText:'Type instead'}); if(await dl.count()) { await dl.first().click(); await p.waitForTimeout(500); }
-    await p.fill('#aq','vegetables, chicken biriyani and an electrician'); await p.press('#aq','Enter'); await p.waitForTimeout(3000); await S('assistant_multi'); await vis('.lw-grp','grouped results');
+    if(!(await p.locator('#aq').isVisible())) await c('#kb',{w:400}); await p.fill('#aq','vegetables, chicken biriyani and an electrician'); await p.press('#aq','Enter'); await p.waitForTimeout(3000); await S('assistant_multi'); await vis('.lw-grp','grouped results');
     await p.fill('#aq','where is my order'); await p.press('#aq','Enter'); await p.waitForTimeout(2000); await S('assistant_track');
     const ad=p.locator('.lw-rc [data-add]'); if(await ad.count()){ await ad.first().click(); await p.waitForTimeout(800); } await c('#__back',{w:1500}); });
   await T('service_booking',async()=>{ await c('.bnav [data-tabnav="home"]',{w:2500}); await p.locator('#screen').evaluate(e=>e.scrollTo(0,1800)); await p.waitForTimeout(800); const bk=p.locator('#lwSvc .lv-req'); if(!(await bk.count())){ log('MISSING','recommended services book'); return; }
@@ -68,7 +68,7 @@ const log=(t,m)=>{ out.push(`[${step}] ${t}: ${m}`); };
   await T('dark',async()=>{ await c('.lv-tbar [data-ctheme]',{w:1200}).catch(()=>log('MISSING','theme toggle')); await S('dark_account'); await c('.bnav [data-tabnav="home"]',{w:2500}); await S('dark_home'); await c('.lv-tbar [data-ctheme], .lv-htop [data-ctheme]',{w:1200}).catch(()=>{}); });
   await T('logout_register',async()=>{ await c('.bnav [data-tabnav="account"]',{w:1500}); p.once('dialog',d=>d.accept()); await c('#out',{w:800}); const ok=p.locator('button',{hasText:/^Log out$/}); if(await ok.count()) await ok.last().click(); await p.waitForTimeout(1200); await S('logged_out');
     await c('#lg',{w:1200}); await c('#goreg',{w:1200}); await S('register'); await p.fill('#rn','New Person'); await p.fill('#rp','98765'+String(Date.now()).slice(-5)); await p.fill('#re','np'+Date.now()+'@x.com'); await p.fill('#rpw','secret123'); await c('#rsubmit',{w:2500}); await S('registered'); });
-  await T('swipe_back',async()=>{ await c('.bnav [data-tabnav="categories"]',{w:1200}); await c('.lv-ctile',{w:1500}); const vp=p.viewportSize(); await p.touchscreen.tap(5,vp.height/2).catch(()=>{});
+  await T('swipe_back',async()=>{ await c('.bnav [data-tabnav="categories"]',{w:1200}); await c('.lx-ctile',{w:1500}); const vp=p.viewportSize(); await p.touchscreen.tap(5,vp.height/2).catch(()=>{});
     await p.evaluate(()=>{ const t=(type,x)=>{ const e=new TouchEvent(type,{touches:type==='touchend'?[]:[new Touch({identifier:1,target:document.body,clientX:x,clientY:400})],changedTouches:[new Touch({identifier:1,target:document.body,clientX:x,clientY:400})],bubbles:true}); document.body.dispatchEvent(e); }; t('touchstart',4); t('touchend',200); }); await p.waitForTimeout(1200); await S('after_swipe_back'); });
   require('fs').writeFileSync('report.txt',out.join('\n')); console.log(out.join('\n')||'NO ISSUES'); console.log('shots',shots.length); await br.close();
 })();
