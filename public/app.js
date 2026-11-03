@@ -412,9 +412,10 @@ function logoMark(size=26){
 
 /* ---------------- customer router ---------------- */
 function stack(){ return nav[state.view]; }
-function go(routeName, params){ stack().push({name:routeName, params:params||{}}); try{ history.pushState({ll:1, view:state.view}, ''); }catch(e){} routeRender(); const s=$('#screen'); if(s) s.scrollTop=0; }
-function back(){ if(stack().length>1){ if(history.state && history.state.ll){ history.back(); return; } stack().pop(); routeRender(); } }
-function setTab(routeName){ nav[state.view]=[{name:routeName}]; routeRender(); }
+let NAV_DIR='tab';
+function go(routeName, params){ NAV_DIR='fwd'; stack().push({name:routeName, params:params||{}}); try{ history.pushState({ll:1, view:state.view}, ''); }catch(e){} routeRender(); const s=$('#screen'); if(s) s.scrollTop=0; }
+function back(){ NAV_DIR='back'; if(stack().length>1){ if(history.state && history.state.ll){ history.back(); return; } stack().pop(); routeRender(); } }
+function setTab(routeName){ NAV_DIR='tab'; nav[state.view]=[{name:routeName}]; routeRender(); }
 
 const SCREENS = {};
 function wirePullToRefresh(){
@@ -434,6 +435,7 @@ async function routeRender(){
   wirePullToRefresh();
   const fn = SCREENS[cur.name];
   if (!fn){ screen.innerHTML = emptyState('compass','Screen not found',''); return; }
+  if(state.view==='customer'){ screen.classList.remove('cx-fwd','cx-back','cx-tab'); void screen.offsetWidth; screen.classList.add('cx-'+NAV_DIR); NAV_DIR='tab'; }
   try { await fn(screen, cur.params||{}); }
   catch(e){ screen.innerHTML = errorState(e.message, ()=>routeRender()); }
   screen.scrollTop = 0;                 // and again after async data loads
@@ -683,11 +685,12 @@ function renderBottomNav(){
   const tab=(r,icon,lab,extra='')=>`<button class="vtab ${cur===r?'on':''}" data-tabnav="${r}" ${cur===r?'aria-current="page"':''}><span class="vico">${icon}${extra}</span><span>${esc(lab)}</span></button>`;
   const talk=(lab,icon)=>`<button class="vtalk" data-tabnav="__talk" aria-label="${esc(lab)}"><span class="t-glow"></span><span class="t-ring"></span><span class="t-core">${icon}</span><span class="t-lab">${esc(lab)}</span></button>`;
   if (state.view==='customer'){
-    if (['splash','location','intro','register','login','cart','checkout'].includes(cur)){ holder.innerHTML=''; return; }
+    if (['splash','location','intro','register','login','cart','checkout','orderDone'].includes(cur)){ holder.innerHTML=''; return; }
     const cb=`<span class="cartbadge" ${cartCount()?'':'hidden'}>${cartCount()}</span>`;
     if (cur==='product'){ holder.innerHTML='<div id="qcCartBar" class="qc-cartwrap onpd" aria-live="polite" hidden></div>'; renderCartBar(); return; }
     const hideBar=['cart','checkout','chat'].includes(cur);
-    holder.innerHTML = `${hideBar?'':'<div id="qcCartBar" class="qc-cartwrap" aria-live="polite" hidden></div>'}<nav class="bnav vdock qc-dock" aria-label="Main">${tab('home',I.home,'Home')}${tab('categories',I.grid,'Categories')}${talk('Ask',GI.mic)}${tab('orders',GI.package,'Orders')}${tab('account',I.user,'Account')}</nav>`;
+    const askBtn=`<button class="vtab pd-addtab" data-tabnav="__talk" aria-label="Ask Local Link by voice"><span class="vico pd-add">${GI.mic}</span><span>Ask</span></button>`;
+    holder.innerHTML = `${hideBar?'':'<div id="qcCartBar" class="qc-cartwrap" aria-live="polite" hidden></div>'}<nav class="bnav pdock cxdock" aria-label="Main">${tab('home',I.home,'Home')}${tab('categories',I.grid,'Categories')}${askBtn}${tab('orders',GI.package,'Orders')}${tab('account',I.user,'Profile')}</nav>`;
     renderCartBar();
   } else if (state.view==='partner'){
     if (cur==='p_login'){ holder.innerHTML=''; return; }
@@ -2819,5 +2822,312 @@ async function boot(){
     $('#stage').innerHTML = `<div style="padding:40px;text-align:center"><h3>Couldn't reach the server</h3><p class="muted">${esc(e.message)}</p></div>`;
   }
 }
+/* ═══════════════════════════════════════════════════════════════════════
+   CUSTOMER APP — HIGH-FIDELITY REBUILD (cx)
+   Fresh screens, same capabilities and APIs. Partner-app scheme & logo:
+   Local Link teal + coral, pin-and-rings logo, wordmark.
+   ═══════════════════════════════════════════════════════════════════════ */
+const CX = {};
+function lxGo(row,i){ const el=row.children[i]; if(!el) return; const d=el.getBoundingClientRect().left-row.getBoundingClientRect().left; row.scrollBy({left:d-16,behavior:'smooth'}); }
+function cxHead(title, opts={}){ return `<header class="cx-bar ${opts.tint?'tint':''}"><button class="cx-ib" id="__back" aria-label="Back">${I.back}</button><h1>${esc(title)}</h1>${opts.right||'<span class="cx-ib ghost" aria-hidden="true"></span>'}</header>`; }
+function cxStoreCard(b){ const cover=b.cover_url||pic(coverKw(b),b.id,600,380); const navr=b.source==='google'?'place':'business';
+  return `<button class="cx-store" data-nav="${navr}" data-id="${b.id}" aria-label="${esc(b.name)}">
+    <span class="cx-sph">${photoLayer(cover)}${dIcon(b)}<span class="cx-sopen ${b.is_open?'on':''}">${b.is_open?t('openNow'):'Closed'}</span>
+      <span class="fav ${isSaved('business',b.id)?'on':''}" data-fav data-ftype="business" data-fid="${b.id}" data-fname="${esc(b.name)}" data-fsub="${esc(b.subcategory||'')}" data-fimg="${esc(cover)}">${I.heart}</span></span>
+    <span class="cx-sb"><b>${esc(b.name)}</b><small>${esc(b.subcategory||b.category_name||'')}${b.area_name?' · '+esc(b.area_name):''}</small>
+      <span class="cx-smeta">${b.rating?`<em class="cx-rate">${I.star}${Number(b.rating).toFixed(1)}</em>`:'<em class="qc-new">New</em>'}${b.hours_label?`<em>${gi('clock')}${esc(b.hours_label)}</em>`:''}${b.phone?`<em class="cx-call" data-callbiz="${esc(b.phone)}" role="button" tabindex="0" aria-label="Call ${esc(b.name)}">${I.phone}</em>`:''}</span></span></button>`; }
+function cxOffer(o,i){ const img=o.image_url||pic(coverKw({subcategory:o.business||'',category_name:o.business||''})+','+(o.title||'offer'),700+(o.id||0),400,400);
+  return `<button class="cx-offer t${i%3}" data-nav="business" data-id="${o.business_id}">
+    <span class="cx-ot"><small>${esc(o.business||'Local Link')}</small><b>${esc(o.title)}</b><em>${esc(o.discount_label||'OFFER')}</em><span class="cx-octa">Order now ${I.chev}</span></span>
+    <span class="cx-oimg">${photoLayer(img)}${gi('percent')}</span></button>`; }
+
+/* ---------- splash ---------- */
+SCREENS.splash = (el) => {
+  el.innerHTML = `<div class="cx-splash"><div class="cx-rings"><i></i><i></i><i></i></div>
+    <div class="cx-logo">${logoMark(96)}</div><h1><span>Local</span> <span>Link</span></h1><p>Everything local. One place.</p><div class="cx-load"><i></i></div></div>`;
+  localStorage.setItem('ll_seen','1');
+  if(!state.onboarded){ state.areaId=state.areaId||1; state.areaName=state.areaName||'Kunnamangalam'; state.onboarded=true;
+    localStorage.setItem('ll_area',state.areaId); localStorage.setItem('ll_area_name',state.areaName); localStorage.setItem('ll_onboarded','1'); }
+  setTimeout(()=>{ if(stack()[stack().length-1].name==='splash'){ nav.customer=[{name: state.introSeen?'home':'intro'}]; routeRender(); } }, 1300);
+};
+/* ---------- onboarding (first visit only, skippable) ---------- */
+SCREENS.intro = (el) => {
+  const S=[{ic:'store',t:'Your whole neighbourhood',s:'Shops, food, services, workers and rides around you — in one app.'},
+           {ic:'cart',t:'Order in a few taps',s:'Add from local stores, check out, and track your order live.'},
+           {ic:'chat',t:'Talk to the shop',s:'Chat, call or just ask Local Link by voice in English or Malayalam.'}];
+  let i=0;
+  const draw=()=>{ el.innerHTML=`<div class="cx-intro"><button class="cx-skip" id="skip">Skip</button>
+      <div class="cx-ill k${i}"><span class="cx-blob"></span><span class="cx-ic">${GI[S[i].ic]}</span><i class="o1"></i><i class="o2"></i><i class="o3"></i></div>
+      <h2>${esc(S[i].t)}</h2><p>${esc(S[i].s)}</p>
+      <div class="cx-idots">${S.map((_,k)=>`<i class="${k===i?'on':''}"></i>`).join('')}</div>
+      <button class="cx-next" id="nx" aria-label="${i===S.length-1?'Get started':'Next'}"><svg viewBox="0 0 44 44" class="cx-prog"><circle cx="22" cy="22" r="20" style="--p:${(i+1)/S.length*100}"/></svg>${I.chev}</button>
+      <small class="cx-gs">${i===S.length-1?'Get started':'Next'}</small></div>`;
+    const done=()=>{ state.introSeen=true; localStorage.setItem('ll_intro','1'); nav.customer=[{name:'home'}]; routeRender(); };
+    $('#skip').onclick=done; $('#nx').onclick=()=>{ if(i<S.length-1){ i++; draw(); } else done(); }; };
+  draw();
+};
+
+/* ---------- HOME ---------- */
+SCREENS.home = async (el) => {
+  const nm = token&&me ? me.name.split(' ')[0] : '';
+  const hero = pic('kerala street market shops', 4242, 900, 600);
+  el.innerHTML = `
+  <header class="cx-hero">${photoLayer(hero)}<span class="cx-hshade"></span>
+    <div class="cx-htop">
+      <button class="cx-av" data-tabnav="account" aria-label="Account">${nm?esc(nm[0]):logoMark(26)}</button>
+      <button class="cx-loc" data-tabnav-loc aria-label="Change area"><small>Your location</small><b>${I.pin}${esc(state.areaName)} ${I.chev.replace('m9 6 6 6-6 6','m6 9 6 6 6-6')}</b></button>
+      <span style="flex:1"></span>${custControls()}
+      <button class="cx-ib glass" data-nav="notifications" aria-label="Notifications">${I.bell}</button></div>
+    <div class="cx-hello"><span class="cx-brandline">${logoMark(22)}<b>Local</b><b>Link</b></span><h1>${nm?`Hi ${esc(nm)}, `:''}what do you<br>need today?</h1></div>
+    <div class="cx-search"><button class="cx-stxt" data-nav="searchScreen">${I.search}<span class="sq" id="rotsq">Search shops, food, services…</span></button><button class="cx-mic" id="askHome" aria-label="Ask by voice">${GI.mic}</button></div>
+  </header>
+  <div id="orderPill"></div>
+  <section class="cx-sec"><div class="cx-sh"><h2>${t('shopByCat')}</h2><button class="cx-see" data-nav="categories">${t('seeAll')}</button></div>
+    <div class="cx-cats">${(ref.categories||[]).map((c,i)=>`<button class="cx-cat" data-nav="category" data-slug="${c.slug}" style="--n:${i}"><span>${photoLayer(catPhoto(c.slug,c.name))}${catIcon(c.slug)}</span>${esc(catLabel(c))}</button>`).join('')}</div></section>
+  <section class="cx-sec"><div class="cx-offers" id="cxOffers"><div class="sk" style="height:150px;flex:0 0 88%"></div></div><div class="cx-odots" id="cxOdots"></div></section>
+  <section class="cx-sec"><div class="cx-sh"><h2>${t('openNear')}</h2><button class="cx-see" data-nav="categories">${t('seeAll')}</button></div><div class="cx-rail" id="cxNear">${skeletonCards(2)}</div></section>
+  <button class="cx-ask" data-talk><span class="cx-aorb">${GI.mic}</span><span><b>${t('voiceT')}</b><small>${t('voiceS')}</small></span><span class="wave">${Array.from({length:6},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span></button>
+  <section class="cx-sec"><div class="cx-sh"><h2>Mega deals</h2><span class="countdown" id="megacd">${gi('clock')} --:--:--</span></div><div class="cx-rail" id="cxDeals">${skeletonCards(3)}</div></section>
+  <section class="cx-sec" id="cxGroc"></section>
+  <section class="cx-sec"><div class="cx-sh"><h2>${t('popularServices')}</h2><button class="cx-see" data-nav="category" data-slug="services">${t('seeAll')}</button></div><div class="px stack" id="cxSvc" style="gap:10px">${skeletonRow(2)}</div></section>
+  <section class="cx-sec"><div class="cx-sh"><h2>${t('localUpdates')}</h2><button class="cx-see" data-nav="news">${t('seeAll')}</button></div><div class="cx-rail" id="cxNews"></div><div class="px stack" id="cxEv" style="gap:10px;margin-top:10px"></div></section>
+  <div style="height:40px"></div>`;
+  wireCustControls(el);
+  $('#askHome').onclick=()=>openAsk('',{voice:true});
+  el.querySelectorAll('[data-talk]').forEach(b=>b.onclick=()=>openAsk('',{voice:true}));
+  el.querySelector('[data-tabnav-loc]').onclick=()=>go('location');
+  el.querySelectorAll('[data-tabnav]').forEach(b=>b.onclick=()=>setTab(b.dataset.tabnav));
+  const rot=$('#rotsq'); let ri=0; const rtm=setInterval(()=>{ if(!document.body.contains(rot)) return clearInterval(rtm); ri=(ri+1)%ROTATE.length; rot.textContent=ROTATE[ri]; rot.classList.remove('fx-swap'); void rot.offsetWidth; rot.classList.add('fx-swap'); },2600);
+  if(token) api('/orders').then(os=>{ const live=(os||[]).find(o=>!['completed','rejected','cancelled'].includes(o.status)); const p=$('#orderPill'); if(!live||!p) return;
+    const MSG={pending:'is waiting for the store',accepted:'was accepted',preparing:'is being prepared',ready:'is ready',out_for_delivery:'is on the way'};
+    p.innerHTML=`<button class="cx-pill" id="opGo"><span class="cx-pdot"></span><span><b>Order from ${esc(live.business)}</b> ${MSG[live.status]||live.status.replace(/_/g,' ')}</span><em>Track</em></button>`; $('#opGo').onclick=()=>setTab('orders'); }).catch(()=>{});
+  const [offers, biz, deals, svcs, news, events, grocery, places] = await Promise.all([
+    api('/offers'), api('/businesses?featured=1'), api('/products?deal=1&limit=10'), api('/services'), api('/news'), api('/events'),
+    api('/products?category=food-grocery&limit=10'), api('/places?area_id='+state.areaId).catch(()=>[]) ]);
+  // offers carousel
+  const oc=$('#cxOffers'), od=$('#cxOdots'); const O=offers.slice(0,5);
+  oc.innerHTML=O.map(cxOffer).join(''); od.innerHTML=O.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('');
+  const mark=()=>{ const w=oc.firstElementChild?oc.firstElementChild.offsetWidth+12:1; const i=Math.round(oc.scrollLeft/w); od.querySelectorAll('i').forEach((d,x)=>d.classList.toggle('on',x===i)); [...oc.children].forEach((c,x)=>c.classList.toggle('on',x===i)); };
+  oc.addEventListener('scroll',mark,{passive:true}); mark(); let paused=0; oc.addEventListener('pointerdown',()=>paused=Date.now(),{passive:true});
+  if(O.length>1){ const tm=setInterval(()=>{ if(!document.body.contains(oc)) return clearInterval(tm); if(Date.now()-paused<5000||document.hidden) return; const w=oc.firstElementChild.offsetWidth+12; lxGo(oc,(Math.round(oc.scrollLeft/w)+1)%O.length); },3200); }
+  // open near you
+  const near=[]; const seen=new Set(); (places||[]).concat(biz).forEach(b=>{ const k=(b.name||'').toLowerCase(); if(!seen.has(k)){ seen.add(k); near.push(b); } });
+  near.sort((a,b)=>(b.is_open?1:0)-(a.is_open?1:0));
+  $('#cxNear').innerHTML = near.slice(0,10).map(cxStoreCard).join('') || emptyState('store','No shops yet','');
+  $('#cxDeals').innerHTML = deals.slice(0,10).map((p,i)=>productCard(p,null,{best:i<2})).join(''); startCountdown();
+  if(grocery&&grocery.length) $('#cxGroc').innerHTML=`<div class="cx-sh"><h2>Grocery & essentials</h2><button class="cx-see" data-nav="category" data-slug="food-grocery">${t('seeAll')}</button></div><div class="cx-rail">${grocery.slice(0,10).map(p=>productCard(p)).join('')}</div>`;
+  $('#cxSvc').innerHTML = svcs.slice(0,4).map(serviceCard).join('');
+  $('#cxNews').innerHTML = news.slice(0,5).map(newsCard).join('');
+  $('#cxEv').innerHTML = events.slice(0,3).map(eventCard).join('');
+};
+
+/* ---------- CATEGORIES ---------- */
+SCREENS.categories = async (el) => {
+  el.innerHTML = `<header class="cx-bar"><span class="cx-ib ghost"></span><h1>${t('categories')}</h1><button class="cx-ib" data-nav="searchScreen" aria-label="Search">${I.search}</button></header>
+    <div class="cx-cgrid">${ref.categories.map((c,i)=>`<button class="cx-ccard" data-nav="category" data-slug="${c.slug}" style="--n:${i}"><span class="cx-cimg">${photoLayer(catPhoto(c.slug,c.name))}${catIcon(c.slug)}</span><b>${esc(catLabel(c))}</b></button>`).join('')}</div>`;
+};
+SCREENS.explore = SCREENS.categories;
+
+/* ---------- CATEGORY (chips + grid, like the "My Order" reference) ---------- */
+SCREENS.category = async (el, {slug, vfilter, vlabel}) => {
+  const cat = ref.categories.find(c=>c.slug===slug) || {name:'Category', slug:'', kind:'business'};
+  const vre = vfilter && VFILTERS[vfilter]; const title = vlabel || catLabel(cat);
+  if (cat.kind==='worker' || cat.kind==='driver' || cat.kind==='info' || slug==='news' || slug==='events'){
+    el.innerHTML = `${cxHead(title)}<div class="px stack" id="list" style="gap:10px">${skeletonRow(4)}</div>`; backWire(el);
+    if (cat.kind==='worker') renderWorkers($('#list'), await api('/workers'));
+    else if (cat.kind==='driver') renderDrivers($('#list'), await api('/drivers'));
+    else if (cat.kind==='info') renderLocalInfo($('#list'), await api('/local-info'));
+    else if (slug==='news') setTab('news');
+    else $('#list').innerHTML=(await api('/events')).map(eventCard).join('');
+    return; }
+  el.innerHTML = `${cxHead(title,{right:`<button class="cx-ib" data-nav="searchScreen" aria-label="Search">${I.search}</button>`})}
+    <nav class="cx-chips" id="subchips" role="tablist"></nav>
+    <div id="catoffers"></div>
+    <div class="cx-sh px2"><h2>Popular items</h2></div><div class="cx-grid" id="catitems">${skeletonCards(2)}</div>
+    <div class="cx-sh px2"><h2>Shops</h2><small class="muted" id="qcCount"></small></div><div class="px stack" id="list" style="gap:10px">${skeletonRow(3)}</div>`;
+  backWire(el);
+  const [biz, prods, offers, places] = await Promise.all([api(`/businesses?category=${slug}`), api(`/products?category=${slug}&limit=12`), api('/offers'), api(`/places?category=${slug}&area_id=${state.areaId}`).catch(()=>[])]);
+  const seen=new Set(); let merged=[];
+  (places||[]).forEach(p=>{ if(!seen.has(p.name.toLowerCase())){ seen.add(p.name.toLowerCase()); merged.push(p); } });
+  biz.forEach(b=>{ if(!seen.has((b.name||'').toLowerCase())){ seen.add((b.name||'').toLowerCase()); merged.push(b); } });
+  if(vre) merged = merged.filter(b=>vre.test((b.subcategory||'')+' '+(b.name||'')));
+  merged.sort((a,b)=>(b.rating||0)-(a.rating||0));
+  let prodsF=prods; if(vre){ const ids=new Set(merged.map(b=>b.id)); prodsF=prods.filter(p=>ids.has(p.business_id)); }
+  const subs=[...new Set(merged.map(b=>b.subcategory).filter(Boolean))].slice(0,10);
+  $('#subchips').innerHTML = `<button class="cx-chip on" data-sub="" role="tab" aria-selected="true"><span>${catIcon(slug)}</span>All</button>`+subs.map(s=>`<button class="cx-chip" data-sub="${esc(s)}" role="tab" aria-selected="false"><span>${GI[iconKeyFor({subcategory:s,name:s},'store')]||GI.store}</span>${esc(s)}</button>`).join('');
+  const ids=new Set(biz.map(b=>b.id)); const co=(offers||[]).filter(o=>ids.has(o.business_id));
+  if(co.length) $('#catoffers').innerHTML=`<div class="cx-offers small">${co.map(cxOffer).join('')}</div>`;
+  $('#catitems').innerHTML = prodsF.length? prodsF.map((p,i)=>productCard(p,null,{best:i<1})).join('') : `<p class="muted px2">No items listed yet.</p>`;
+  const draw=(items)=>{ $('#qcCount').textContent=items.length+' places'; $('#list').innerHTML=items.length?items.map(bizRow).join(''):emptyState('search','Nothing here yet','Try another area.'); };
+  draw(merged);
+  $('#subchips').onclick=e=>{ const b=e.target.closest('[data-sub]'); if(!b) return; el.querySelectorAll('#subchips .cx-chip').forEach(x=>{ x.classList.toggle('on',x===b); x.setAttribute('aria-selected',x===b); }); const s=b.dataset.sub; draw(s?merged.filter(x=>x.subcategory===s):merged); };
+};
+
+/* ---------- CART ---------- */
+SCREENS.cart = async (el) => {
+  if(!cart.length){
+    el.innerHTML=`${cxHead(t('yourCart'))}<div class="cx-empty"><div class="cx-eill"><span class="cx-blob"></span>${GI.cart}</div><h2>Your cart is empty</h2><p>Add something from a shop near you and it'll show up here.</p><button class="btn" id="shop">Start shopping</button></div><div id="best"></div>`;
+    backWire(el); $('#shop').onclick=()=>setTab('home');
+    const ps=await api('/products?limit=8'); $('#best').innerHTML=`<div class="cx-sh px2"><h2>Bestsellers near you</h2></div><div class="cx-rail">${ps.map((p,i)=>productCard(p,null,{best:i<2})).join('')}</div>`; return; }
+  const FREE=499, sub=cartTotal(), delivery=sub>=FREE?0:29;
+  const save=cart.reduce((t,i)=>t+(i.mrp&&i.mrp>i.price?(i.mrp-i.price)*i.qty:0),0)+(delivery===0?29:0);
+  el.innerHTML = `${cxHead(t('yourCart'),{right:`<span class="cx-cnt">${cartCount()}</span>`})}
+    <p class="cx-from">${gi('store')} Ordering from <b>${esc(cart[0].biz||'your local store')}</b></p>
+    <div class="cx-lines">${cart.map((it,i)=>`<div class="cx-line" style="--n:${i}"><span class="cx-limg">${photoLayer(it.image||pic((it.name||'x').toLowerCase(),500+it.id,160,160))}${dIcon({name:it.name},'cart')}</span>
+      <div class="cx-lt"><b>${esc(it.name)}</b><small>${esc(it.unit||it.biz||'')}</small><em>${money(it.price*it.qty)}${it.mrp&&it.mrp>it.price?` <s>${money(it.mrp*it.qty)}</s>`:''}</em></div>
+      <div class="cx-vstep" role="group" aria-label="Quantity of ${esc(it.name)}"><button data-inc="${it.id}" aria-label="Add one">+</button><b>${it.qty}</b><button data-dec="${it.id}" aria-label="Remove one">${it.qty>1?'−':I.trash||'×'}</button></div></div>`).join('')}</div>
+    <button class="cx-more" data-nav="business" data-id="${cartBizId()||1}">${I.plus} Add more from this shop</button>
+    ${save>0?`<div class="cx-save">${gi('percent')}<span>You're saving <b>${money(save)}</b> on this order</span></div>`:''}
+    <div id="cxSugg"></div>
+    <section class="cx-bill"><div><span>Subtotal</span><b>${money(sub)}</b></div><div><span>Delivery</span><b>${delivery?money(delivery):'<em>FREE</em>'}</b></div>
+      ${delivery?`<div class="cx-free"><span>Add <b>${money(FREE-sub)}</b> for free delivery</span><i style="--p:${Math.min(100,Math.round(sub/FREE*100))}%"></i></div>`:''}
+      <div class="tot"><span>Total</span><b>${money(sub+delivery)}</b></div></section>
+    <div style="height:110px"></div>
+    <div class="cx-paybar"><div><small>Total</small><b>${money(sub+delivery)}</b></div><button class="btn" id="checkout">Checkout ${I.chev}</button></div>`;
+  backWire(el);
+  el.querySelectorAll('[data-inc]').forEach(b=>b.onclick=()=>{ setQty(Number(b.dataset.inc),1); routeRender(); });
+  el.querySelectorAll('[data-dec]').forEach(b=>b.onclick=()=>{ setQty(Number(b.dataset.dec),-1); routeRender(); });
+  $('#checkout').onclick=()=>{ track('checkout_start'); gateAction('place your order',()=>go('checkout')); };
+  api('/products?limit=10').then(ps=>{ const s=$('#cxSugg'); if(!s) return; const ids=new Set(cart.map(i=>i.id)); const l=(ps||[]).filter(p=>!ids.has(p.id)).slice(0,8);
+    if(l.length) s.innerHTML=`<div class="cx-sh px2"><h2>You might also like</h2></div><div class="cx-rail">${l.map(p=>productCard(p)).join('')}</div>`; }).catch(()=>{});
+};
+
+/* ---------- CHECKOUT (same order logic, new UI) ---------- */
+SCREENS.checkout = async (el) => {
+  if(!cart.length){ setTab('home'); return; }
+  if(!token){ toast('Please log in'); return go('login'); }
+  const a = safeParse(localStorage.getItem('ll_addr')) || { name: me?me.name:'', phone: me?me.phone:'', line:'', area: state.areaName };
+  const delivery = cartTotal()>=499?0:29; const pay = cartTotal()+delivery;
+  const bizId = cartBizId() || 1; let bizPay=['cash'], upiId=null, bizName=cart[0]?.biz||'';
+  try{ const b=await api('/businesses/'+bizId); bizPay=(b.payment_methods&&b.payment_methods.length)?b.payment_methods:['cash']; upiId=b.upi_id; bizName=b.name||bizName; }catch(e){}
+  const PM={ cash:['Cash on delivery','Pay when it arrives',GI.card], card:['Card on delivery','Swipe at your door',GI.card], upi:['UPI'+(upiId?' · '+upiId:''),'Pay the shop directly',GI.chat] };
+  const methods=bizPay.filter(m=>PM[m]); if(!methods.length) methods.push('cash');
+  const hasAddr=!!(a.line&&a.phone);
+  el.innerHTML = `${cxHead('Checkout')}
+    <div class="cx-steps"><span class="done"><i>✓</i>Cart</span><b></b><span class="on"><i>2</i>Details</span><b></b><span><i>3</i>Done</span></div>
+    <section class="cx-card"><div class="cx-ch"><h3>${I.pin} Delivery address</h3>${hasAddr?'<button id="edAddr">Edit</button>':''}</div>
+      <div id="addrView" ${hasAddr?'':'hidden'}><div class="cx-addr"><span>${GI.building}</span><div><b>${esc(a.name||'')}</b><small>${esc(a.line||'')}, ${esc(a.area||'')}</small><small>${esc(a.phone||'')}</small></div></div></div>
+      <div id="addrEdit" ${hasAddr?'hidden':''}>
+        <div class="field"><label for="cn">Full name</label><div class="input"><input id="cn" value="${esc(a.name||'')}" autocomplete="name"/></div></div>
+        <div class="field"><label for="cp">Phone</label><div class="input"><input id="cp" value="${esc(a.phone||'')}" placeholder="+91…" inputmode="tel" autocomplete="tel"/></div></div>
+        <div class="field"><label for="cl">Address</label><div class="input"><textarea id="cl" rows="2" placeholder="House / building, street, landmark">${esc(a.line||'')}</textarea></div></div>
+        <div class="field"><label for="ca">Area</label><div class="input"><input id="ca" value="${esc(a.area||state.areaName)}"/></div></div></div></section>
+    <section class="cx-card"><div class="cx-ch"><h3>${GI.card} Payment</h3><small class="muted">accepted by ${esc(bizName)}</small></div>
+      <div class="cx-pays" id="payopts">${methods.map((m,i)=>`<button class="cx-pay ${i===0?'on':''}" data-pay="${m}"><span>${PM[m][2]}</span><div><b>${esc(PM[m][0])}</b><small>${PM[m][1]}</small></div><i></i></button>`).join('')}</div></section>
+    <section class="cx-bill"><div><span>${cartCount()} item${cartCount()>1?'s':''}</span><b>${money(cartTotal())}</b></div><div><span>Delivery</span><b>${delivery?money(delivery):'<em>FREE</em>'}</b></div><div class="tot"><span>To pay</span><b>${money(pay)}</b></div></section>
+    <div style="height:110px"></div>
+    <div class="cx-paybar"><div><small>To pay</small><b>${money(pay)}</b></div><button class="btn" id="place">Place order</button></div>`;
+  backWire(el);
+  const ed=$('#edAddr'); if(ed) ed.onclick=()=>{ $('#addrView').hidden=true; $('#addrEdit').hidden=false; ed.remove(); };
+  let payMethod=methods[0];
+  el.querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>{ el.querySelectorAll('[data-pay]').forEach(x=>x.classList.toggle('on',x===b)); payMethod=b.dataset.pay; buzz(); });
+  $('#place').onclick=async()=>{
+    const name=$('#cn').value.trim(), phone=$('#cp').value.trim(), line=$('#cl').value.trim(), area=$('#ca').value.trim();
+    if(!name||!phone||!line){ $('#addrView').hidden=true; $('#addrEdit').hidden=false; return toast('Please fill name, phone and address'); }
+    localStorage.setItem('ll_addr', JSON.stringify({name,phone,line,area}));
+    const btn=$('#place'); btn.disabled=true; btn.textContent='Placing…';
+    const groups={}; cart.forEach(i=>{ (groups[i.bizId||1]=groups[i.bizId||1]||[]).push(i); });
+    try{
+      for(const [bId,items] of Object.entries(groups)){
+        const tot=items.reduce((n,i)=>n+i.qty*i.price,0)+(cartTotal()>=499?0:29);
+        await api('/orders',{method:'POST',body:{business_id:Number(bId),total:tot,item_summary:items.map(i=>`${i.qty}× ${i.name}`).join(', '),payment_method:payMethod,
+          items_json:items.map(i=>({id:i.id,name:i.name,price:i.price,qty:i.qty,image:i.image||''}))}});
+      }
+      track('order_placed',{total:pay}); const shop=cart[0]?.biz||''; cart=[]; saveCart(); updateCartBadge(); buzz(30);
+      nav.customer=[{name:'orderDone',params:{shop,total:pay}}]; routeRender();
+    }catch(e){ btn.disabled=false; btn.textContent='Place order'; toast(e.message); }
+  };
+};
+SCREENS.orderDone = (el, {shop, total}) => {
+  el.innerHTML = `<div class="cx-done"><div class="cx-burst">${Array.from({length:12},(_,i)=>`<i style="--a:${i*30}deg"></i>`).join('')}</div>
+    <div class="cx-check"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="36"/><path d="M24 41l11 11 21-23"/></svg></div>
+    <h1>Order placed!</h1><p>${esc(shop||'The shop')} has your order${total?` for <b>${money(total)}</b>`:''}. You'll see each step as they accept and prepare it.</p>
+    <button class="btn" id="trk">Track order</button><button class="cx-link" id="cont">Continue shopping</button></div>`;
+  $('#trk').onclick=()=>setTab('orders'); $('#cont').onclick=()=>setTab('home');
+};
+
+/* ---------- ORDERS + tracking ---------- */
+SCREENS.orders = async (el) => {
+  if(!token) return openLoginInline(el, 'Log in to see your orders');
+  el.innerHTML = `<header class="cx-bar"><span class="cx-ib ghost"></span><h1>${t('orders')}</h1><span class="cx-ib ghost"></span></header><div class="px stack" id="l" style="gap:14px">${skeletonRow(3)}</div>`;
+  const orders = await api('/orders');
+  const live = orders.find(o=>!['completed','rejected','cancelled'].includes(o.status));
+  const STEP={pending:0,accepted:1,preparing:2,ready:3,out_for_delivery:4,completed:5};
+  const track=(o)=>`<section class="cx-track"><div class="cx-map" aria-hidden="true">
+      <svg viewBox="0 0 340 170" preserveAspectRatio="xMidYMid slice"><g class="st"><path d="M-10 40 H350 M-10 118 H350 M60 -10 V180 M175 -10 V180 M280 -10 V180 M-10 160 L120 -10 M210 180 L350 20"/></g>
+        <path class="rt" d="M58 128 C110 128 120 60 175 62 S250 40 282 46" pathLength="1"/><circle class="a" cx="58" cy="128" r="7"/><circle class="b" cx="282" cy="46" r="9"/></svg>
+      <span class="cx-mp s">${gi('store')}</span><span class="cx-mp h">${I.home}</span></div>
+    <div class="cx-tb"><div><small>Order #${1000+o.id}</small><b>${esc(o.business)}</b></div><span class="badge warn">${o.status.replace(/_/g,' ')}</span></div>
+    ${orderTimeline(o.status)}<p class="cx-titems">${esc(o.item_summary)}</p>
+    <div class="cx-tf"><b>${money(o.total)}</b><button class="btn sm ghost" data-nav="business" data-id="${o.business_id}">${GI.chat} Contact shop</button></div></section>`;
+  const past = orders.filter(o=>o!==live);
+  $('#l').innerHTML = orders.length ? (live?track(live):'') + (past.length?`<div class="cx-sh"><h2>Past orders</h2></div>`:'') + past.map((o,i)=>`<article class="cx-po" style="--n:${i}">
+      <span class="cx-poi">${GI.package}</span><div><b>${esc(o.business)}</b><small>${esc(o.item_summary)}</small><em>${money(o.total)} · <span class="st-${o.status}">${o.status.replace(/_/g,' ')}</span></em></div>
+      <button class="cx-again" data-reorder='${esc(JSON.stringify({items:o.items_json,biz:o.business,bizId:o.business_id}))}'>Reorder</button></article>`).join('')
+    : `<div class="cx-empty"><div class="cx-eill"><span class="cx-blob"></span>${GI.package}</div><h2>No orders yet</h2><p>Your orders and live tracking will appear here.</p><button class="btn" id="shop">Find a shop</button></div>`;
+  const sh=$('#shop'); if(sh) sh.onclick=()=>setTab('home');
+  el.querySelectorAll('[data-reorder]').forEach(b=>b.onclick=()=>{ let d={}; try{ d=JSON.parse(b.dataset.reorder); }catch(e){}
+    const items = d.items ? (typeof d.items==='string'?safeParse(d.items):d.items) : null;
+    if(items && items.length){ cart=[]; items.forEach(it=>{ cart.push({id:it.id,name:it.name,price:it.price,image:it.image||'',biz:d.biz,bizId:Number(d.bizId),qty:it.qty||1}); }); saveCart(); updateCartBadge(); toast('Added to cart'); go('cart'); }
+    else if(d.bizId) go('business',{id:d.bizId}); else toast('Nothing to reorder'); });
+};
+
+/* ---------- ACCOUNT ---------- */
+SCREENS.account = async (el) => {
+  const loggedIn=!!token; const nm=loggedIn?me.name:'Guest';
+  const row=(attr,ic,label,right='')=>`<button ${attr}><span class="cx-mi">${ic}</span><b>${label}</b>${right?`<small>${right}</small>`:''}${I.chev}</button>`;
+  el.innerHTML = `<header class="cx-bar"><span class="cx-ib ghost"></span><h1>My profile</h1>${custControls()}</header>
+    <section class="cx-me">${loggedIn?`<span class="cx-mav">${esc(nm[0])}</span><div><b>${esc(nm)}</b><small>${esc(me.email||me.phone||'')}</small></div><button class="cx-ib glass" data-tabnav="profile" aria-label="Edit profile">${I.edit||I.cog}</button>`
+      :`<span class="cx-mav">${logoMark(30)}</span><div><b>Welcome to Local Link</b><small>Log in to order, save favourites and review</small></div><button class="btn sm" id="lg">Log in</button>`}</section>
+    <button class="btn block" id="installapp" style="margin:0 16px 14px;width:calc(100% - 32px);display:${window.__llInstall?'inline-flex':'none'}">${GI.download||I.plus} Install Local Link</button>
+    <div class="cx-menu">
+      ${row('data-tabnav="orders"',GI.package,'Order history')}
+      ${row('data-nav="saved"',I.heart,'My favourites')}
+      ${row('id="bulkreq"',GI.megaphone||I.tag,'Post a requirement')}
+      ${row('data-nav="offers"',GI.percent,'Offers & promo codes')}
+      ${row('data-nav="location"',I.pin,'My location',esc(state.areaName))}</div>
+    <div class="cx-menu">
+      ${row('data-nav="localinfo"',GI.building,t('localInfo'))}
+      ${row('data-nav="events"',GI.calendar,t('events'))}
+      ${row('id="langrow"',I.globe,'Language',state.lang==='ml'?'മലയാളം':'English')}
+      ${row('data-tabnav="notifications"',I.bell,'Notifications')}</div>
+    <div class="cx-menu">
+      <a href="/partner"><span class="cx-mi">${GI.store}</span><b>Sell on Local Link</b>${I.chev}</a>
+      ${row('id="help"',GI.chat,'Help & support')}
+      ${loggedIn?`<button id="out" class="danger"><span class="cx-mi">${I.logout}</span><b>Sign out</b>${I.chev}</button>`:''}</div>
+    <p class="cx-ver">${logoMark(18)} Local Link · Everything local. One place.</p>`;
+  wireCustControls(el);
+  const inst=$('#installapp'); if(inst){ document.addEventListener('ll-installable',()=>{ if(window.__llInstall) inst.style.display='inline-flex'; });
+    inst.onclick=async()=>{ const p=window.__llInstall; if(!p) return toast('Open the browser menu → “Add to Home screen”'); p.prompt(); try{ await p.userChoice; }catch(e){} window.__llInstall=null; inst.style.display='none'; }; }
+  const lg=$('#lg'); if(lg) lg.onclick=()=>go('login');
+  $('#bulkreq').onclick=()=>{ if(!token){ toast('Please log in to post a requirement'); return go('login'); } openBulkEnquiry(); };
+  $('#help').onclick=()=>openAsk('');
+  $('#langrow').onclick=()=>{ state.lang=state.lang==='en'?'ml':'en'; localStorage.setItem('ll_lang',state.lang); renderShell(); };
+  const out=$('#out'); if(out) out.onclick=async()=>{ const ok=await confirmDialog({title:'Sign out?',message:'Your cart stays on this phone.',ok:'Sign out',cancel:'Stay',danger:true,icon:I.logout}); if(!ok) return;
+    token=null; me=null; localStorage.removeItem('ll_token'); localStorage.removeItem('ll_user'); toast('Signed out'); routeRender(); };
+  el.querySelectorAll('[data-tabnav]').forEach(b=>b.onclick=()=>setTab(b.dataset.tabnav));
+};
+
+/* ---------- LOGIN (customer) — teal canvas + white card ---------- */
+SCREENS.login = (el) => {
+  el.innerHTML = `<div class="cx-auth"><div class="cx-aglow"><i></i><i></i></div>
+    <button class="cx-ib glass" id="ab" aria-label="Back">${I.back}</button>
+    <div class="cx-abrand">${logoMark(54)}<h1><span>Local</span> <span>Link</span></h1></div>
+    <section class="cx-acard"><h2>Log in</h2><p>Welcome back — order from shops around ${esc(state.areaName)}.</p>
+      <div class="field"><label for="lid">Email or phone</label><div class="input">${I.user}<input id="lid" value="customer@locallink.app" autocomplete="username"/></div></div>
+      <div class="field"><label for="lpw">Password</label><div class="input"><span class="gi">${GI.lock}</span><input id="lpw" type="password" value="password" autocomplete="current-password"/></div></div>
+      <button class="btn block" id="lsubmit">${t('login')}</button>
+      <div class="cx-or"><span>demo accounts</span></div>
+      <div class="demo-pill"><button data-d="customer@locallink.app">Customer</button><button data-d="partner@locallink.app">Partner</button><button data-d="admin@locallink.app">Admin</button></div>
+      <p class="cx-alt">New to Local Link? <a href="#" id="goreg">Create an account</a></p></section></div>`;
+  $('#ab').onclick=back; $('#goreg').onclick=(e)=>{ e.preventDefault(); go('register'); };
+  el.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{ $('#lid').value=b.dataset.d; $('#lpw').value='password'; });
+  const submit=async()=>{ const btn=$('#lsubmit'); btn.disabled=true;
+    try{ const r=await api('/auth/login',{method:'POST',body:{identifier:$('#lid').value.trim(),password:$('#lpw').value}});
+      token=r.token; me=r.user; localStorage.setItem('ll_token',token); localStorage.setItem('ll_user',JSON.stringify(me)); toast('Welcome, '+me.name.split(' ')[0]); routeAfterLogin(); }
+    catch(e){ btn.disabled=false; const c=$('.cx-acard'); c.classList.remove('fx-shake'); void c.offsetWidth; c.classList.add('fx-shake'); toast(e.message||'Login failed'); } };
+  $('#lsubmit').onclick=submit; $('#lpw').onkeydown=e=>{ if(e.key==='Enter') submit(); };
+};
+
 boot();
 })();
