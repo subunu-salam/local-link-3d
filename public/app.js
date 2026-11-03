@@ -1465,10 +1465,10 @@ function openLoginPrompt(){ toast('Please log in first'); go('login'); }
 /* Guest gate: ask a guest to sign up before ordering / seeing contact details */
 async function gateAction(actionText, cb){
   if(token){ cb(); return; }
-  const ok = await confirmDialog({ title:'Sign up to continue',
-    message:`Create a free Local Link account to ${actionText}. It only takes a moment.`,
-    ok:'Sign up', cancel:'Not now', icon: GI.user||I.user });
-  if(ok) go('register');
+  const ok = await confirmDialog({ title:'Log in to continue',
+    message:`Log in or create a free Local Link account to ${actionText}. It only takes a moment.`,
+    ok:'Continue', cancel:'Not now', icon: GI.user||I.user });
+  if(ok){ window.__llAfter=cb; go('login'); }
 }
 
 function openEnquiry(b){
@@ -1717,7 +1717,11 @@ SCREENS.register = (el) => {
 function routeAfterLogin(){
   if (me.role==='super_admin'||me.role==='admin'){ openView('admin'); return; }
   if (me.role==='business_partner'){ nav.partner=[{name:'p_dash'}]; openView('partner'); return; }
-  if (state.view==='customer'){ back(); }
+  if (state.view==='customer'){
+    // leave the auth screens and continue what the user was doing
+    const st=nav.customer; while(st.length>1 && ['login','register'].includes(st[st.length-1].name)) st.pop();
+    const after=window.__llAfter; window.__llAfter=null;
+    renderShell(); if(typeof after==='function') setTimeout(()=>{ try{ after(); }catch(e){} },350); return; }
   renderShell();
 }
 
@@ -3523,7 +3527,7 @@ SCREENS.account = async (el) => {
   wireCustControls(el);
   const inst=$('#installapp'); if(inst) inst.onclick=async()=>{ const p=window.__llInstall; if(!p) return; p.prompt(); try{ await p.userChoice; }catch(e){} window.__llInstall=null; inst.style.display='none'; };
   const lg=$('#lg'); if(lg) lg.onclick=()=>go('login');
-  const br=$('#bulkreq'); if(br) br.onclick=()=>{ if(typeof openBulkReq==='function') openBulkReq(); else go('offers'); };
+  const br=$('#bulkreq'); if(br) br.onclick=()=>gateAction('post a requirement',()=>openBulkEnquiry());
   $('#help').onclick=()=>openAsk('',{voice:false});
   $('#langrow').onclick=()=>{ state.lang=state.lang==='en'?'ml':'en'; localStorage.setItem('ll_lang',state.lang); renderShell(); };
   const out=$('#out'); if(out) out.onclick=async()=>{ const ok=await confirmDialog({title:'Log out?',message:'Your cart stays on this phone.',ok:'Log out',cancel:'Stay',danger:true,icon:I.logout}); if(!ok) return;
@@ -3731,7 +3735,7 @@ SCREENS.offers=async(el)=>{
   $('#l').innerHTML=of.length?of.map((o,i)=>`<div class="lw-cpn" style="--n:${Math.min(i,8)}"><div class="lw-cl"><b>${esc(o.discount_label||'OFFER')}</b><small>${esc(o.business||'')}</small></div><div class="lw-cr"><b>${esc(o.title)}</b><p>${esc(o.description||'')}</p>
       <div class="lw-cact">${o.code?`<button class="lw-code" data-code="${esc(o.code)}">${esc(o.code)} <span>Copy</span></button>`:''}<button class="lv-btn sm" data-nav="business" data-id="${o.business_id}">Shop ${I.chev}</button></div></div></div>`).join('')
     :`<div class="lv-empty"><div class="lv-eill"><span class="lv-halo"></span>${GI.percent}</div><h2>No offers right now</h2><p>Check back soon — local shops add deals every week.</p></div>`;
-  el.querySelectorAll('[data-code]').forEach(b=>b.onclick=()=>{ try{ navigator.clipboard.writeText(b.dataset.code); }catch(e){} b.classList.add('ok'); b.querySelector('span').textContent='Copied'; buzz(); toast('Code copied — apply it at checkout'); });
+  el.querySelectorAll('[data-code]').forEach(b=>b.onclick=()=>{ try{ const w=navigator.clipboard&&navigator.clipboard.writeText(b.dataset.code); if(w&&w.catch) w.catch(()=>{}); }catch(e){} b.classList.add('ok'); b.querySelector('span').textContent='Copied'; buzz(); toast('Code copied — apply it at checkout'); });
 };
 
 /* ---------- COMMUNITY ---------- */
@@ -3867,7 +3871,7 @@ SCREENS.category=async(el,p)=>{ await _lvCat(el,p); const list=$('#list'); if(!l
   const mapBox=document.createElement('div'); mapBox.className='lw-mapv'; mapBox.hidden=true; list.before(mapBox);
   const drawMap=()=>{ const rows=[...list.querySelectorAll('.lv-srow')].slice(0,12);
     mapBox.innerHTML=`<svg viewBox="0 0 340 220" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g class="st"><path d="M-10 50H350M-10 130H350M-10 190H350M60 -10V230M170 -10V230M280 -10V230M-10 220L140 -10M200 230L350 30"/></g><g class="pk"><rect x="190" y="64" width="70" height="50" rx="10"/><rect x="18" y="146" width="36" height="30" rx="8"/></g></svg>
-      <span class="lw-me">${I.user}</span>${rows.map((r,i)=>{ let h=0; const s=r.querySelector('b').textContent; for(const c of s) h=(h*31+c.charCodeAt(0))%9973; const x=12+(h%76), y=12+((h>>3)%70);
+      <span class="lw-me">${I.user}</span>${rows.map((r,i)=>{ let h=0; const s=r.querySelector('b').textContent; for(const c of s) h=(h*31+c.charCodeAt(0))%9973; const x=10+(h%80), y=24+((h>>3)%58);
       return `<button class="lw-mpin" style="left:${x}%;top:${y}%;--n:${i}" data-i="${i}"><span>${i+1}</span></button>`; }).join('')}
       <p class="lw-mnote">Pins show stores in ${esc(state.areaName)} · tap a pin</p><div class="lw-mcard" id="mc"></div>`;
     mapBox.querySelectorAll('.lw-mpin').forEach(b=>b.onclick=()=>{ mapBox.querySelectorAll('.lw-mpin').forEach(x=>x.classList.toggle('on',x===b)); const c=$('#mc'); c.innerHTML=rows[b.dataset.i].outerHTML; c.classList.remove('in'); void c.offsetWidth; c.classList.add('in'); buzz(); }); };
@@ -3885,8 +3889,8 @@ SCREENS.home=async(el)=>{ await _lvHome(el);
     <button class="lw-comm" data-nav="community"><span class="lw-cav">${['A','R','S'].map(x=>`<i>${x}</i>`).join('')}</span><span><b>Your Neighbourhood</b><small>New shops, events, reviews &amp; local news</small></span>${I.chev}</button>`;
   anchor.insertAdjacentHTML('afterend',html);
   const rc=$('#rclr'); if(rc) rc.onclick=()=>{ lwSet('ll_recent',[]); rc.closest('.lv-sec').remove(); };
-  const sv=await api('/services').catch(()=>[]); const box=$('#lwSvc'); if(box) box.innerHTML=sv.slice(0,3).map((s,i)=>`<button class="lv-srow" data-svc="${esc(s.name)}" data-bid="${s.business_id}" style="--n:${i}"><span class="lv-rimg">${dIcon(s,'wrench')}</span><span class="lv-rt"><b>${esc(s.name)}</b><span class="lv-sm"><span>from <b>${money(s.starting_price)}</b>${s.business?' · '+esc(s.business):''}</span></span></span><span class="lv-req">Book</span></button>`).join('');
-  el.querySelectorAll('[data-svc]').forEach(b=>b.onclick=async e=>{ if(e.target.closest('.lv-req')){ e.stopPropagation(); try{ lwBook(await api('/businesses/'+b.dataset.bid),b.dataset.svc); }catch(x){ toast(x.message); } } else go('business',{id:Number(b.dataset.bid)}); });
+  const sv=await api('/services').catch(()=>[]); const box=$('#lwSvc'); if(box) box.innerHTML=sv.slice(0,3).map((s,i)=>`<div class="lv-srow" style="--n:${i}"><button class="lw-svcgo" data-nav="business" data-id="${s.business_id}"><span class="lv-rimg">${dIcon(s,'wrench')}</span><span class="lv-rt"><b>${esc(s.name)}</b><span class="lv-sm"><span>from <b>${money(s.starting_price)}</b>${s.business?' · '+esc(s.business):''}</span></span></span></button><button class="lv-req" data-svc="${esc(s.name)}" data-bid="${s.business_id}">Book</button></div>`).join('');
+  el.querySelectorAll('.lv-req[data-svc]').forEach(b=>b.onclick=async()=>{ try{ lwBook(await api('/businesses/'+b.dataset.bid),b.dataset.svc); }catch(x){ toast(x.message); } });
 };
 
 /* ---------- CHECKOUT: pickup / delivery, coupon, note, per-store split ---------- */
@@ -3906,7 +3910,7 @@ SCREENS.checkout=async(el)=>{ await _lvChk(el); const place=$('#place'); if(!pla
   const redraw=()=>{ const pay=Math.max(0,base-disc+deliv()); tot.textContent=money(pay); tot.classList.remove('lw-tick'); void tot.offsetWidth; tot.classList.add('lw-tick');
     bill.innerHTML=`<div><span>Items</span><b>${money(base)}</b></div>${disc?`<div class="lw-dl"><span>Coupon ${esc(code)}</span><b>−${money(disc)}</b></div>`:''}<div><span>${ful==='pickup'?'Pickup':'Delivery'}</span><b>${deliv()?money(deliv()):'<em>FREE</em>'}</b></div><div class="tot"><span>To pay</span><b>${money(pay)}</b></div>`; };
   redraw();
-  $('#ful').onclick=e=>{ const b=e.target.closest('[data-f]'); if(!b) return; ful=b.dataset.f; $('#ful').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); $('#ful').classList.toggle('r',ful==='pickup'); $('#pk').hidden=ful!=='pickup'; const ar=$('#addrRow'); if(ar&&!ar.hidden&&ful==='pickup') ar.classList.add('dim'); else ar&&ar.classList.remove('dim'); buzz(); redraw(); };
+  $('#ful').onclick=e=>{ const b=e.target.closest('[data-f]'); if(!b) return; ful=b.dataset.f; $('#ful').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); $('#ful').classList.toggle('r',ful==='pickup'); $('#pk').hidden=ful!=='pickup'; el.querySelectorAll('#addrRow,#addrEdit').forEach(x=>x.classList.toggle('lw-off',ful==='pickup')); buzz(); redraw(); };
   const apply=c=>{ c=(c||$('#cc').value).trim().toUpperCase(); const o=avail.find(x=>(x.code||'').toUpperCase()===c); if(!o){ disc=0; code=''; redraw(); const i=$('#cc').closest('.lv-stxt'); i.classList.remove('fx-shake'); void i.offsetWidth; i.classList.add('fx-shake'); return toast(c?'That code isn’t valid for this shop':'Enter a code'); }
     const pct=lwPct(o.discount_label); disc=pct?Math.round(base*pct/100):0; code=c; $('#cc').value=c; redraw(); buzz(20); toast(disc?`${c} applied — you save ${money(disc)}`:`${c} applied — the shop will apply this offer`); };
   $('#ccgo').onclick=()=>apply(); el.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>apply(b.dataset.cc));

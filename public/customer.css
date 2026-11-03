@@ -717,3 +717,36 @@ body.cdark .lw-chero{filter:brightness(.95)} body.cdark .lw-refer,body.cdark .lw
 body.cdark .lw-trend button{background:var(--surface-2) !important; color:var(--ink) !important}
 .lw-ai{position:absolute; inset:0; min-height:0; overflow:hidden}
 .lw-loc .lw-sbox{flex:none}
+/* regression fix: the nav holder ignores taps, so the dock and cart bar must opt back in */
+#navholder .lvdock,#navholder .qc-cartwrap{pointer-events:auto}
+/* product page: keep the floating cart bar above the product action bar */
+body[data-app="customer"] .qc-cartwrap.onpd{bottom:calc(96px + var(--bottom))}
+/* regression fixes */
+body[data-app="customer"] .phone .screen{overflow-x:hidden}
+.lv-fbar,.lv-pbar{position:sticky !important; left:auto; right:auto; margin-top:-24px}
+.lv-fbar{bottom:0} .lv-pbar{bottom:0}
+.lw-x svg{width:15px; height:15px; vertical-align:-2px}
+.lw-oextra{flex-wrap:wrap}
+body[data-app="customer"] .phone .screen:has(> .lv-fbar),body[data-app="customer"] .phone .screen:has(> .lv-pbar){padding-bottom:0}
+.screen:has(> .lv-fbar) > div[style*="height:110px"]{height:16px !important}
+.lv-psheet > div[style*="height:120px"]{height:24px !important}
+.lv-fbar,.lv-pbar{margin-top:0}
+.lw-svcgo{flex:1; min-width:0; display:flex; align-items:center; gap:12px; text-align:left}
+.lv-hbar .lv-cb.fav{position:static !important; inset:auto !important}
+/* past orders: icon | details | reorder, then a full-width action row */
+.lv-prow{display:grid !important; grid-template-columns:44px minmax(0,1fr) auto; align-items:center; gap:10px 12px}
+.lv-prow .lv-oimg{width:44px; height:44px}
+.lw-prx{grid-column:1 / -1; padding-left:56px; justify-content:space-between}
+.lw-prx .lw-x{min-height:36px}
+.lw-off{display:none !important}
+body[data-app="customer"] .qc-thumbs i:not(:has(img)){display:none}
+.lw-mcard{z-index:3}
+body[data-app="customer"] .sheet .sh-head h3{font-family:inherit !important; font-style:normal !important; text-transform:none !important; font-size:18px !important; font-weight:800; letter-spacing:-.02em}
+/* keep the last rows reachable above the floating cart bar */
+body[data-app="customer"] .phone:has(#qcCartBar:not([hidden])) .screen{padding-bottom:180px}
+/* dark mode contrast */
+body.cdark :is(.lv-mi,.lv-ri,.lv-oimg,.lw-ri,.lv-rimg,.lw-li > span,.lw-nt > span,.lw-adr > span,.lv-sold > span,.lv-perks .gi,.lw-areas button > span,.lw-sugg button span,.lv-sacts > *,.lv-req,.lv-mic,.cx-mmic,.lw-mic){color:#7FE0CF !important}
+body.cdark .lv-sph,body.cdark .lv-cmini button > span{background:var(--surface-2)}
+body.cdark .lv-pill em{color:#7FE0CF}
+body.cdark .lvdock .vtab.on{color:#7FE0CF}
+body.cdark .lv-ost{color:#7FE0CF}
