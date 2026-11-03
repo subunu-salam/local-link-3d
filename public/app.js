@@ -440,6 +440,7 @@ async function routeRender(){
   catch(e){ screen.innerHTML = errorState(e.message, ()=>routeRender()); }
   screen.scrollTop = 0;                 // and again after async data loads
   renderBottomNav();
+  if(state.view==='customer') try{ cxMotion(screen); }catch(e){}
 }
 
 /* ---------------- reusable components ---------------- */
@@ -3128,6 +3129,84 @@ SCREENS.login = (el) => {
     catch(e){ btn.disabled=false; const c=$('.cx-acard'); c.classList.remove('fx-shake'); void c.offsetWidth; c.classList.add('fx-shake'); toast(e.message||'Login failed'); } };
   $('#lsubmit').onclick=submit; $('#lpw').onkeydown=e=>{ if(e.key==='Enter') submit(); };
 };
+
+
+/* ================= CUSTOMER MOTION LAYER ================= */
+const CX_TABS=['home','categories','orders','account'];
+let cxIndX=null;
+function cxMotion(screen){
+  if(state.view!=='customer') return;
+  // 1. scroll reveal
+  const rv=screen.querySelectorAll('.cx-sec,.cx-store,.cx-po,.cx-menu,.cx-card,.cx-bill,.cx-ask,.cx-track,.brow,.cx-grid > *');
+  if('IntersectionObserver' in window){
+    const io=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } }),{root:screen,rootMargin:'0px 0px -6% 0px'});
+    rv.forEach((n,i)=>{ n.classList.add('rv'); n.style.setProperty('--rd',(i%4)*60+'ms'); io.observe(n); });
+  }
+  // 2. depth on horizontal rails
+  screen.querySelectorAll('.cx-offers,.cx-rail,.cx-cats').forEach(r=>{
+    if(r.__d) return; r.__d=1;
+    const f=()=>{ const rb=r.getBoundingClientRect(), c=rb.left+rb.width/2;
+      [...r.children].forEach(ch=>{ const b=ch.getBoundingClientRect(); const d=Math.max(-1,Math.min(1,((b.left+b.width/2)-c)/rb.width)); ch.style.setProperty('--d',d.toFixed(3)); }); };
+    r.addEventListener('scroll',()=>requestAnimationFrame(f),{passive:true}); setTimeout(f,60); new MutationObserver(()=>setTimeout(f,30)).observe(r,{childList:true});
+  });
+  // 3. home: compact sticky bar once the hero scrolls away
+  const hero=screen.querySelector('.cx-hero');
+  if(hero && !screen.querySelector('.cx-mini')){
+    const mini=document.createElement('div'); mini.className='cx-mini';
+    mini.innerHTML=`<span class="cx-mlogo">${logoMark(26)}</span><button class="cx-msearch" aria-label="Search">${I.search||''}<span>Search shops, food, services…</span></button><button class="cx-mmic" aria-label="Ask by voice">${GI.mic}</button>`;
+    screen.prepend(mini);
+    mini.querySelector('.cx-msearch').onclick=()=>{ const t=screen.querySelector('.cx-stxt'); t?t.click():go('search'); };
+    mini.querySelector('.cx-mmic').onclick=()=>{ const m=screen.querySelector('#askHome'); m&&m.click(); };
+    const onS=()=>{ const y=screen.scrollTop, h=hero.offsetHeight; hero.style.setProperty('--hs',Math.min(1,y/h).toFixed(3)); mini.classList.toggle('on',y>h-70); };
+    screen.addEventListener('scroll',()=>requestAnimationFrame(onS),{passive:true});
+  }
+  cxDockInd();
+}
+function cxDockInd(){
+  const nav=document.querySelector('.cxdock'); if(!nav) return;
+  const on=nav.querySelector('.vtab.on'); let ind=nav.querySelector('.cx-ind');
+  if(!ind){ ind=document.createElement('i'); ind.className='cx-ind'; nav.prepend(ind); }
+  if(!on){ ind.style.opacity=0; return; }
+  const x=on.offsetLeft+on.offsetWidth/2-24;
+  ind.style.transition='none'; ind.style.transform=`translateX(${cxIndX==null?x:cxIndX}px)`; void ind.offsetWidth;
+  ind.style.transition=''; ind.style.opacity=1; ind.style.transform=`translateX(${x}px)`; cxIndX=x;
+}
+// tap ripple + light haptic, fly-to-cart, edge-swipe back, swipe between tabs
+(function(){
+  document.addEventListener('pointerdown',e=>{
+    if(state.view!=='customer') return;
+    const b=e.target.closest('.cx-cat,.cx-ccard,.cx-store,.cx-offer,.cx-menu > *,.cx-pay,.cx-chip,.btn,.cx-po,.vtab,.qc-add,.cx-again,.cx-ask');
+    if(!b) return; const r=b.getBoundingClientRect(); const s=document.createElement('span'); s.className='cx-rip';
+    const d=Math.max(r.width,r.height)*1.2; s.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;
+    if(getComputedStyle(b).position==='static') b.style.position='relative'; b.style.overflow='hidden'; b.appendChild(s); setTimeout(()=>s.remove(),600);
+  },{passive:true});
+  document.addEventListener('click',e=>{
+    if(state.view!=='customer') return;
+    const a=e.target.closest('.qc-add[data-add]'); if(!a) return;
+    try{ navigator.vibrate&&navigator.vibrate(12); }catch(_){}
+    const card=a.closest('.qc-card,.cx-line,article,.pd-sheet'); const src=(card&&card.querySelector('.pimg,img'))||a;
+    const r=src.getBoundingClientRect(); setTimeout(()=>{
+      const t=document.querySelector('#qcCartBar:not([hidden]) .qc-cartbar, .cxdock [data-tabnav="orders"]'); if(!t) return;
+      const tr=t.getBoundingClientRect(); const f=document.createElement('div'); f.className='cx-fly';
+      const img=card&&card.querySelector('img'); if(img) f.style.backgroundImage=`url("${img.src}")`;
+      f.style.left=(r.left+r.width/2-22)+'px'; f.style.top=(r.top+r.height/2-22)+'px'; document.body.appendChild(f);
+      requestAnimationFrame(()=>{ f.style.transform=`translate(${tr.left+30-(r.left+r.width/2)}px,${tr.top+tr.height/2-(r.top+r.height/2)}px) scale(.35)`; f.style.opacity=.3; });
+      setTimeout(()=>{ f.remove(); t.classList.remove('cx-bump'); void t.offsetWidth; t.classList.add('cx-bump'); },560);
+    },60);
+  },true);
+  let sx=null, sy=0, edge=false, inRail=false;
+  document.addEventListener('touchstart',e=>{ if(state.view!=='customer') return; const t=e.touches[0]; sx=t.clientX; sy=t.clientY;
+    const ph=document.querySelector('.phone'); const pl=ph?ph.getBoundingClientRect().left:0; edge=(sx-pl)<24;
+    inRail=!!e.target.closest('.cx-offers,.cx-rail,.cx-cats,.cx-chips,.pt-kpis,input,textarea,.sheet,[data-noswipe]'); },{passive:true});
+  document.addEventListener('touchend',e=>{ if(sx===null||state.view!=='customer') return; const t=e.changedTouches[0]; const dx=t.clientX-sx, dy=t.clientY-sy; sx=null;
+    if(Math.abs(dx)<70||Math.abs(dy)>Math.abs(dx)*.6) return;
+    const cur=(stack()[stack().length-1]||{}).name;
+    if(edge && dx>0 && stack().length>1){ back(); return; }
+    if(inRail||document.querySelector('.sheet')) return;
+    const i=CX_TABS.indexOf(cur); if(i<0||stack().length>1) return;
+    const n=i+(dx<0?1:-1); if(n>=0&&n<CX_TABS.length){ setTab(CX_TABS[n]); }
+  },{passive:true});
+})();
 
 boot();
 })();
