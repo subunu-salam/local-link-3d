@@ -1,522 +1,489 @@
 /* =====================================================================
-   Local Link — CUSTOMER APP (high-fidelity rebuild)
-   Same scheme and logo as the partner app: teal #0C8F82 / deep #0A5C55,
-   coral #F0523A, sun #F7C948, pin-and-rings logo + italic wordmark.
-   Mobile rules: 12px min text, 15px body, ≥44px targets, 8/16/24 spacing.
+   Local Link — CUSTOMER APP v2 (lv)
+   Rebuilt from the Local Link customer UI kit. Teal + coral, cream accents,
+   pin-and-rings logo. 12px min text, ≥44px targets, 8/16/24 spacing.
    ===================================================================== */
-body[data-app="customer"]{font-size:15px}
-body[data-app="customer"] .phone{background:#F6F8F7}
-body[data-app="customer"].cdark .phone{background:var(--bg)}
-body[data-app="customer"] .phone .screen{padding-bottom:110px}
-.px2{padding-left:16px; padding-right:16px}
+body[data-app="customer"]{--lv-deep:#0A5C55; --lv-teal:#0C8F82; --lv-mint:#E3F5F1; --lv-cream:#FFF3E2; --lv-coral:#F26B3A; --lv-bg:#F5F8F7; font-size:15px}
+body[data-app="customer"] .phone{background:var(--lv-bg)}
+body[data-app="customer"].cdark{--lv-mint:#173431; --lv-cream:#2A241B; --lv-bg:var(--bg)}
+body[data-app="customer"] .phone .screen{padding-bottom:104px}
+body[data-app="customer"] h1,body[data-app="customer"] h2{letter-spacing:-.02em}
 
 /* ---------- screen transitions ---------- */
 body[data-app="customer"] .phone .screen > *{animation:none}
-.screen.cx-fwd > *{animation:cxFwd .42s var(--ease) both}
-.screen.cx-back > *{animation:cxBack .42s var(--ease) both}
-.screen.cx-tab > *{animation:cxTab .38s var(--ease) both}
-.screen.cx-fwd > *:nth-child(2),.screen.cx-tab > *:nth-child(2){animation-delay:.04s} .screen.cx-fwd > *:nth-child(3),.screen.cx-tab > *:nth-child(3){animation-delay:.08s}
-.screen.cx-fwd > *:nth-child(4),.screen.cx-tab > *:nth-child(4){animation-delay:.12s} .screen.cx-fwd > *:nth-child(n+5),.screen.cx-tab > *:nth-child(n+5){animation-delay:.16s}
-@keyframes cxFwd{from{opacity:0; transform:translateX(28px)}}
-@keyframes cxBack{from{opacity:0; transform:translateX(-28px)}}
-@keyframes cxTab{from{opacity:0; transform:translateY(12px)}}
+.screen.cx-fwd{animation:lvFwd .45s var(--ease) both}
+.screen.cx-back{animation:lvBack .45s var(--ease) both}
+.screen.cx-tab > *{animation:lvTab .45s var(--ease) both}
+.screen.cx-tab > *:nth-child(2){animation-delay:.04s} .screen.cx-tab > *:nth-child(3){animation-delay:.08s} .screen.cx-tab > *:nth-child(n+4){animation-delay:.12s}
+@keyframes lvFwd{from{opacity:.2; transform:translateX(36px)}}
+@keyframes lvBack{from{opacity:.2; transform:translateX(-36px)}}
+@keyframes lvTab{from{opacity:0; transform:translateY(14px)}}
+.lv-tin{animation:lvTab .4s var(--ease) both}
 
-/* ---------- top bar (inner screens) ---------- */
-.cx-bar{position:sticky; top:0; z-index:9; display:grid; grid-template-columns:44px 1fr auto; align-items:center; gap:8px; padding:calc(12px + var(--top)) 16px 12px;
-  background:color-mix(in srgb,#F6F8F7 92%,transparent); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px)}
-body.cdark .cx-bar{background:color-mix(in srgb,var(--bg) 92%,transparent)}
-.cx-bar h1{text-align:center; font-family:var(--display); font-style:italic; text-transform:uppercase; font-weight:800; font-size:24px; line-height:1; letter-spacing:0}
-.cx-bar .mini-ctrl,.cx-bar .clang{justify-self:end}
-.cx-ib{width:44px; height:44px; flex:none; border-radius:14px; display:grid; place-items:center; background:var(--surface); color:var(--ink); box-shadow:var(--shadow); transition:transform .25s var(--spring)}
-.cx-ib:active{transform:scale(.9)}
-.cx-ib svg{width:20px; height:20px}
-.cx-ib.ghost{background:transparent; box-shadow:none}
-.cx-ib.glass{background:rgba(255,255,255,.18); color:#fff; box-shadow:none; border:1px solid rgba(255,255,255,.25); backdrop-filter:blur(8px)}
-.cx-cnt{min-width:44px; height:44px; border-radius:14px; display:grid; place-items:center; background:var(--brand); color:#fff; font-weight:800}
+/* ---------- shared atoms ---------- */
+.lv-btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:52px; padding:0 20px; border-radius:16px; background:var(--lv-deep); color:#fff; font-weight:800; font-size:15.5px; box-shadow:0 12px 24px -14px rgba(10,92,85,.9); transition:transform .25s var(--spring), filter .2s}
+.lv-btn:active{transform:scale(.96)} .lv-btn svg{width:17px; height:17px}
+.lv-btn.ghost{background:var(--surface); color:var(--lv-deep); box-shadow:inset 0 0 0 1.5px var(--line)}
+.lv-btn.soft{background:var(--lv-mint); color:var(--lv-deep); box-shadow:none}
+.lv-btn.sm{width:auto; min-height:44px; padding:0 16px; font-size:14px}
+.lv-btn[disabled]{opacity:.55}
+.lv-btn.busy{position:relative; color:transparent !important} .lv-btn.busy::after{content:""; position:absolute; width:20px; height:20px; border-radius:50%; border:2.5px solid #fff; border-right-color:transparent; animation:spin .7s linear infinite}
+.lv-ib{width:44px; height:44px; flex:none; border-radius:14px; display:grid; place-items:center; background:var(--surface); color:var(--ink); box-shadow:var(--shadow); transition:transform .25s var(--spring)}
+.lv-ib:active{transform:scale(.9)} .lv-ib svg{width:20px; height:20px}
+.lv-rate{display:inline-flex; align-items:center; gap:3px; font-size:12.5px; color:var(--ink2)} .lv-rate svg{width:13px; height:13px; fill:#F5B400; color:#F5B400} .lv-rate b{color:var(--ink)} .lv-rate small{color:var(--muted); font-size:12px}
+.lv-new{font-size:12px; font-weight:800; color:#2F5FD0; background:#E8EEFF; border-radius:6px; padding:1px 6px}
+.lv-open{display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:700; color:var(--muted); background:var(--surface-2); border-radius:999px; padding:2px 8px}
+.lv-open::before{content:""; width:6px; height:6px; border-radius:50%; background:currentColor}
+.lv-open.on{color:#0A8F55; background:#E3F7EC} .lv-open.on::before{animation:fcLive 1.6s ease-out infinite}
+.lv-dist{display:inline-flex; align-items:center; gap:3px; font-size:12px; color:var(--muted)} .lv-dist svg,.lv-dist .gi svg{width:12px; height:12px}
+.lv-sm{display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0} .lv-sm > i{font-style:normal; color:var(--faint)} .lv-sm > span{font-size:12.5px; color:var(--muted)}
+.lv-heart{position:absolute; top:8px; right:8px; z-index:3; width:34px; height:34px; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.92); color:var(--muted); box-shadow:0 4px 10px -4px rgba(0,0,0,.3); transition:transform .3s var(--spring)}
+.lv-heart svg{width:16px; height:16px} .lv-heart.on{color:var(--lv-coral)} .lv-heart.on svg{fill:currentColor; animation:pop .4s var(--spring)}
+.lv-heart.flat{position:static; background:transparent; box-shadow:none; width:44px; height:44px}
+.lv-empty-s{padding:12px 16px; font-size:14px; color:var(--muted)}
 
-/* ---------- section heads ---------- */
-.cx-sec{margin-top:24px}
-.cx-sh{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:0 16px 12px}
-.cx-sh h2{font-size:18px; font-weight:800; letter-spacing:-.03em}
-.cx-sh.px2{padding-top:20px}
-.cx-see{min-height:44px; padding:0 4px; color:var(--brand); font-weight:700; font-size:14px}
-.cx-rail{display:flex; gap:12px; overflow-x:auto; padding:2px 16px 20px; scroll-snap-type:x mandatory; scrollbar-width:none}
-.cx-rail::-webkit-scrollbar{display:none}
-.cx-rail > *{flex:none; scroll-snap-align:start}
+/* ---------- headers ---------- */
+.lv-bar{position:sticky; top:0; z-index:9; display:flex; align-items:center; gap:12px; padding:calc(10px + var(--top)) 16px 10px; background:color-mix(in srgb,var(--lv-bg) 90%,transparent); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px)}
+.lv-bar h1{flex:1; font-size:21px; font-weight:800}
+.lv-bar .lv-ib:first-child{box-shadow:none; background:transparent; margin-left:-8px}
+.lv-right{display:flex; gap:8px}
+.lv-tbar{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:calc(16px + var(--top)) 16px 8px}
+.lv-tbar h1{font-size:26px; font-weight:800}
+.lv-sh{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:20px 16px 12px}
+.lv-sh.flush{padding-left:0; padding-right:0}
+.lv-sh h2{font-size:18px; font-weight:800} .lv-sh small{font-size:12.5px; color:var(--muted)}
+.lv-see{display:inline-flex; align-items:center; gap:2px; min-height:44px; color:var(--lv-teal); font-weight:700; font-size:14px} .lv-see svg{width:14px; height:14px}
+.lv-sec{margin-top:8px}
+.lv-rail{display:flex; gap:12px; overflow-x:auto; padding:2px 16px 12px; scroll-snap-type:x mandatory; scrollbar-width:none; scroll-padding:0 16px}
+.lv-rail.flush{margin:0 -16px}
+.lv-rail::-webkit-scrollbar,.lv-banners::-webkit-scrollbar,.lv-tabs::-webkit-scrollbar,.lv-chips::-webkit-scrollbar,.lv-cmini::-webkit-scrollbar,.lv-utabs::-webkit-scrollbar{display:none}
+.lv-rail > *{flex:none; scroll-snap-align:start}
+.lv-rail.lv-swap > *{opacity:0; transform:translateX(24px)}
+.lv-list{display:grid; gap:10px; padding:0 16px}
 
-/* ---------- HOME hero ---------- */
-.cx-hero{position:relative; isolation:isolate; overflow:hidden; padding:calc(14px + var(--top)) 16px 20px; border-radius:0 0 32px 32px; color:#fff;
-  background:linear-gradient(160deg,#0C8F82,#0A5C55); box-shadow:0 20px 40px -24px rgba(7,63,58,.8)}
-.cx-hero > img.ph{z-index:-2; opacity:0; transform:scale(1.1); animation:none}
-.cx-hero > img.ph.on{opacity:.55; transform:scale(1.04); transition:opacity .8s var(--ease), transform 8s ease-out}
-.cx-hshade{position:absolute; inset:0; z-index:-1; background:linear-gradient(180deg,rgba(7,63,58,.55) 0%,rgba(10,92,85,.82) 55%,#0A5C55 100%)}
-.cx-htop{display:flex; align-items:center; gap:10px}
-.cx-av{width:44px; height:44px; flex:none; border-radius:50%; display:grid; place-items:center; background:#fff; color:var(--brand); font-weight:800; font-size:17px; box-shadow:0 0 0 3px rgba(255,255,255,.3)}
-.cx-loc{display:grid; text-align:left; color:#fff; min-width:0; min-height:44px; align-content:center}
-.cx-loc small{font-size:12px; color:#CFF1EC}
-.cx-loc b{display:flex; align-items:center; gap:4px; font-size:15px; font-weight:800; white-space:nowrap}
-.cx-loc b svg{width:14px; height:14px} .cx-loc b > svg:first-child{fill:#FFD86B}
-.cx-htop .hicon{width:40px; height:40px; background:rgba(255,255,255,.16); color:#fff; box-shadow:none}
-.cx-htop .clang{background:rgba(255,255,255,.16); box-shadow:none; border:0}
-.cx-htop .clang button{color:#fff; min-height:34px} .cx-htop .clang button.on{background:#fff; color:var(--brand); box-shadow:none}
-.cx-hello{margin-top:20px}
-.cx-brandline{display:inline-flex; align-items:center; gap:5px; font-family:var(--display); font-style:italic; font-weight:800; font-size:15px; text-transform:uppercase; background:rgba(255,255,255,.14); border-radius:999px; padding:4px 10px 4px 5px}
-.cx-brandline b:last-child{color:#FFD86B}
-.cx-hello h1{margin-top:10px; font-family:var(--display); font-style:italic; text-transform:uppercase; font-weight:800; font-size:34px; line-height:.95; letter-spacing:0; color:#fff; animation:rise .6s var(--ease) .1s both}
-.cx-search{display:flex; align-items:center; gap:8px; margin-top:16px; padding:5px 5px 5px 14px; border-radius:18px; background:#fff; box-shadow:0 16px 30px -16px rgba(0,0,0,.55)}
-.cx-stxt{flex:1; min-width:0; display:flex; align-items:center; gap:8px; min-height:44px; color:#6E777E; font-size:15px; text-align:left; white-space:nowrap; overflow:hidden}
-.cx-stxt svg{width:19px; height:19px; flex:none}
-.cx-mic{position:relative; width:44px; height:44px; flex:none; border-radius:14px; display:grid; place-items:center; background:var(--hot); color:#fff; box-shadow:0 8px 16px -8px rgba(240,82,58,.8)}
-.cx-mic svg{width:20px; height:20px}
-.cx-mic::after{content:""; position:absolute; inset:-4px; border-radius:17px; border:2px solid rgba(240,82,58,.4); animation:ringpulse 2.2s ease-out infinite}
+/* ---------- HOME header ---------- */
+.lv-head{position:relative; padding:calc(12px + var(--top)) 16px 14px; border-radius:0 0 28px 28px; color:#fff; overflow:hidden; isolation:isolate;
+  background:radial-gradient(320px 220px at 110% -10%, rgba(44,203,186,.45), transparent 70%), linear-gradient(165deg,#0E7468,#0A5C55 60%,#084C46); box-shadow:0 18px 34px -24px rgba(7,63,58,.9)}
+.lv-head::after{content:""; position:absolute; right:-70px; top:-60px; width:220px; height:220px; border-radius:50%; border:1.5px dashed rgba(255,255,255,.12); z-index:-1; animation:spin 40s linear infinite}
+.lv-htop{display:flex; align-items:center; gap:8px}
+.lv-brand{display:inline-flex; align-items:center; gap:6px; font-family:var(--display); font-style:italic; font-weight:800; font-size:22px; text-transform:uppercase; animation:rise .5s var(--ease) both}
+.lv-brand b:last-of-type{color:#FFD86B}
+.lv-hb{position:relative; width:42px; height:42px; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.14); color:#fff}
+.lv-hb svg{width:20px; height:20px} .lv-dot{position:absolute; top:9px; right:10px; width:8px; height:8px; border-radius:50%; background:var(--lv-coral); box-shadow:0 0 0 2px #0A5C55; animation:fcLive 1.8s ease-out infinite}
+.lv-av{width:42px; height:42px; border-radius:50%; display:grid; place-items:center; background:linear-gradient(135deg,#FFD86B,#F7A928); color:#5A3A00; font-weight:800; font-size:17px; box-shadow:0 0 0 2.5px rgba(255,255,255,.6)} .lv-av svg{width:20px; height:20px}
+.lv-htop .clang{background:rgba(255,255,255,.14); border:0; box-shadow:none} .lv-htop .clang button{color:#fff; min-height:34px} .lv-htop .clang button.on{background:#fff; color:var(--lv-deep)}
+.lv-htop .hicon{width:40px; height:40px; background:rgba(255,255,255,.14); color:#fff; box-shadow:none}
+.lv-loc{display:inline-flex; align-items:center; gap:4px; min-height:36px; margin-top:4px; color:#fff; font-size:14.5px} .lv-loc svg{width:15px; height:15px} .lv-loc > svg:first-child{fill:#FFD86B; color:#FFD86B}
+.lv-search{display:flex; align-items:center; gap:6px; margin-top:8px; padding:4px 4px 4px 14px; border-radius:16px; background:#fff; box-shadow:0 14px 26px -16px rgba(0,0,0,.6); animation:cxGrow .5s var(--spring) .1s both}
+@keyframes cxGrow{from{transform:scaleX(.88); opacity:0}}
+.lv-stxt{flex:1; min-width:0; display:flex; align-items:center; gap:10px; min-height:44px; color:#7A8388; font-size:14.5px; text-align:left; white-space:nowrap; overflow:hidden}
+.lv-stxt svg{width:19px; height:19px; flex:none; color:#4C5559}
+.lv-stxt input{flex:1; min-width:0; border:0; outline:0; background:transparent; font:inherit; color:var(--ink)}
+.lv-mic{width:44px; height:44px; flex:none; border-radius:12px; display:grid; place-items:center; background:var(--lv-mint); color:var(--lv-deep)} .lv-mic svg{width:20px; height:20px}
+/* category tabs in the header with sliding pill */
+.lv-tabs{position:relative; display:flex; gap:4px; margin:12px -16px 0; padding:0 16px; overflow-x:auto; scrollbar-width:none}
+.lv-tabs button{position:relative; z-index:1; flex:none; display:flex; flex-direction:column; align-items:center; gap:4px; min-width:62px; min-height:60px; padding:8px 8px 6px; border-radius:16px; color:#D5F2EE; font-size:12px; font-weight:700; transition:color .3s}
+.lv-tabs button span{display:grid; place-items:center; width:26px; height:26px} .lv-tabs button svg{width:22px; height:22px}
+.lv-tabs button.on{color:var(--lv-deep)}
+.lv-tabs button.on span{animation:cxHop .5s var(--spring)}
+.lv-tind{position:absolute; left:0; top:0; height:60px; border-radius:16px; background:#fff; box-shadow:0 8px 18px -10px rgba(0,0,0,.5); transition:transform .45s var(--spring), width .35s var(--ease)}
+@keyframes cxHop{40%{transform:translateY(-4px) scale(1.12)}}
 /* live order pill */
-.cx-pill{display:flex; align-items:center; gap:10px; width:calc(100% - 32px); margin:16px 16px 0; padding:12px 14px; border-radius:18px; text-align:left; font-size:14px; background:var(--surface); box-shadow:var(--shadow); animation:rise .5s var(--spring) both}
-.cx-pill > span:nth-child(2){flex:1; min-width:0}
-.cx-pill em{font-style:normal; font-weight:800; color:#fff; background:var(--brand); border-radius:999px; padding:6px 12px; font-size:13px}
-.cx-pdot{width:10px; height:10px; flex:none; border-radius:50%; background:var(--brand); animation:fcLive 1.6s ease-out infinite}
-/* category pills with photos */
-.cx-cats{display:flex; gap:10px; overflow-x:auto; padding:2px 16px 4px; scrollbar-width:none}
-.cx-cats::-webkit-scrollbar{display:none}
-.cx-cat{flex:none; display:flex; align-items:center; gap:8px; min-height:48px; padding:4px 14px 4px 4px; border-radius:999px; background:var(--surface); box-shadow:var(--shadow); font-size:13.5px; font-weight:700;
-  animation:moodIn .5s var(--spring) both; animation-delay:calc(.1s + var(--n) * 40ms); transition:transform .25s var(--spring)}
-.cx-cat:active{transform:scale(.95)}
-.cx-cat > span{position:relative; width:40px; height:40px; border-radius:50%; overflow:hidden; display:grid; place-items:center; background:var(--brand-50); color:var(--brand)}
-.cx-cat > span .gi svg{width:18px; height:18px}
-/* offer banners (coral / teal / sun) */
-.cx-offers{display:flex; gap:12px; overflow-x:auto; padding:2px 16px 4px; scroll-snap-type:x mandatory; scrollbar-width:none}
-.cx-offers::-webkit-scrollbar{display:none}
-.cx-offer{position:relative; overflow:hidden; isolation:isolate; flex:0 0 calc(100% - 40px); scroll-snap-align:start; display:flex; align-items:stretch; min-height:150px; border-radius:24px; padding:16px; text-align:left; color:#fff;
-  background:radial-gradient(220px 160px at 100% 100%, #FF9A80, transparent 70%), linear-gradient(135deg,#F0523A,#C7341F); box-shadow:0 18px 30px -20px rgba(199,52,31,.8);
-  transform:scale(.96); opacity:.85; transition:transform .45s var(--spring), opacity .35s}
-.cx-offer.on{transform:none; opacity:1}
-.cx-offer.t1{background:radial-gradient(220px 160px at 100% 100%, #2CCBBA, transparent 70%), linear-gradient(135deg,#0C8F82,#0A5C55); box-shadow:0 18px 30px -20px rgba(10,92,85,.8)}
-.cx-offer.t2{background:radial-gradient(220px 160px at 100% 100%, #FFE9A6, transparent 70%), linear-gradient(135deg,#F7C948,#E8A912); color:#2B2100}
-.cx-offer::before{content:""; position:absolute; right:-40px; top:-40px; width:160px; height:160px; border-radius:50%; border:1.5px dashed rgba(255,255,255,.3); z-index:-1; animation:spin 30s linear infinite}
-.cx-ot{flex:1; display:flex; flex-direction:column; align-items:flex-start; gap:4px; min-width:0; padding-right:8px}
-.cx-ot small{font-size:12px; font-weight:700; opacity:.9}
-.cx-ot b{font-size:18px; font-weight:800; line-height:1.15; letter-spacing:-.02em}
-.cx-ot em{font-style:normal; font-family:var(--display); font-style:italic; font-weight:800; font-size:30px; line-height:1; text-transform:uppercase}
-.cx-octa{margin-top:auto; display:inline-flex; align-items:center; gap:4px; background:#fff; color:#14161A; border-radius:999px; padding:7px 12px; font-size:12.5px; font-weight:800}
-.cx-octa svg{width:14px; height:14px}
-.cx-oimg{position:relative; flex:none; align-self:center; width:110px; height:110px; border-radius:50%; overflow:hidden; display:grid; place-items:center; background:rgba(255,255,255,.2); border:4px solid rgba(255,255,255,.35); box-shadow:0 14px 26px -12px rgba(0,0,0,.5)}
-.cx-offer.on .cx-oimg{animation:cxSpinIn .8s var(--spring)}
-@keyframes cxSpinIn{from{transform:rotate(-30deg) scale(.8)}}
-.cx-oimg .gi svg{width:34px; height:34px; opacity:.6}
-.cx-odots{display:flex; justify-content:center; gap:6px; margin-top:10px}
-.cx-odots i{width:7px; height:7px; border-radius:4px; background:var(--border-strong); transition:width .35s var(--spring), background .3s}
-.cx-odots i.on{width:22px; background:var(--hot)}
-.cx-offers.small .cx-offer{flex-basis:calc(100% - 64px); min-height:120px} .cx-offers.small .cx-oimg{width:86px; height:86px}
-/* store cards */
-.cx-store{width:240px; display:flex; flex-direction:column; text-align:left; border-radius:22px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden; transition:transform .3s var(--spring)}
-.cx-store:active{transform:scale(.97)}
-.cx-sph{position:relative; height:132px; display:grid; place-items:center; background:linear-gradient(150deg,#E2F5F1,#CDEDE7); color:var(--brand); overflow:hidden}
-body.cdark .cx-sph{background:var(--surface-2)}
-.cx-sph > .gi svg{width:34px; height:34px; opacity:.5}
-.cx-sph .fav{top:10px; right:10px; width:36px; height:36px}
-.cx-sopen{position:absolute; left:10px; top:10px; z-index:3; font-size:12px; font-weight:800; border-radius:999px; padding:4px 10px; background:rgba(20,22,26,.7); color:#fff}
-.cx-sopen.on{background:#0A9F64}
-.cx-sb{display:grid; gap:2px; padding:12px 14px 14px}
-.cx-sb b{font-size:16px; font-weight:800; letter-spacing:-.02em}
-.cx-sb small{font-size:12.5px; color:var(--muted)}
-.cx-smeta{display:flex; align-items:center; gap:10px; margin-top:6px}
-.cx-smeta em{font-style:normal; display:inline-flex; align-items:center; gap:4px; font-size:12.5px; font-weight:700; color:var(--ink2)}
-.cx-smeta svg{width:13px; height:13px}
-.cx-rate{background:var(--ok-50); color:var(--ok) !important; border-radius:8px; padding:3px 7px} .cx-rate svg{fill:var(--ok)}
-.cx-call{margin-left:auto; width:40px; height:40px; border-radius:12px; justify-content:center; background:var(--brand-50); color:var(--brand) !important}
-.cx-call svg{width:17px; height:17px; fill:var(--brand)}
-/* voice strip */
-.cx-ask{display:flex; align-items:center; gap:12px; width:calc(100% - 32px); margin:24px 16px 0; padding:14px; border-radius:22px; text-align:left; color:#fff;
-  background:radial-gradient(200px 120px at 90% 0%, #2CCBBA, transparent 70%), linear-gradient(120deg,#0C8F82,#0A5C55); box-shadow:0 14px 26px -16px rgba(10,92,85,.8)}
-.cx-aorb{width:48px; height:48px; flex:none; border-radius:50%; display:grid; place-items:center; background:conic-gradient(from 0deg,#0C8F82,#17B6A6,#F7C948,#FF6B4A,#0C8F82); animation:spin 6s linear infinite; box-shadow:0 0 0 3px rgba(255,255,255,.25)}
-.cx-aorb svg{width:21px; height:21px; animation:spin 6s linear infinite reverse}
-.cx-ask b{display:block; font-size:15px} .cx-ask small{display:block; font-size:12px; color:#CFF1EC}
-.cx-ask .wave{margin-left:auto; display:flex; gap:3px; align-items:center; height:22px}
-.cx-ask .wave i{width:3px; height:30%; border-radius:2px; background:#fff; animation:wv 1.1s ease-in-out infinite; animation-delay:calc(var(--n) * -120ms)}
+.lv-pill{display:flex; align-items:center; gap:10px; width:calc(100% - 32px); margin:14px 16px 0; padding:10px 12px; border-radius:18px; text-align:left; background:var(--surface); box-shadow:var(--shadow); animation:rise .5s var(--spring) both}
+.lv-pill > span:nth-child(2){flex:1; min-width:0; display:grid} .lv-pill b{font-size:14px} .lv-pill small{font-size:12.5px; color:var(--muted)}
+.lv-pill em{font-style:normal; display:inline-flex; align-items:center; gap:2px; min-height:36px; padding:0 12px; border-radius:999px; background:var(--lv-mint); color:var(--lv-deep); font-weight:800; font-size:13px} .lv-pill em svg{width:14px; height:14px}
+.lv-pdot{width:10px; height:10px; border-radius:50%; background:var(--lv-coral); animation:fcLive 1.6s ease-out infinite}
+/* banner carousel */
+.lv-banners{display:flex; gap:12px; overflow-x:auto; padding:14px 16px 4px; scroll-snap-type:x mandatory; scrollbar-width:none; perspective:900px}
+.lv-ban{position:relative; flex:0 0 calc(100% - 8px); scroll-snap-align:center; min-height:150px; display:flex; align-items:stretch; overflow:hidden; isolation:isolate; padding:16px; border-radius:24px; text-align:left;
+  background:radial-gradient(200px 160px at 85% 60%, #FFE2B8, transparent 70%), linear-gradient(120deg,#FFF6E8,#FFE9CC); color:#163B36; box-shadow:0 16px 28px -22px rgba(120,70,0,.6);
+  transform:rotateY(calc(var(--d,0) * -16deg)) scale(calc(1 - (var(--d,0) * var(--d,0)) * .12)); transition:transform .15s linear}
+.lv-ban.t1{background:radial-gradient(200px 160px at 85% 60%, #BFEDE5, transparent 70%), linear-gradient(120deg,#E8F8F4,#CDEFE8)}
+.lv-ban.t2{background:radial-gradient(200px 160px at 85% 60%, #FFC9B6, transparent 70%), linear-gradient(120deg,#FFF0EA,#FFDCCF)}
+.lv-bt{position:relative; z-index:2; flex:1; display:flex; flex-direction:column; align-items:flex-start; gap:4px; min-width:0; transform:translateX(calc(var(--d,0) * -20px))}
+.lv-bt small{font-size:12px; font-weight:700; color:#5B6A68}
+.lv-bt b{font-size:20px; font-weight:800; line-height:1.12; letter-spacing:-.02em; color:#0D4A44}
+.lv-bt strong{font-family:var(--display); font-style:italic; text-transform:uppercase; font-weight:800; font-size:28px; line-height:1; color:var(--lv-coral)}
+.lv-bt em{margin-top:auto; font-style:normal; display:inline-flex; align-items:center; gap:4px; min-height:36px; padding:0 14px; border-radius:999px; background:var(--lv-coral); color:#fff; font-size:13px; font-weight:800; box-shadow:0 8px 16px -8px rgba(242,107,58,.9)}
+.lv-bt em svg{width:14px; height:14px}
+.lv-ban.on .lv-bt > *{animation:rise .5s var(--ease) both} .lv-ban.on .lv-bt > *:nth-child(2){animation-delay:.06s} .lv-ban.on .lv-bt > *:nth-child(3){animation-delay:.12s} .lv-ban.on .lv-bt > *:nth-child(4){animation-delay:.18s}
+.lv-bimg{position:absolute; right:-6px; bottom:-6px; width:150px; height:150px; border-radius:50% 50% 0 50%; overflow:hidden; display:grid; place-items:center; color:var(--lv-teal); background:rgba(255,255,255,.5); transform:translateX(calc(var(--d,0) * 30px)) rotate(calc(var(--d,0) * 12deg))}
+.lv-ban.on .lv-bimg{animation:lvFloatIn .8s var(--spring)}
+@keyframes lvFloatIn{from{transform:translate(30px,20px) scale(.85) rotate(8deg)}}
+.lv-bimg .gi svg{width:46px; height:46px; opacity:.5}
+.lv-spark{position:absolute; width:8px; height:8px; border-radius:2px; background:#F5B400; transform:rotate(45deg); animation:lvTw 2.4s ease-in-out infinite}
+.lv-spark.s1{top:20px; right:150px} .lv-spark.s2{bottom:30px; right:160px; background:var(--lv-coral); animation-delay:-1.2s}
+@keyframes lvTw{50%{transform:rotate(45deg) scale(.4); opacity:.4}}
+.lv-dots{display:flex; justify-content:center; gap:6px; margin-top:10px}
+.lv-dots i{position:relative; overflow:hidden; width:7px; height:7px; border-radius:4px; background:var(--border-strong); transition:width .35s var(--spring); cursor:pointer}
+.lv-dots i.on{width:28px; background:color-mix(in srgb,var(--lv-deep) 22%,transparent)}
+.lv-dots i.on::after{content:""; position:absolute; inset:0; background:var(--lv-deep); transform-origin:left; animation:lvStory 3.6s linear forwards}
+@keyframes lvStory{from{transform:scaleX(0)}}
+/* store photo card */
+.lv-scard{width:200px; display:flex; flex-direction:column; text-align:left; border-radius:20px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden;
+  transform:scale(calc(1 - max(0, (var(--d,0) * var(--d,0)) - .3) * .14)); transition:transform .2s linear; animation:lvCard .5s var(--spring) both; animation-delay:calc(var(--n,0) * 60ms)}
+@keyframes lvCard{from{opacity:0; transform:translateX(30px) scale(.94)}}
+.lv-sph{position:relative; height:118px; display:grid; place-items:center; color:var(--lv-teal); background:linear-gradient(150deg,#E2F5F1,#C9ECE5); overflow:hidden}
+.lv-sph > .gi svg{width:32px; height:32px; opacity:.45}
+.lv-sph img.ph{transition:transform .6s var(--ease)} .lv-scard:active .lv-sph img.ph{transform:scale(1.08)}
+.lv-sb{display:grid; gap:4px; padding:10px 12px 12px} .lv-sb > b{font-size:15px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+/* greeting + ask */
+.lv-greet{padding:16px 16px 0} .lv-greet h2{font-size:21px; font-weight:800} .lv-greet p{margin-top:4px; font-size:14px; color:var(--muted)}
+.lv-wave{display:inline-block; transform-origin:70% 70%; animation:lvHand 2.4s ease-in-out infinite} @keyframes lvHand{0%,60%,100%{transform:rotate(0)} 10%,30%{transform:rotate(16deg)} 20%,40%{transform:rotate(-8deg)}}
+.lv-ask{display:flex; align-items:center; gap:12px; width:calc(100% - 32px); margin:14px 16px 0; padding:14px; border-radius:22px; text-align:left; color:#fff;
+  background:radial-gradient(220px 140px at 90% 0%, rgba(44,203,186,.6), transparent 70%), linear-gradient(120deg,#0E7468,#0A5C55); box-shadow:0 16px 28px -18px rgba(10,92,85,.9)}
+.lv-aorb{position:relative; width:52px; height:52px; flex:none; border-radius:50%; display:grid; place-items:center; background:conic-gradient(from 0deg,#2CCBBA,#FFD86B,#FF8A6B,#2CCBBA); animation:spin 6s linear infinite; box-shadow:0 0 0 4px rgba(255,255,255,.18)}
+.lv-aorb svg{width:22px; height:22px; color:#fff; animation:spin 6s linear infinite reverse; filter:drop-shadow(0 1px 2px rgba(0,0,0,.3))}
+.lv-ask b{display:block; font-size:16px} .lv-ask small{display:block; font-size:12.5px; color:#CDEFE9; margin-top:2px}
+.lv-wv{margin-left:auto; display:flex; gap:3px; align-items:center; height:26px} .lv-wv i{width:3px; height:30%; border-radius:2px; background:#fff; animation:wv 1.1s ease-in-out infinite; animation-delay:calc(var(--n) * -130ms)}
+.lv-cd{display:inline-flex; align-items:center; gap:4px; font-size:12.5px; font-weight:800; color:var(--lv-coral); background:#FFEDE5; border-radius:999px; padding:4px 10px; font-variant-numeric:tabular-nums} .lv-cd svg{width:13px; height:13px}
+/* mini category tiles on home */
+.lv-cmini{display:flex; gap:12px; overflow-x:auto; padding:0 16px 8px; scrollbar-width:none}
+.lv-cmini button{flex:none; width:74px; display:flex; flex-direction:column; align-items:center; gap:6px; font-size:12px; font-weight:700; text-align:center; color:var(--ink2); animation:lvCard .5s var(--spring) both; animation-delay:calc(var(--n) * 45ms)}
+.lv-cmini button > span{position:relative; width:68px; height:68px; border-radius:22px; overflow:hidden; display:grid; place-items:center; color:var(--lv-teal); background:var(--lv-mint); box-shadow:var(--shadow); transform:rotate(calc(var(--d,0) * 10deg)); transition:transform .2s linear}
+.lv-cmini button:nth-child(3n+2) > span{background:#FFEDE5; color:var(--lv-coral)} .lv-cmini button:nth-child(3n+3) > span{background:var(--lv-cream); color:#B07800}
+/* product card */
+.lv-pcard{position:relative; width:146px; display:flex; flex-direction:column; gap:2px; padding:8px 8px 10px; border-radius:20px; background:var(--surface); box-shadow:var(--shadow); text-align:left;
+  transform:scale(calc(1 - max(0, (var(--d,0) * var(--d,0)) - .3) * .14)); transition:transform .2s linear; animation:lvCard .5s var(--spring) both; animation-delay:calc(min(var(--n,0),6) * 50ms)}
+.lv-pimg{position:relative; height:118px; margin-bottom:6px; border-radius:15px; overflow:hidden; display:grid; place-items:center; color:var(--lv-coral); background:linear-gradient(150deg,#FFF1EA,#FFE0D3)}
+.lv-pcard:nth-child(3n+2) .lv-pimg{background:linear-gradient(150deg,#E2F5F1,#CDEDE7); color:var(--lv-teal)}
+.lv-pcard:nth-child(3n+3) .lv-pimg{background:linear-gradient(150deg,#FFF6DC,#FDEBB5); color:#B07800}
+body.cdark .lv-pimg{background:var(--surface-2) !important}
+.lv-pimg > .gi svg{width:32px; height:32px; opacity:.5}
+.lv-off{position:absolute; top:8px; left:8px; z-index:2; font-style:normal; font-size:12px; font-weight:800; color:#fff; background:#0A9F64; border-radius:8px; padding:2px 7px}
+.lv-pcard > b{font-size:14px; font-weight:800; line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.lv-pcard > small{font-size:12px; color:var(--muted)}
+.lv-pp{display:flex; align-items:baseline; gap:6px; margin-top:2px} .lv-pp b{font-size:16px; font-weight:800} .lv-pp s{font-size:12px; color:var(--faint)}
+.lv-pctl{margin-top:8px}
+.lv-pctl .qc-add,.lv-pctl .qc-step{position:static !important; transform:none !important; width:100%; min-height:40px; border-radius:12px; margin:0}
+.lv-pctl .qc-add{background:var(--lv-deep); color:#fff; border:0; font-size:13.5px; font-weight:800; box-shadow:0 8px 16px -10px rgba(10,92,85,.9)}
+.lv-pctl .qc-add::before{content:"+ "; font-weight:800} .lv-pctl .qc-add{font-size:0} .lv-pctl .qc-add::after{content:"Add"; font-size:13.5px}
+.lv-pctl .qc-step{display:flex; align-items:center; justify-content:space-between; background:var(--lv-deep); color:#fff; animation:pop .35s var(--spring)}
+.lv-pctl .qc-step button{width:40px; height:40px; color:#fff; font-size:18px} .lv-pctl .qc-step b{color:#fff}
+.lv-pgrid{display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:4px 16px}
+.lv-pgrid .lv-pcard{width:auto}
 
-/* ---------- product cards (shared look, warmer) ---------- */
-body[data-app="customer"] .qc-card{width:156px; border:0; box-shadow:var(--shadow); border-radius:20px; background:var(--surface)}
-body[data-app="customer"] .qc-card .pimg{background:linear-gradient(150deg,#FFF1EC,#FFE3D9); border-radius:18px 18px 14px 14px}
-body[data-app="customer"] .qc-card:nth-child(3n+2) .pimg{background:linear-gradient(150deg,#E2F5F1,#CDEDE7)}
-body[data-app="customer"] .qc-card:nth-child(3n+3) .pimg{background:linear-gradient(150deg,#FFF6DC,#FDEBB5)}
-body[data-app="customer"].cdark .qc-card .pimg{background:var(--surface-2) !important}
-body[data-app="customer"] .qc-card .pimg > .gi svg{opacity:.45}
-body[data-app="customer"] .qc-add{border-radius:12px; min-height:36px}
-body[data-app="customer"] .qc-card h4{font-size:14px !important}
-body[data-app="customer"] :is(.qc-time,.qc-new,.punit,.prate){font-size:12px}
-.cx-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px 12px; padding:0 16px}
-.cx-grid .qc-card{width:auto}
+/* ---------- list rows ---------- */
+.lv-srow{position:relative; display:flex; align-items:center; gap:12px; width:100%; padding:10px; border-radius:20px; background:var(--surface); box-shadow:var(--shadow); text-align:left; animation:rise .45s var(--ease) both; animation-delay:calc(min(var(--n,0),6) * 50ms)}
+.lv-rimg{position:relative; width:76px; height:76px; flex:none; border-radius:16px; overflow:hidden; display:grid; place-items:center; color:var(--lv-teal); background:var(--lv-mint)}
+.lv-rimg .gi svg{width:26px; height:26px}
+.lv-rt{flex:1; min-width:0; display:grid; gap:4px} .lv-rt > b{font-size:15px; font-weight:800} .lv-rt > small{font-size:12.5px; color:var(--muted)}
+.lv-req{min-height:40px; padding:0 14px; border-radius:12px; background:var(--lv-mint); color:var(--lv-deep); font-weight:800; font-size:13px}
 
-/* ---------- categories grid ---------- */
-.cx-cgrid{display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:4px 16px 16px}
-.cx-ccard{position:relative; display:flex; flex-direction:column; text-align:left; border-radius:22px; overflow:hidden; background:var(--surface); box-shadow:var(--shadow); animation:catIn .5s var(--spring) both; animation-delay:calc(var(--n) * 40ms); transition:transform .25s var(--spring)}
-.cx-ccard:active{transform:scale(.96)}
-.cx-cimg{position:relative; height:104px; display:grid; place-items:center; color:var(--brand); background:var(--brand-50)}
-.cx-ccard:nth-child(4n+2) .cx-cimg{background:var(--hot-50); color:var(--hot)} .cx-ccard:nth-child(4n+3) .cx-cimg{background:var(--sun-50); color:#B07800} .cx-ccard:nth-child(4n+4) .cx-cimg{background:#E6F0FF; color:#2F5FD0}
-body.cdark .cx-cimg{background:var(--surface-2) !important}
-.cx-cimg .gi svg{width:32px; height:32px}
-.cx-ccard b{padding:12px 14px; font-size:14.5px; font-weight:800}
+/* ---------- categories ---------- */
+.lv-srch{display:flex; gap:10px; padding:4px 16px 0}
+.lv-srch .lv-stxt.in{padding:0 14px; min-height:48px; border-radius:16px; background:var(--surface); box-shadow:var(--shadow)}
+.lv-srch.st{padding-top:14px}
+.lv-filt{width:48px; height:48px; flex:none; border-radius:16px; display:grid; place-items:center; background:var(--surface); color:var(--lv-deep); box-shadow:var(--shadow)} .lv-filt svg{width:20px; height:20px}
+.lv-chips{display:flex; gap:8px; overflow-x:auto; padding:14px 16px 4px; scrollbar-width:none}
+.lv-chips.sub{padding-top:6px}
+.lv-chips button{flex:none; display:inline-flex; align-items:center; gap:6px; min-height:40px; padding:0 14px; border-radius:999px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); font-size:13px; font-weight:700; color:var(--ink2); transition:background .25s, color .25s, transform .3s var(--spring)}
+.lv-chips button svg,.lv-chips button .gi svg{width:14px; height:14px}
+.lv-chips button.on{background:var(--lv-mint); color:var(--lv-deep); box-shadow:inset 0 0 0 1.5px var(--lv-teal); transform:translateY(-1px)}
+.lv-chips.sub button.on{background:var(--lv-deep); color:#fff; box-shadow:none}
+.lv-chips.lv-nudge{animation:lvNudge .5s var(--spring)} @keyframes lvNudge{30%{transform:translateX(-8px)} 60%{transform:translateX(5px)}}
+.lv-cgrid{display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:14px 16px 4px}
+.lv-ctile{position:relative; height:118px; overflow:hidden; isolation:isolate; display:flex; align-items:flex-end; padding:12px; border-radius:22px; text-align:left; background:#DDF3EE; color:#0D4A44;
+  animation:lvTile .6s var(--spring) both; animation-delay:calc(var(--n) * 55ms); transition:transform .3s var(--spring)}
+@keyframes lvTile{from{opacity:0; transform:perspective(600px) rotateX(-24deg) translateY(24px) scale(.92)}}
+.lv-ctile.c1{background:#FFE4D9} .lv-ctile.c2{background:#FFF0D2} .lv-ctile.c3{background:#DDEBFF} .lv-ctile.c4{background:#0A5C55; color:#fff} .lv-ctile.c5{background:#EDE5FF}
+body.cdark .lv-ctile:not(.c4){background:var(--surface-2); color:var(--ink)}
+.lv-cph{position:absolute; right:-10px; top:-10px; width:104px; height:104px; border-radius:50%; overflow:hidden; display:grid; place-items:center; z-index:-1; color:currentColor; opacity:.95; transition:transform .5s var(--spring)}
+.lv-cph .gi svg{width:36px; height:36px; opacity:.55}
+.lv-ctile:active .lv-cph{transform:scale(1.1) rotate(-6deg)}
+.lv-ctile b{flex:1; font-size:16px; font-weight:800; line-height:1.1}
+.lv-ctile i{width:30px; height:30px; border-radius:50%; display:grid; place-items:center; background:#fff; color:#0D4A44; box-shadow:0 4px 10px -4px rgba(0,0,0,.25)} .lv-ctile i svg{width:14px; height:14px}
 
-/* ---------- category chips (icon pills) ---------- */
-.cx-chips{display:flex; gap:10px; overflow-x:auto; padding:4px 16px 8px; scrollbar-width:none}
-.cx-chips::-webkit-scrollbar{display:none}
-.cx-chip{flex:none; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:68px; font-size:12px; font-weight:700; color:var(--ink2)}
-.cx-chip span{width:56px; height:56px; border-radius:18px; display:grid; place-items:center; background:var(--surface); color:var(--brand); box-shadow:var(--shadow); transition:transform .3s var(--spring), background .25s, color .25s}
-.cx-chip span svg{width:24px; height:24px}
-.cx-chip.on{color:var(--hot)} .cx-chip.on span{background:var(--hot); color:#fff; box-shadow:0 10px 20px -10px rgba(240,82,58,.8); transform:translateY(-3px)}
-#catoffers{margin-top:8px}
+/* ---------- store ---------- */
+.lv-shero{position:relative; height:230px; overflow:hidden; display:grid; place-items:center; color:#fff; background:linear-gradient(160deg,#0E7468,#084C46)}
+.lv-shero > img.ph{transform:translateY(calc(var(--py,0) * 70px)) scale(calc(1.05 + var(--py,0) * .12))}
+.lv-shero > .gi svg{width:48px; height:48px; opacity:.4}
+.lv-shade{position:absolute; inset:0; background:linear-gradient(180deg,rgba(0,0,0,.25),transparent 40%,rgba(0,0,0,.1))}
+.lv-hbar{position:absolute; left:0; right:0; top:0; z-index:3; display:flex; gap:8px; padding:calc(12px + var(--top)) 16px}
+.lv-cb{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.94); color:#14161A; box-shadow:0 6px 14px -6px rgba(0,0,0,.4); transition:transform .25s var(--spring)}
+.lv-cb:active{transform:scale(.88)} .lv-cb svg{width:19px; height:19px} .lv-cb.fav.on{color:var(--lv-coral)} .lv-cb.fav.on svg{fill:currentColor}
+.lv-scard2{position:relative; z-index:2; margin:-46px 16px 0; padding:14px; border-radius:24px; background:var(--surface); box-shadow:0 22px 40px -26px rgba(7,63,58,.7); animation:rise .55s var(--spring) .05s both}
+.lv-sid{display:flex; gap:12px; align-items:flex-start}
+.lv-slogo{width:56px; height:56px; flex:none; border-radius:16px; display:grid; place-items:center; color:#fff; background:linear-gradient(135deg,#17B6A6,#0A5C55); box-shadow:0 10px 18px -10px rgba(10,92,85,.9); animation:pop .6s var(--spring) .2s both}
+.lv-slogo svg{width:26px; height:26px}
+.lv-sid h1{font-size:20px; font-weight:800; line-height:1.15} .lv-sid > div{display:grid; gap:6px; min-width:0}
+.lv-sacts{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:14px}
+.lv-sacts > *{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; min-height:58px; border-radius:14px; background:var(--lv-mint); color:var(--lv-deep); font-size:12px; font-weight:700; transition:transform .25s var(--spring)}
+.lv-sacts > *:active{transform:scale(.92)} .lv-sacts svg{width:18px; height:18px}
+.lv-coupons{display:flex; gap:10px; overflow-x:auto; padding:14px 16px 0; scrollbar-width:none}
+.lv-coupon{flex:none; display:flex; align-items:center; gap:10px; padding:10px 14px 10px 10px; border-radius:16px; background:#FFF0EA; border:1.5px dashed var(--lv-coral); min-width:220px}
+.lv-coupon > span{width:36px; height:36px; border-radius:12px; display:grid; place-items:center; background:var(--lv-coral); color:#fff} .lv-coupon > span svg{width:18px; height:18px}
+.lv-coupon b{display:block; font-size:14px; color:var(--lv-coral)} .lv-coupon small{font-size:12.5px; color:var(--ink2)}
+.lv-coupon.big{min-width:0}
+.lv-utabs{position:sticky; top:0; z-index:8; display:flex; gap:4px; margin-top:12px; padding:calc(4px + var(--top)) 16px 0; overflow-x:auto; scrollbar-width:none; background:color-mix(in srgb,var(--lv-bg) 92%,transparent); backdrop-filter:blur(14px); border-bottom:1px solid var(--line)}
+.lv-utabs button{flex:none; min-height:46px; padding:0 14px; font-size:14px; font-weight:700; color:var(--muted); transition:color .25s}
+.lv-utabs button.on{color:var(--lv-deep)} .lv-utabs button small{font-size:12px; color:var(--faint)}
+.lv-uind{position:absolute; left:0; bottom:0; height:3px; border-radius:3px 3px 0 0; background:var(--lv-deep); transition:transform .4s var(--spring), width .3s var(--ease)}
+.lv-tbody{padding-top:12px}
+.lv-about{padding:0 16px} .lv-about > p{font-size:14.5px; color:var(--ink2); line-height:1.5}
+.lv-info{display:grid; gap:2px; margin-top:12px; border-radius:18px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden}
+.lv-info > div{display:flex; justify-content:space-between; gap:12px; padding:12px 14px; font-size:14px; border-bottom:1px solid var(--line)} .lv-info > div:last-child{border:0} .lv-info span{color:var(--muted)} .lv-info b{text-align:right}
+.lv-info button{color:var(--lv-teal); font-weight:800; min-height:32px}
+.lv-rsum{display:flex; gap:16px; align-items:center; margin:0 16px 12px; padding:14px; border-radius:18px; background:var(--surface); box-shadow:var(--shadow)}
+.lv-rsum > div:first-child{display:grid; justify-items:center} .lv-rsum > div:first-child b{font-size:30px; font-weight:800} .lv-rsum small{font-size:12px; color:var(--muted)}
+.lv-bars{flex:1; display:grid; gap:3px} .lv-bars p{display:flex; align-items:center; gap:6px; font-size:12px} .lv-bars i{flex:1; height:6px; border-radius:3px; background:linear-gradient(90deg,#F5B400 var(--w),var(--line) var(--w))}
+.lv-tbody > .lv-btn.ghost{width:calc(100% - 32px); margin:0 16px 12px}
+.lv-rev{padding:12px 14px; border-radius:16px; background:var(--surface); box-shadow:var(--shadow)} .lv-rev > div{display:flex; justify-content:space-between} .lv-rev p{margin-top:4px; font-size:14px; color:var(--ink2)}
 
-/* ---------- empty states ---------- */
-.cx-empty{display:flex; flex-direction:column; align-items:center; text-align:center; padding:24px 32px 8px}
-.cx-eill{position:relative; width:150px; height:150px; display:grid; place-items:center; color:var(--brand); margin-bottom:16px}
-.cx-eill svg{position:relative; width:56px; height:56px; animation:logoBob 3.5s ease-in-out infinite}
-.cx-blob{position:absolute; inset:0; background:var(--brand-50); border-radius:42% 58% 63% 37% / 41% 44% 56% 59%; animation:cxBlob 8s ease-in-out infinite}
-@keyframes cxBlob{50%{border-radius:58% 42% 37% 63% / 59% 56% 44% 41%; transform:rotate(18deg)}}
-.cx-empty h2{font-family:var(--display); font-style:italic; text-transform:uppercase; font-weight:800; font-size:28px; letter-spacing:0}
-.cx-empty p{font-size:14px; color:var(--muted); margin:8px 0 20px; max-width:260px}
-.cx-empty .btn{min-height:48px; padding:0 28px}
+/* ---------- product ---------- */
+.lv-phero{position:relative; height:330px; overflow:hidden; display:grid; place-items:center; color:var(--lv-coral); background:radial-gradient(240px 200px at 50% 55%, #fff, transparent 70%), linear-gradient(160deg,#FFEDE5,#FFD8C8)}
+body.cdark .lv-phero{background:var(--surface-2)}
+.lv-phero > img.ph{transform:translateY(calc(var(--py,0) * 80px)) scale(calc(1.02 + var(--py,0) * .15))}
+.lv-phero > .gi{animation:logoBob 3.5s ease-in-out infinite} .lv-phero > .gi svg{width:70px; height:70px; opacity:.55}
+.lv-pdots{position:absolute; bottom:40px; left:50%; transform:translateX(-50%); display:flex; gap:5px; z-index:2}
+.lv-pdots i{width:6px; height:6px; border-radius:3px; background:rgba(0,0,0,.25)} .lv-pdots i.on{width:18px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.lv-psheet{position:relative; z-index:2; margin-top:-28px; padding:22px 16px 0; border-radius:28px 28px 0 0; background:var(--lv-bg); animation:rise .55s var(--spring) .05s both}
+.lv-psheet h1{font-size:24px; font-weight:800}
+.lv-unit{display:flex; align-items:center; gap:6px; margin-top:4px; font-size:14px; color:var(--muted)}
+.lv-price{display:flex; align-items:center; gap:10px; margin-top:12px} .lv-price b{font-size:28px; font-weight:800; letter-spacing:-.03em} .lv-price s{font-size:15px; color:var(--faint)}
+.lv-price em{font-style:normal; font-size:12.5px; font-weight:800; color:#0A8F55; background:#E3F7EC; border-radius:8px; padding:3px 8px; animation:pop .5s var(--spring) .3s both}
+.lv-desc{margin-top:10px; font-size:14.5px; color:var(--ink2); line-height:1.5}
+.lv-perks{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:16px}
+.lv-perks > div{display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 6px; border-radius:16px; background:var(--surface); box-shadow:var(--shadow); text-align:center; animation:lvCard .5s var(--spring) both}
+.lv-perks > div:nth-child(2){animation-delay:.06s} .lv-perks > div:nth-child(3){animation-delay:.12s}
+.lv-perks .gi{width:36px; height:36px; display:grid; place-items:center; border-radius:12px; background:var(--lv-mint); color:var(--lv-deep)} .lv-perks .gi svg{width:18px; height:18px}
+.lv-perks b{font-size:12.5px; font-weight:700}
+.lv-sold{display:flex; align-items:center; gap:12px; width:100%; margin-top:12px; padding:12px; border-radius:18px; background:var(--surface); box-shadow:var(--shadow); text-align:left}
+.lv-sold > span{width:44px; height:44px; border-radius:14px; display:grid; place-items:center; background:var(--lv-mint); color:var(--lv-deep)} .lv-sold > span svg{width:20px; height:20px}
+.lv-sold div{flex:1} .lv-sold small{display:block; font-size:12px; color:var(--muted)} .lv-sold b{font-size:15px} .lv-sold > svg{width:16px; height:16px; color:var(--faint)}
+.lv-pbar{position:absolute; left:0; right:0; bottom:0; z-index:22; display:flex; align-items:center; gap:14px; padding:12px 16px calc(14px + var(--bottom)); background:var(--surface); border-radius:24px 24px 0 0; box-shadow:0 -14px 30px -18px rgba(0,0,0,.35); animation:qcBarIn .5s var(--spring) both}
+.lv-pbar > div small{display:block; font-size:12px; color:var(--muted)} .lv-pbar > div b{font-size:22px; font-weight:800}
+.lv-pctl.big{flex:1; margin:0} .lv-pctl.big .qc-add,.lv-pctl.big .qc-step{min-height:52px; border-radius:16px}
+.lv-pctl.big .qc-add::after{content:"Add to Cart"; font-size:15.5px}
 
 /* ---------- cart ---------- */
-.cx-from{display:flex; align-items:center; gap:6px; padding:0 16px 12px; font-size:13.5px; color:var(--muted)}
-.cx-from .gi svg{width:16px; height:16px; color:var(--brand)}
-.cx-lines{display:grid; gap:10px; padding:0 16px}
-.cx-line{display:grid; grid-template-columns:72px minmax(0,1fr) 44px; gap:12px; align-items:center; padding:10px; border-radius:20px; background:var(--hot-50); animation:rise .4s var(--ease) both; animation-delay:calc(var(--n) * 50ms)}
-.cx-line:nth-child(3n+2){background:var(--brand-50)} .cx-line:nth-child(3n+3){background:var(--sun-50)}
-.cx-limg{position:relative; width:72px; height:72px; border-radius:50%; overflow:hidden; display:grid; place-items:center; background:var(--surface); color:var(--brand); box-shadow:0 8px 16px -10px rgba(0,0,0,.4)}
-.cx-limg img.ph{border-radius:50%}
-.cx-lt b{display:block; font-size:15px; font-weight:800; line-height:1.25}
-.cx-lt small{display:block; font-size:12.5px; color:var(--muted)}
-.cx-lt em{display:block; margin-top:4px; font-style:normal; font-size:15px; font-weight:800; color:var(--hot)}
-.cx-lt s{font-size:12px; color:var(--faint); font-weight:500}
-.cx-vstep{display:flex; flex-direction:column; align-items:center; border-radius:999px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden}
-.cx-vstep button{width:44px; height:36px; display:grid; place-items:center; font-size:18px; font-weight:700; color:var(--brand)}
-.cx-vstep button:first-child{background:var(--brand); color:#fff}
-.cx-vstep button svg{width:15px; height:15px; color:var(--bad)}
-.cx-vstep b{font-size:14px; font-weight:800; padding:2px 0}
-.cx-more{display:flex; align-items:center; gap:6px; min-height:48px; margin:8px 16px 0; color:var(--brand); font-weight:800; font-size:14px}
-.cx-more svg{width:17px; height:17px}
-.cx-save{display:flex; align-items:center; gap:8px; margin:8px 16px 0; padding:12px 14px; border-radius:16px; background:var(--ok-50); color:var(--ok); font-size:14px; font-weight:600}
-.cx-save .gi svg{width:18px; height:18px}
-.cx-bill{margin:16px 16px 0; padding:16px; border-radius:22px; background:var(--surface); box-shadow:var(--shadow); display:grid; gap:10px}
-.cx-bill > div{display:flex; justify-content:space-between; font-size:14.5px; color:var(--ink2)}
-.cx-bill b{color:var(--ink)} .cx-bill em{font-style:normal; color:var(--ok); font-weight:800}
-.cx-bill .tot{border-top:1.5px dashed var(--line); padding-top:12px; font-size:17px} .cx-bill .tot span{font-weight:800; color:var(--ink)} .cx-bill .tot b{font-size:20px; color:var(--hot)}
-.cx-free{display:block !important; font-size:13px !important}
-.cx-free i{display:block; height:6px; margin-top:6px; border-radius:3px; background:linear-gradient(90deg,var(--brand) var(--p),var(--line) var(--p))}
-.cx-paybar{position:absolute; left:0; right:0; bottom:0; z-index:22; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px calc(14px + var(--bottom)); border-radius:26px 26px 0 0; background:#14161A; color:#fff; box-shadow:0 -16px 30px -18px rgba(0,0,0,.5); animation:qcBarIn .5s var(--spring) both}
-.cx-paybar small{display:block; font-size:12px; color:#9AA3A1} .cx-paybar b{font-size:22px; font-weight:800}
-.cx-paybar .btn{min-height:52px; padding:0 26px; background:var(--hot); box-shadow:0 10px 22px -10px rgba(240,82,58,.8); font-size:16px}
-.cx-paybar .btn svg{width:18px; height:18px}
+.lv-cbag{position:relative; width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--lv-deep); color:#fff; animation:pop .5s var(--spring)}
+.lv-cbag svg{width:20px; height:20px} .lv-cbag i{position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; border-radius:10px; display:grid; place-items:center; background:#F5B400; color:#3A2600; font-style:normal; font-size:12px; font-weight:800}
+.lv-from{display:flex; align-items:center; gap:6px; padding:0 16px 10px; font-size:13.5px; color:var(--muted)} .lv-from .gi svg{width:15px; height:15px; color:var(--lv-teal)}
+.lv-lines{display:grid; gap:10px; padding:0 16px}
+.lv-line{display:grid; grid-template-columns:64px minmax(0,1fr) auto; gap:12px; align-items:center; padding:10px; border-radius:20px; background:var(--surface); box-shadow:var(--shadow); animation:lvSlideUp .5s var(--spring) both; animation-delay:calc(var(--n) * 60ms)}
+@keyframes lvSlideUp{from{opacity:0; transform:translateY(24px)}}
+.lv-limg{position:relative; width:64px; height:64px; border-radius:16px; overflow:hidden; display:grid; place-items:center; background:#FFEDE5; color:var(--lv-coral)} .lv-limg .gi svg{width:24px; height:24px}
+.lv-lt b{display:block; font-size:14.5px; font-weight:800; line-height:1.25} .lv-lt small{display:block; font-size:12.5px; color:var(--muted)}
+.lv-lt em{display:block; margin-top:4px; font-style:normal; font-size:15px; font-weight:800} .lv-lt s{font-size:12px; color:var(--faint); font-weight:500}
+.lv-step{display:flex; align-items:center; border-radius:12px; box-shadow:inset 0 0 0 1.5px var(--line); overflow:hidden}
+.lv-step button{width:36px; height:40px; display:grid; place-items:center; font-size:18px; font-weight:700; color:var(--lv-deep)} .lv-step button svg{width:15px; height:15px; color:var(--bad)}
+.lv-step b{min-width:22px; text-align:center; font-size:14.5px; animation:pop .3s var(--spring)}
+.lv-more{display:flex; align-items:center; gap:6px; min-height:48px; margin:6px 16px 0; color:var(--lv-teal); font-weight:800; font-size:14px} .lv-more svg{width:16px; height:16px}
+.lv-bill{display:grid; gap:10px; margin:12px 16px 0; padding:16px; border-radius:22px; background:var(--surface); box-shadow:var(--shadow)}
+.lv-bill > div{display:flex; justify-content:space-between; font-size:14.5px; color:var(--ink2)} .lv-bill b{color:var(--ink)} .lv-bill em{font-style:normal; color:#0A8F55; font-weight:800}
+.lv-saved{margin:-4px -4px 2px; padding:10px 12px; border-radius:14px; background:#E3F7EC} .lv-saved span,.lv-saved b{color:#0A8F55 !important; font-weight:800}
+.lv-free{display:block !important; font-size:13px !important} .lv-free i{display:block; height:6px; margin-top:6px; border-radius:3px; background:linear-gradient(90deg,var(--lv-teal) var(--p),var(--line) var(--p))}
+.lv-bill .tot{border-top:1.5px dashed var(--line); padding-top:12px; font-size:17px} .lv-bill .tot span{font-weight:800; color:var(--ink)} .lv-bill .tot b{font-size:20px}
+.lv-fbar{position:absolute; left:0; right:0; bottom:0; z-index:22; padding:10px 16px calc(14px + var(--bottom)); background:linear-gradient(180deg,transparent,var(--lv-bg) 30%); animation:qcBarIn .5s var(--spring) both}
+.lv-gobar{display:flex; align-items:center; justify-content:space-between; width:100%; min-height:60px; padding:8px 8px 8px 18px; border-radius:20px; background:var(--lv-deep); color:#fff; box-shadow:0 16px 30px -16px rgba(10,92,85,.9); transition:transform .25s var(--spring)}
+.lv-gobar:active{transform:scale(.97)}
+.lv-gobar > span{display:grid; text-align:left} .lv-gobar small{font-size:12px; color:#BFE7E1} .lv-gobar b{font-size:19px}
+.lv-gobar em{font-style:normal; display:inline-flex; align-items:center; gap:4px; min-height:44px; padding:0 16px; border-radius:14px; background:var(--lv-coral); font-weight:800; font-size:14.5px} .lv-gobar em svg{width:16px; height:16px}
+.lv-fbar.split{display:flex; align-items:center; gap:12px; background:var(--surface); border-radius:24px 24px 0 0; box-shadow:0 -14px 30px -18px rgba(0,0,0,.35); padding-top:12px}
+.lv-tot{display:grid; text-align:left; min-height:48px} .lv-tot b{font-size:21px; font-weight:800} .lv-tot small{display:inline-flex; align-items:center; gap:2px; font-size:12.5px; color:var(--lv-teal); font-weight:700} .lv-tot small svg{width:13px; height:13px}
+.lv-fbar.split .lv-btn{flex:1; width:auto}
 
 /* ---------- checkout ---------- */
-.cx-steps{display:flex; align-items:center; gap:6px; padding:0 16px 16px}
-.cx-steps span{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; color:var(--muted)}
-.cx-steps i{width:24px; height:24px; border-radius:50%; display:grid; place-items:center; font-style:normal; font-size:12px; font-weight:800; background:var(--surface); box-shadow:var(--shadow)}
-.cx-steps span.done i{background:var(--ok); color:#fff} .cx-steps span.on{color:var(--ink)} .cx-steps span.on i{background:var(--brand); color:#fff}
-.cx-steps b{flex:1; height:2px; background:var(--line)}
-.cx-card{margin:0 16px 12px; padding:16px; border-radius:22px; background:var(--surface); box-shadow:var(--shadow)}
-.cx-ch{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px}
-.cx-ch h3{display:flex; align-items:center; gap:8px; font-size:16px; font-weight:800}
-.cx-ch h3 svg{width:18px; height:18px; color:var(--brand); fill:currentColor}
-.cx-ch button{min-height:44px; color:var(--brand); font-weight:800}
-.cx-ch small{font-size:12px}
-.cx-addr{display:flex; gap:12px; align-items:flex-start}
-.cx-addr > span{width:44px; height:44px; flex:none; border-radius:14px; display:grid; place-items:center; background:var(--brand-50); color:var(--brand)}
-.cx-addr > span svg{width:20px; height:20px}
-.cx-addr b{display:block; font-size:15px} .cx-addr small{display:block; font-size:13px; color:var(--muted)}
-.cx-pays{display:grid; gap:8px}
-.cx-pay{display:flex; align-items:center; gap:12px; width:100%; min-height:60px; padding:10px 12px; border-radius:16px; border:1.5px solid var(--line); text-align:left; transition:border-color .2s, background .2s}
-.cx-pay > span{width:40px; height:40px; border-radius:12px; display:grid; place-items:center; background:var(--surface-2); color:var(--muted)}
-.cx-pay > span svg{width:19px; height:19px}
-.cx-pay div{flex:1} .cx-pay b{display:block; font-size:14.5px} .cx-pay small{font-size:12px; color:var(--muted)}
-.cx-pay i{width:22px; height:22px; border-radius:50%; border:2px solid var(--border-strong); transition:border .2s}
-.cx-pay.on{border-color:var(--brand); background:var(--brand-50)} .cx-pay.on > span{background:var(--brand); color:#fff} .cx-pay.on i{border:7px solid var(--brand)}
+.lv-steps{display:flex; align-items:center; gap:6px; padding:0 16px 14px}
+.lv-steps span{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; color:var(--muted)}
+.lv-steps i{width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font-style:normal; font-size:12px; font-weight:800; background:var(--surface); box-shadow:inset 0 0 0 1.5px var(--line)} .lv-steps i svg{width:13px; height:13px}
+.lv-steps span.done i{background:var(--lv-teal); color:#fff; box-shadow:none} .lv-steps span.on{color:var(--ink)} .lv-steps span.on i{background:var(--lv-deep); color:#fff; box-shadow:none; animation:cxPing 1.8s ease-out infinite}
+.lv-steps b{flex:1; height:2px; border-radius:2px; background:var(--line); position:relative; overflow:hidden} .lv-steps b.done::after{content:""; position:absolute; inset:0; background:var(--lv-teal); transform-origin:left; animation:lvStory .8s var(--ease) both}
+@keyframes cxPing{0%{box-shadow:0 0 0 0 rgba(12,143,130,.5)} 100%{box-shadow:0 0 0 10px rgba(12,143,130,0)}}
+.lv-row{display:flex; align-items:center; gap:12px; width:calc(100% - 32px); margin:0 16px; padding:14px; border-radius:20px; background:var(--surface); box-shadow:var(--shadow); text-align:left}
+.lv-ri{width:44px; height:44px; flex:none; border-radius:14px; display:grid; place-items:center; background:var(--lv-mint); color:var(--lv-deep)} .lv-ri svg{width:20px; height:20px}
+.lv-row div{flex:1; min-width:0; display:grid} .lv-row small{font-size:12px; color:var(--muted)} .lv-row b{font-size:15px} .lv-row div span{font-size:13px; color:var(--ink2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis} .lv-row > svg{width:16px; height:16px; color:var(--faint)}
+.lv-form{margin:0 16px; padding:16px; border-radius:20px; background:var(--surface); box-shadow:var(--shadow)}
+.lv-form h3{display:flex; align-items:center; gap:6px; font-size:16px; font-weight:800; margin-bottom:8px} .lv-form h3 svg{width:17px; height:17px; color:var(--lv-teal)}
+.lv-form .input,.lv-login .input{border-radius:14px; min-height:50px; background:var(--surface-2); border-color:transparent; transition:box-shadow .2s}
+.lv-form .input:focus-within,.lv-login .input:focus-within{box-shadow:0 0 0 2px var(--lv-teal); background:var(--surface)}
+.lv-pays{display:grid; gap:8px; padding:0 16px}
+.lv-pay{display:flex; align-items:center; gap:12px; width:100%; min-height:64px; padding:10px 12px; border-radius:18px; background:var(--surface); box-shadow:var(--shadow); text-align:left; transition:box-shadow .25s, transform .25s var(--spring); animation:rise .45s var(--ease) both; animation-delay:calc(var(--n) * 60ms)}
+.lv-pay > span{width:42px; height:42px; border-radius:12px; display:grid; place-items:center; background:var(--surface-2); color:var(--muted)} .lv-pay > span svg{width:20px; height:20px}
+.lv-pay div{flex:1} .lv-pay b{display:block; font-size:14.5px} .lv-pay small{font-size:12px; color:var(--muted)}
+.lv-pay i{width:24px; height:24px; border-radius:50%; display:grid; place-items:center; box-shadow:inset 0 0 0 2px var(--border-strong); color:#fff; transition:all .3s var(--spring)} .lv-pay i svg{width:13px; height:13px; opacity:0}
+.lv-pay.on{box-shadow:inset 0 0 0 2px var(--lv-teal), var(--shadow)} .lv-pay.on > span{background:var(--lv-mint); color:var(--lv-deep)}
+.lv-pay.on i{background:var(--lv-teal); box-shadow:none; transform:scale(1.1)} .lv-pay.on i svg{opacity:1}
+.lv-pay.on i:empty::after{content:""; width:6px; height:10px; border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg) translate(-1px,-1px)}
 
 /* ---------- order placed ---------- */
-.cx-done{position:relative; min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:calc(40px + var(--top)) 28px 40px; color:#fff; overflow:hidden;
-  background:radial-gradient(420px 420px at 50% 36%, #17B6A6, #0A5C55 75%)}
-.cx-check{position:relative; width:140px; height:140px; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.14); box-shadow:0 0 0 18px rgba(255,255,255,.06); animation:pop .6s var(--spring) both}
-.cx-check svg{width:100px; height:100px}
-.cx-check circle{fill:#fff} .cx-check path{fill:none; stroke:#0C8F82; stroke-width:6; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:60; stroke-dashoffset:60; animation:cxTick .5s var(--ease) .45s forwards}
+.lv-done{position:relative; min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:calc(40px + var(--top)) 24px 32px; overflow:hidden;
+  background:radial-gradient(360px 300px at 50% 32%, #E2F7F2, transparent 70%), var(--lv-bg)}
+.lv-x{position:absolute; top:calc(12px + var(--top)); right:16px; width:44px; height:44px; border-radius:50%; font-size:26px; color:var(--muted)}
+.lv-conf{position:absolute; top:calc(50% - 150px); left:50%}
+.lv-conf i{position:absolute; width:8px; height:14px; border-radius:3px; background:#F5B400; opacity:0; transform:rotate(var(--a)) translateY(-60px); animation:lvConf 1.2s var(--ease) calc(.35s + var(--d)) forwards}
+.lv-conf i:nth-child(3n){background:var(--lv-coral)} .lv-conf i:nth-child(3n+1){background:var(--lv-teal)} .lv-conf i:nth-child(4n){width:8px; height:8px; border-radius:50%}
+@keyframes lvConf{0%{opacity:1; transform:rotate(var(--a)) translateY(-50px) rotate(0)} 100%{opacity:0; transform:rotate(var(--a)) translateY(-170px) rotate(220deg)}}
+.lv-bag{position:relative; width:170px; height:170px; display:grid; place-items:center}
+.lv-halo{position:absolute; inset:0; border-radius:50%; background:var(--lv-mint); animation:lvHalo 2.4s ease-out infinite}
+.lv-halo.h2{animation-delay:-1.2s}
+@keyframes lvHalo{0%{transform:scale(.7); opacity:1} 100%{transform:scale(1.15); opacity:0}}
+.lv-bagb{position:relative; width:110px; height:110px; border-radius:30px; display:grid; place-items:center; color:#fff; background:linear-gradient(135deg,#FFD86B,#F5A623); box-shadow:0 22px 40px -18px rgba(200,120,0,.8); animation:lvBagIn .7s var(--spring) both}
+@keyframes lvBagIn{0%{transform:scale(.3) rotate(-14deg); opacity:0} 100%{transform:none}}
+.lv-bagb > svg{width:54px; height:54px}
+.lv-tick{position:absolute; right:-14px; bottom:-14px; width:52px; height:52px; animation:pop .5s var(--spring) .5s both}
+.lv-tick svg{width:100%; height:100%} .lv-tick circle{fill:var(--lv-teal); stroke:#fff; stroke-width:3} .lv-tick path{fill:none; stroke:#fff; stroke-width:4; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:30; stroke-dashoffset:30; animation:cxTick .45s var(--ease) .85s forwards}
 @keyframes cxTick{to{stroke-dashoffset:0}}
-.cx-burst{position:absolute; top:calc(50% - 120px); left:50%; width:0; height:0}
-.cx-burst i{position:absolute; width:8px; height:16px; border-radius:4px; background:#FFD86B; transform:rotate(var(--a)) translateY(-90px); opacity:0; animation:cxBurst .9s var(--ease) .4s forwards}
-.cx-burst i:nth-child(3n){background:#FF8A6B} .cx-burst i:nth-child(3n+1){background:#fff}
-@keyframes cxBurst{0%{opacity:1; transform:rotate(var(--a)) translateY(-70px)} 100%{opacity:0; transform:rotate(var(--a)) translateY(-150px)}}
-.cx-done h1{margin-top:28px; font-family:var(--display); font-style:italic; text-transform:uppercase; font-weight:800; font-size:40px; color:#fff; animation:rise .5s var(--ease) .5s both}
-.cx-done p{margin-top:8px; font-size:15px; color:#CFF1EC; max-width:300px; animation:rise .5s var(--ease) .6s both}
-.cx-done .btn{margin-top:28px; min-height:52px; width:100%; max-width:300px; background:#fff; color:var(--brand); box-shadow:none; animation:rise .5s var(--ease) .7s both}
-.cx-link{margin-top:10px; min-height:48px; color:#fff; font-weight:700; text-decoration:underline; text-underline-offset:4px}
+.lv-done h1{margin-top:26px; font-size:28px; font-weight:800; line-height:1.15; color:var(--lv-deep); animation:rise .5s var(--ease) .55s both}
+.lv-oid{margin-top:12px; padding:6px 14px; border-radius:999px; background:var(--surface); box-shadow:var(--shadow); font-size:13.5px; font-weight:700; animation:rise .5s var(--ease) .62s both}
+.lv-dmsg{margin-top:12px; max-width:300px; font-size:14.5px; color:var(--muted); animation:rise .5s var(--ease) .68s both}
+.lv-done .lv-btn{max-width:320px; margin-top:12px; animation:rise .5s var(--ease) .75s both} .lv-done .lv-btn:nth-last-child(1){animation-delay:.82s}
+.lv-done #trk{margin-top:28px}
 
-/* ---------- orders / tracking ---------- */
-.cx-track{border-radius:24px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden}
-.cx-map{position:relative; height:170px; background:#E7EFEC; overflow:hidden}
-body.cdark .cx-map{background:#18211F}
-.cx-map svg{width:100%; height:100%}
-.cx-map .st path{fill:none; stroke:#fff; stroke-width:9; stroke-linecap:round} body.cdark .cx-map .st path{stroke:#24302D}
-.cx-map .rt{fill:none; stroke:var(--hot); stroke-width:4; stroke-linecap:round; stroke-dasharray:1; stroke-dashoffset:1; animation:draw 1.4s var(--ease) .3s forwards}
-.cx-map .a{fill:var(--brand)} .cx-map .b{fill:var(--hot)}
-.cx-mp{position:absolute; width:38px; height:38px; border-radius:50% 50% 50% 0; display:grid; place-items:center; color:#fff; box-shadow:0 8px 16px -8px rgba(0,0,0,.5); transform:rotate(-45deg)}
-.cx-mp > *{transform:rotate(45deg)} .cx-mp svg{width:17px; height:17px}
-.cx-mp.s{left:calc(17% - 19px); top:calc(75% - 46px); background:var(--brand)}
-.cx-mp.h{left:calc(83% - 19px); top:calc(27% - 48px); background:var(--hot); animation:pinFloat 2.5s ease-in-out infinite}
-.cx-tb{display:flex; justify-content:space-between; align-items:flex-start; padding:16px 16px 0}
-.cx-tb small{font-size:12px; color:var(--muted)} .cx-tb b{display:block; font-size:17px; font-weight:800}
-.cx-track .otl{padding:0 16px}
-.cx-titems{padding:10px 16px 0; font-size:14px; color:var(--ink2)}
-.cx-tf{display:flex; justify-content:space-between; align-items:center; padding:12px 16px 16px}
-.cx-tf b{font-size:18px}
-.cx-po{display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:12px; align-items:center; padding:12px; border-radius:20px; background:var(--surface); box-shadow:var(--shadow); animation:rise .4s var(--ease) both; animation-delay:calc(var(--n) * 50ms)}
-.cx-poi{width:44px; height:44px; border-radius:14px; display:grid; place-items:center; background:var(--brand-50); color:var(--brand)} .cx-poi svg{width:20px; height:20px}
-.cx-po b{display:block; font-size:15px} .cx-po small{display:block; font-size:12.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.cx-po em{font-style:normal; font-size:13px; font-weight:700} .cx-po em span{text-transform:capitalize}
-.st-completed{color:var(--ok)} .st-rejected,.st-cancelled{color:var(--bad)}
-.cx-again{min-height:44px; padding:0 14px; border-radius:14px; background:var(--hot-50); color:var(--hot); font-weight:800; font-size:13px}
+/* ---------- orders ---------- */
+.lv-seg{position:relative; display:grid; grid-template-columns:1fr 1fr; margin:6px 16px 14px; padding:4px; border-radius:16px; background:var(--surface); box-shadow:var(--shadow)}
+.lv-seg > i{position:absolute; top:4px; bottom:4px; left:4px; width:calc(50% - 4px); border-radius:12px; background:var(--lv-deep); transition:transform .45s var(--spring)}
+.lv-seg.r > i{transform:translateX(100%)}
+.lv-seg button{position:relative; z-index:1; min-height:44px; font-weight:800; font-size:14px; color:var(--muted); transition:color .3s} .lv-seg button.on{color:#fff}
+.lv-olist{display:grid; gap:12px; padding:0 16px}
+.lv-ocard{border-radius:24px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden; animation:rise .5s var(--spring) both}
+.lv-ohead{display:flex; align-items:center; gap:12px; padding:14px 14px 10px}
+.lv-oimg{width:52px; height:52px; flex:none; border-radius:14px; display:grid; place-items:center; background:var(--lv-mint); color:var(--lv-deep)} .lv-oimg svg{width:22px; height:22px}
+.lv-ohead > div{flex:1; min-width:0; display:grid} .lv-ohead b{font-size:15.5px} .lv-ohead small{font-size:12.5px; color:var(--muted)} .lv-ohead small b{font-size:13px; color:var(--ink)}
+.lv-ost{font-size:12px; font-weight:800; color:var(--lv-deep); background:var(--lv-mint); border-radius:999px; padding:5px 10px; white-space:nowrap}
+.lv-omsg{display:flex; align-items:center; gap:12px; margin:0 14px; padding:12px; border-radius:16px; background:#FFF0E6}
+.lv-omsg > span{width:42px; height:42px; flex:none; border-radius:12px; display:grid; place-items:center; background:#fff; color:var(--lv-coral); animation:logoBob 2.6s ease-in-out infinite} .lv-omsg > span svg{width:20px; height:20px}
+.lv-omsg b{display:block; font-size:15px; color:#7A2E10} .lv-omsg small{font-size:12.5px; color:#9A5A3E}
+.lv-track{position:relative; display:grid; grid-template-columns:repeat(5,1fr); padding:16px 8px 6px}
+.lv-track::before,.lv-track > em{content:""; position:absolute; top:33px; left:10%; right:10%; height:2px; background:repeating-linear-gradient(90deg,var(--border-strong) 0 5px,transparent 5px 9px)}
+.lv-track > em{right:auto; width:calc(80% * var(--k) / 4); background:var(--lv-teal); transform-origin:left; animation:lvStory 1s var(--ease) .2s both}
+.lv-track span{position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center}
+.lv-track i{width:34px; height:34px; border-radius:50%; display:grid; place-items:center; background:var(--surface); box-shadow:inset 0 0 0 2px var(--line); color:var(--faint)} .lv-track i svg{width:15px; height:15px}
+.lv-track span.done i{background:var(--lv-teal); color:#fff; box-shadow:none}
+.lv-track span.on i{background:var(--lv-coral); color:#fff; box-shadow:0 0 0 5px rgba(242,107,58,.18); animation:pop .5s var(--spring) .6s both, cxPing2 1.8s ease-out 1.1s infinite}
+@keyframes cxPing2{0%{box-shadow:0 0 0 0 rgba(242,107,58,.5)} 100%{box-shadow:0 0 0 12px rgba(242,107,58,0)}}
+.lv-track b{font-size:12px; font-weight:700; color:var(--muted)} .lv-track span.on b{color:var(--lv-coral)} .lv-track span.done b{color:var(--ink)}
+.lv-map{position:relative; height:150px; margin:10px 14px 0; border-radius:18px; overflow:hidden; background:#E6EFEB}
+body.cdark .lv-map{background:#18211F}
+.lv-map svg{width:100%; height:100%}
+.lv-map .st path{fill:none; stroke:#fff; stroke-width:9; stroke-linecap:round} body.cdark .lv-map .st path{stroke:#24302D}
+.lv-map .pk rect{fill:#CDEBD9} body.cdark .lv-map .pk rect{fill:#1F3A2E}
+.lv-map .rt{fill:none; stroke:var(--lv-teal); stroke-width:4.5; stroke-linecap:round; stroke-dasharray:1; stroke-dashoffset:1; animation:draw 1.6s var(--ease) .3s forwards}
+.lv-map .rider circle{fill:#fff; stroke:var(--lv-coral); stroke-width:2.5} .lv-map .rider text{font-size:14px}
+.lv-mp{position:absolute; width:36px; height:36px; border-radius:50% 50% 50% 0; display:grid; place-items:center; color:#fff; transform:rotate(-45deg); box-shadow:0 8px 14px -6px rgba(0,0,0,.4)}
+.lv-mp > *{transform:rotate(45deg)} .lv-mp svg{width:16px; height:16px}
+.lv-mp.s{left:calc(14.7% - 18px); top:calc(27.5% - 44px); background:var(--lv-coral)} .lv-mp.h{left:calc(87% - 18px); top:calc(77.5% - 44px); background:var(--lv-deep); animation:pinFloat 2.5s ease-in-out infinite}
+.lv-oitems{margin:12px 14px 0; padding:12px; border-radius:16px; background:var(--surface-2)}
+.lv-oitems summary{min-height:32px; font-weight:800; font-size:15px; cursor:pointer}
+.lv-oitems p{display:flex; justify-content:space-between; padding:6px 0; font-size:14px; border-top:1px solid var(--line)}
+.lv-osum{margin:12px 14px 0; font-size:14px; color:var(--ink2)}
+.lv-oacts{display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:14px} .lv-oacts .lv-btn{min-height:48px; font-size:13.5px; padding:0 10px}
+.lv-prow{display:flex; align-items:center; gap:12px; padding:12px; border-radius:20px; background:var(--surface); box-shadow:var(--shadow); animation:rise .45s var(--ease) both; animation-delay:calc(var(--n) * 60ms)}
+.lv-prow > div{flex:1; min-width:0; display:grid} .lv-prow b{font-size:15px} .lv-prow small{font-size:12.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.lv-prow .st-completed{color:#0A8F55} .lv-prow :is(.st-rejected,.st-cancelled){color:var(--bad)}
+.lv-reo{min-height:40px; padding:0 14px; border-radius:12px; background:#FFF0E6; color:var(--lv-coral); font-weight:800; font-size:13px}
+.lv-empty{display:flex; flex-direction:column; align-items:center; text-align:center; padding:24px 32px 8px}
+.lv-eill{position:relative; width:150px; height:150px; display:grid; place-items:center; color:var(--lv-deep); margin-bottom:12px}
+.lv-eill > svg{position:relative; width:54px; height:54px; animation:logoBob 3.5s ease-in-out infinite}
+.lv-empty h2{font-size:22px; font-weight:800} .lv-empty p{font-size:14px; color:var(--muted); margin:6px 0 20px; max-width:270px} .lv-empty .lv-btn{max-width:260px}
 
-/* ---------- profile ---------- */
-.cx-me{display:flex; align-items:center; gap:14px; margin:4px 16px 16px; padding:16px; border-radius:24px; color:#fff;
-  background:radial-gradient(240px 180px at 100% 0%, #2CCBBA, transparent 70%), linear-gradient(140deg,#0C8F82,#0A5C55); box-shadow:0 18px 32px -20px rgba(10,92,85,.8)}
-.cx-mav{width:60px; height:60px; flex:none; border-radius:50%; display:grid; place-items:center; background:#fff; color:var(--brand); font-size:24px; font-weight:800; box-shadow:0 0 0 4px rgba(255,255,255,.25)}
-.cx-me div{flex:1; min-width:0} .cx-me b{display:block; font-size:18px; font-weight:800} .cx-me small{display:block; font-size:13px; color:#CFF1EC}
-.cx-me .btn{background:#fff; color:var(--brand); box-shadow:none}
-.cx-menu{margin:0 16px 12px; border-radius:22px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden}
-.cx-menu > :is(a,button){display:flex; align-items:center; gap:12px; width:100%; min-height:58px; padding:8px 14px; text-align:left; border-bottom:1px solid var(--line); transition:background .2s}
-.cx-menu > :is(a,button):last-child{border-bottom:0}
-.cx-menu > :is(a,button):active{background:var(--surface-2)}
-.cx-mi{width:40px; height:40px; flex:none; border-radius:12px; display:grid; place-items:center; background:var(--brand-50); color:var(--brand)}
-.cx-mi svg{width:19px; height:19px}
-.cx-menu b{flex:1; font-size:15px; font-weight:600}
-.cx-menu small{font-size:13px; color:var(--muted)}
-.cx-menu > :is(a,button) > svg:last-child{width:17px; height:17px; color:var(--faint)}
-.cx-menu .danger .cx-mi{background:var(--bad-50); color:var(--bad)} .cx-menu .danger b{color:var(--bad)}
-.cx-ver{display:flex; align-items:center; justify-content:center; gap:6px; padding:12px; font-size:12px; color:var(--faint)}
+/* ---------- account ---------- */
+.lv-me{display:flex; align-items:center; gap:14px; margin:4px 16px 16px; padding:16px; border-radius:24px; background:var(--surface); box-shadow:var(--shadow); animation:rise .5s var(--spring) both}
+.lv-mav{width:60px; height:60px; flex:none; border-radius:50%; display:grid; place-items:center; color:#5A3A00; font-size:24px; font-weight:800; background:linear-gradient(135deg,#FFD86B,#F7A928); box-shadow:0 0 0 4px var(--lv-mint)}
+.lv-me > div{flex:1; min-width:0} .lv-me b{display:block; font-size:18px; font-weight:800} .lv-me small{font-size:13px; color:var(--muted)}
+.lv-menu{margin:0 16px 12px; border-radius:22px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden}
+.lv-menu > :is(a,button){display:flex; align-items:center; gap:12px; width:100%; min-height:56px; padding:8px 14px; text-align:left; border-bottom:1px solid var(--line); transition:background .2s; animation:rise .4s var(--ease) both; animation-delay:calc(var(--n,0) * 35ms)}
+.lv-menu > :is(a,button):last-child{border-bottom:0} .lv-menu > :is(a,button):active{background:var(--surface-2)}
+.lv-mi{width:38px; height:38px; flex:none; border-radius:12px; display:grid; place-items:center; background:var(--lv-mint); color:var(--lv-deep)} .lv-mi svg{width:18px; height:18px}
+.lv-menu b{flex:1; font-size:15px; font-weight:600} .lv-menu small{font-size:13px; color:var(--lv-teal); font-weight:700}
+.lv-menu > :is(a,button) > svg:last-child{width:16px; height:16px; color:var(--faint)}
+.lv-logout{display:flex; align-items:center; justify-content:center; gap:8px; width:calc(100% - 32px); min-height:52px; margin:12px 16px 0; border-radius:16px; background:#FFF0EA; color:var(--lv-coral); font-weight:800; font-size:15px}
+.lv-logout svg{width:18px; height:18px}
+.lv-ver{display:flex; align-items:center; justify-content:center; gap:6px; padding:16px; font-size:12px; color:var(--faint)}
 
-/* ---------- auth (customer) ---------- */
-.cx-auth{position:relative; min-height:100%; overflow:hidden; isolation:isolate; padding:calc(14px + var(--top)) 16px 30px; color:#fff;
-  background:radial-gradient(360px 280px at 100% 0%, #2CCBBA, transparent 70%), linear-gradient(160deg,#0C8F82,#073F3A)}
-.cx-aglow i{position:absolute; border-radius:50%; z-index:-1; background:radial-gradient(circle,rgba(255,255,255,.18),transparent 70%); animation:lxFloat 9s ease-in-out infinite}
-.cx-aglow i:first-child{width:220px; height:220px; left:-60px; top:120px} .cx-aglow i:last-child{width:160px; height:160px; right:-40px; top:20px; animation-delay:-4s}
-.cx-abrand{display:flex; flex-direction:column; align-items:center; gap:8px; margin:18px 0 22px; animation:pop .6s var(--spring) both}
-.cx-abrand h1{font-family:var(--display); font-style:italic; text-transform:uppercase; font-weight:800; font-size:38px; color:#fff; letter-spacing:0}
-.cx-abrand h1 span:last-child{color:#FFD86B}
-.cx-acard{border-radius:28px; padding:22px 18px; background:var(--surface); color:var(--ink); box-shadow:0 30px 60px -30px rgba(0,0,0,.6); animation:rise .55s var(--spring) .1s both}
-.cx-acard h2{font-size:24px; font-weight:800; text-align:center} .cx-acard > p{text-align:center; font-size:14px; color:var(--muted); margin:4px 0 18px}
-.cx-acard .input{border-radius:16px; min-height:52px; background:var(--surface-2); border-color:transparent}
-.cx-acard .input svg{width:18px; height:18px; color:var(--muted)}
-.cx-acard .btn{min-height:52px; margin-top:6px; background:var(--hot); box-shadow:0 12px 24px -12px rgba(240,82,58,.8)}
-.cx-or{display:flex; align-items:center; gap:10px; margin:18px 0 10px; font-size:12px; color:var(--muted)}
-.cx-or::before,.cx-or::after{content:""; flex:1; height:1px; background:var(--line)}
-.cx-acard .demo-pill button{min-height:40px}
-.cx-alt{margin-top:16px; text-align:center; font-size:14px; color:var(--ink2)} .cx-alt a{color:var(--brand); font-weight:800}
-/* register keeps its logic; give it the same canvas */
-body[data-app="customer"] .auth-wrap{background:radial-gradient(360px 280px at 100% 0%, #2CCBBA, transparent 70%), linear-gradient(160deg,#0C8F82,#073F3A); min-height:100%}
-body[data-app="customer"] .auth-wrap > *:not(.auth-hero):not(.tb-btn){background:var(--surface)}
-body[data-app="customer"] .auth-wrap .field{padding:0 14px; margin:0} body[data-app="customer"] .auth-wrap .field:first-of-type{padding-top:18px; border-radius:24px 24px 0 0}
+/* ---------- login ---------- */
+.lv-login{min-height:100%; padding:calc(12px + var(--top)) 20px 32px; background:radial-gradient(320px 240px at 100% 0%, var(--lv-mint), transparent 70%), var(--lv-bg)}
+.lv-login > .lv-ib{box-shadow:none; background:transparent; margin-left:-10px}
+.lv-lbrand{display:flex; align-items:center; justify-content:center; gap:6px; margin:18px 0 22px; font-family:var(--display); font-style:italic; font-weight:800; font-size:30px; text-transform:uppercase; color:var(--lv-deep); animation:pop .6s var(--spring) both}
+.lv-lbrand b:last-child{color:var(--lv-coral)}
+.lv-login h2{font-size:24px; font-weight:800; text-align:center; animation:rise .5s var(--ease) .1s both} .lv-login > p{text-align:center; font-size:14px; color:var(--muted); margin:6px 0 20px; animation:rise .5s var(--ease) .15s both}
+.lv-login .field{animation:rise .5s var(--ease) .2s both} .lv-login .field + .field{animation-delay:.25s}
+.lv-login .input svg{width:18px; height:18px; color:var(--muted)}
+.lv-login > .lv-btn{margin-top:8px; animation:rise .5s var(--ease) .3s both}
+.lv-or{display:flex; align-items:center; gap:10px; margin:22px 0 12px; font-size:12px; color:var(--muted)} .lv-or::before,.lv-or::after{content:""; flex:1; height:1px; background:var(--line)}
+.lv-demo{display:flex; justify-content:center; gap:8px} .lv-demo button{min-height:44px; padding:0 16px; border-radius:14px; background:var(--surface); box-shadow:var(--shadow); font-weight:700; font-size:13.5px}
+.lv-alt{margin-top:20px; text-align:center; font-size:14px} .lv-alt a{color:var(--lv-teal); font-weight:800}
+.lv-terms{margin-top:12px; text-align:center; font-size:12px; color:var(--faint)}
+body[data-app="customer"] .auth-wrap{background:radial-gradient(320px 240px at 100% 0%, var(--lv-mint), transparent 70%), var(--lv-bg); min-height:100%}
 
 /* ---------- splash + onboarding ---------- */
-.cx-splash{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#fff; overflow:hidden;
-  background:radial-gradient(420px 420px at 50% 44%, #17B6A6, #0A5C55 75%)}
-.cx-rings{position:absolute; top:44%; left:50%}
-.cx-rings i{position:absolute; transform:translate(-50%,-50%); border:2px solid rgba(255,255,255,.3); border-radius:50%; animation:splashring 2.2s ease-out infinite}
-.cx-rings i:nth-child(2){animation-delay:.6s} .cx-rings i:nth-child(3){animation-delay:1.2s}
-.cx-logo{animation:pop .9s var(--spring) both} .cx-logo svg{filter:drop-shadow(0 18px 30px rgba(0,0,0,.35))}
-.cx-splash h1{font-family:var(--display); font-style:italic; text-transform:uppercase; font-weight:800; font-size:50px; color:#fff; animation:rise .6s var(--ease) .3s both}
-.cx-splash h1 span:last-child{color:#FFD86B}
-.cx-splash p{color:#CFF1EC; font-size:15px; animation:rise .6s var(--ease) .45s both}
-.cx-load{width:140px; height:5px; border-radius:3px; background:rgba(255,255,255,.22); overflow:hidden; margin-top:14px}
-.cx-load i{display:block; height:100%; width:0; background:linear-gradient(90deg,#fff,#FFD86B); animation:spbar 1.2s var(--ease) forwards}
-.cx-intro{position:relative; min-height:100%; display:flex; flex-direction:column; align-items:center; text-align:center; padding:calc(70px + var(--top)) 28px 30px}
-.cx-skip{position:absolute; top:calc(14px + var(--top)); right:16px; min-height:44px; padding:0 16px; border-radius:999px; background:var(--hot); color:#fff; font-weight:800; font-size:14px}
-.cx-ill{position:relative; width:250px; height:250px; display:grid; place-items:center; animation:pop .6s var(--spring) both}
-.cx-ill .cx-blob{background:var(--hot-50)} .cx-ill.k1 .cx-blob{background:var(--brand-50)} .cx-ill.k2 .cx-blob{background:var(--sun-50)}
-.cx-ic{position:relative; width:120px; height:120px; border-radius:36px; display:grid; place-items:center; color:#fff; background:linear-gradient(135deg,#17B6A6,#0A5C55); box-shadow:0 26px 40px -20px rgba(10,92,85,.8); animation:logoBob 3.5s ease-in-out infinite}
-.cx-ill.k0 .cx-ic{background:linear-gradient(135deg,#FF8A6B,#E0422A)} .cx-ill.k2 .cx-ic{background:linear-gradient(135deg,#F7C948,#E8A912); color:#2B2100}
-.cx-ic svg{width:54px; height:54px}
-.cx-ill > i{position:absolute; width:16px; height:16px; border-radius:50%; background:var(--brand); animation:lxFloat 4s ease-in-out infinite}
-.cx-ill .o1{top:22px; left:40px} .cx-ill .o2{bottom:34px; right:24px; width:22px; height:22px; background:var(--hot); animation-delay:-1.5s} .cx-ill .o3{top:60px; right:30px; width:10px; height:10px; background:var(--sun); animation-delay:-3s}
-.cx-intro h2{margin-top:30px; font-family:var(--display); font-style:italic; text-transform:uppercase; font-weight:800; font-size:32px; line-height:1; letter-spacing:0; animation:rise .5s var(--ease) .1s both}
-.cx-intro p{margin-top:12px; font-size:15px; color:var(--muted); max-width:290px; animation:rise .5s var(--ease) .2s both}
-.cx-idots{display:flex; gap:6px; margin-top:24px} .cx-idots i{width:8px; height:8px; border-radius:4px; background:var(--border-strong); transition:width .3s var(--spring)} .cx-idots i.on{width:24px; background:var(--hot)}
-.cx-next{position:relative; margin-top:auto; width:72px; height:72px; border-radius:50%; display:grid; place-items:center; color:#fff; background:var(--hot); box-shadow:0 14px 26px -12px rgba(240,82,58,.8); transition:transform .25s var(--spring)}
-.cx-next:active{transform:scale(.92)}
-.cx-next > svg:last-child{width:26px; height:26px}
-.cx-prog{position:absolute; inset:-8px; width:88px; height:88px; transform:rotate(-90deg)}
-.cx-prog circle{fill:none; stroke:var(--hot); stroke-width:2.5; stroke-dasharray:126; stroke-dashoffset:calc(126 - 126 * var(--p) / 100); transition:stroke-dashoffset .5s var(--ease); opacity:.5}
-.cx-gs{margin-top:10px; font-size:14px; font-weight:700; color:var(--ink2)}
+.lv-splash{position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; color:#fff; overflow:hidden; background:radial-gradient(400px 360px at 50% 36%, #17A898, #0A5C55 70%, #073F3A)}
+.lv-spc{display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:-80px}
+.lv-slogo{animation:lvLogo 1s var(--spring) both} .lv-slogo svg{filter:drop-shadow(0 18px 26px rgba(0,0,0,.35))}
+@keyframes lvLogo{0%{transform:translateY(-40px) scale(.4); opacity:0} 60%{transform:translateY(6px) scale(1.06); opacity:1} 100%{transform:none}}
+.lv-splash h1{font-family:var(--display); font-style:italic; text-transform:uppercase; font-weight:800; font-size:46px; color:#fff; animation:rise .6s var(--ease) .35s both} .lv-splash h1 span:last-child{color:#FFD86B}
+.lv-splash p{text-align:center; font-size:15px; color:#CFF1EC; line-height:1.4; animation:rise .6s var(--ease) .5s both}
+.lv-sky{position:absolute; left:0; right:0; bottom:0; width:100%; height:180px}
+.lv-sky path{fill:none; stroke:rgba(255,255,255,.4); stroke-width:1.6; stroke-linejoin:round; stroke-dasharray:1; stroke-dashoffset:1; animation:draw 1.6s var(--ease) .2s forwards}
+.lv-sky path + path{stroke:rgba(255,216,107,.55); animation-delay:.9s}
+.lv-intro{position:relative; min-height:100%; display:flex; flex-direction:column; align-items:center; text-align:center; padding:calc(48px + var(--top)) 24px 24px; background:radial-gradient(360px 300px at 50% 26%, var(--lv-mint), transparent 70%), var(--lv-bg); touch-action:pan-y}
+.lv-ill{position:relative; width:250px; height:250px; display:grid; place-items:center}
+.lv-ill.in-r{animation:lvInR .55s var(--spring) both} .lv-ill.in-l{animation:lvInL .55s var(--spring) both}
+.lv-itx.in-r{animation:lvInR .55s var(--spring) .06s both} .lv-itx.in-l{animation:lvInL .55s var(--spring) .06s both}
+@keyframes lvInR{from{opacity:0; transform:translateX(50px)}} @keyframes lvInL{from{opacity:0; transform:translateX(-50px)}}
+.lv-iic{position:relative; width:128px; height:128px; border-radius:38px; display:grid; place-items:center; color:#fff; background:linear-gradient(135deg,#17B6A6,#0A5C55); box-shadow:0 26px 40px -20px rgba(10,92,85,.9); animation:logoBob 3.5s ease-in-out infinite}
+.lv-ill.k0 .lv-iic{background:linear-gradient(135deg,#FF9A6B,#F26B3A)} .lv-ill.k2 .lv-iic{background:linear-gradient(135deg,#FFD86B,#F5A623); color:#4A3000}
+.lv-iic svg{width:56px; height:56px}
+.lv-ill > i{position:absolute; width:46px; height:46px; border-radius:14px; display:grid; place-items:center; color:#fff; box-shadow:0 10px 18px -8px rgba(0,0,0,.35); animation:lxFloat 4s ease-in-out infinite}
+.lv-ill > i svg{width:22px; height:22px}
+.lv-ill .f1{top:18px; left:22px; background:var(--lv-coral)} .lv-ill .f2{top:40px; right:14px; background:var(--lv-teal); animation-delay:-1.4s} .lv-ill .f3{bottom:26px; left:34px; background:#F5B400; animation-delay:-2.6s}
+.lv-itx h2{margin-top:28px; font-size:26px; font-weight:800; line-height:1.15} .lv-itx p{margin-top:10px; font-size:15px; color:var(--muted); max-width:300px}
+.lv-idots{display:flex; gap:6px; margin:24px 0} .lv-idots i{width:8px; height:8px; border-radius:4px; background:var(--border-strong); transition:width .35s var(--spring), background .3s} .lv-idots i.on{width:26px; background:var(--lv-deep)}
+.lv-intro .lv-btn{margin-top:auto; max-width:340px}
+.lv-skip{min-height:44px; margin-top:8px; padding:0 20px; color:var(--muted); font-weight:700; font-size:14px}
 
-/* ---------- floating cart bar (customer) ---------- */
-body[data-app="customer"] .qc-cartbar{background:#14161A; border-radius:20px; padding:10px 10px 12px 10px}
-body[data-app="customer"] .qc-cgo{background:var(--hot); color:#fff; border-radius:14px; padding:10px 14px}
-body[data-app="customer"] .qc-thumbs i{border-color:#14161A}
-body[data-app="customer"] .qc-cartwrap{bottom:calc(84px + var(--bottom))}
+/* ---------- compact sticky bar on home ---------- */
+.cx-mini{position:sticky; top:0; z-index:12; height:0; overflow:visible; pointer-events:none; display:flex; align-items:flex-start; gap:8px; padding:0 12px}
+.cx-mini::before{content:""; position:absolute; left:0; right:0; top:0; height:calc(64px + var(--top)); background:linear-gradient(165deg,#0E7468,#0A5C55); border-radius:0 0 22px 22px; box-shadow:0 12px 24px -16px rgba(7,63,58,.9); transform:translateY(-110%); transition:transform .4s var(--spring)}
+.cx-mini > *{position:relative; margin-top:calc(10px + var(--top)); opacity:0; transform:translateY(-14px); transition:opacity .3s, transform .4s var(--spring); pointer-events:auto}
+.cx-mini.on::before{transform:none} .cx-mini.on > *{opacity:1; transform:none} .cx-mini:not(.on) > *{pointer-events:none}
+.cx-mini.on > *:nth-child(2){transition-delay:.04s} .cx-mini.on > *:nth-child(3){transition-delay:.08s}
+.cx-mlogo{width:44px; height:44px; display:grid; place-items:center}
+.cx-msearch{flex:1; min-width:0; display:flex; align-items:center; gap:8px; height:44px; padding:0 14px; border-radius:14px; background:#fff; color:#7A8388; font-size:14px; white-space:nowrap; overflow:hidden} .cx-msearch svg{width:18px; height:18px; flex:none}
+.cx-mmic{width:44px; height:44px; flex:none; border-radius:14px; display:grid; place-items:center; background:var(--lv-mint); color:var(--lv-deep)} .cx-mmic svg{width:19px; height:19px}
+.lv-head .lv-search,.lv-head .lv-tabs{transform:translateY(calc(var(--hs,0) * -16px)); opacity:calc(1 - var(--hs,0) * 1.2)}
 
-/* ---------- bottom nav: same compact system as the partner app ---------- */
-body[data-app="customer"] .cxdock .pd-add{background:linear-gradient(135deg,#FF8A6B,#F0523A); box-shadow:0 6px 14px -6px rgba(240,82,58,.8)}
-body[data-app="customer"] .cxdock .pd-addtab{color:var(--hot)}
+/* ---------- bottom dock ---------- */
+body[data-app="customer"] .lvdock{position:absolute; left:0; right:0; bottom:0; z-index:20; display:grid; grid-template-columns:repeat(5,1fr); align-items:end; height:calc(68px + var(--bottom)); padding:0 6px var(--bottom); background:var(--surface); border-radius:24px 24px 0 0; box-shadow:0 -10px 30px -18px rgba(0,0,0,.35)}
+.lvdock .vtab{position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; height:64px; font-size:12px; font-weight:700; color:var(--muted); background:transparent !important; box-shadow:none !important}
+.lvdock .vtab .vico{display:grid; place-items:center; width:30px; height:26px; background:transparent !important} .lvdock .vtab svg{width:22px; height:22px}
+.lvdock .vtab.on{color:var(--lv-deep)} .lvdock .vtab.on .vico{animation:cxHop .5s var(--spring)} .lvdock .vtab.on svg{fill:currentColor; fill-opacity:.15}
+.lvdock .cx-ind{position:absolute; top:6px; left:0; width:60px; height:52px; border-radius:16px; background:var(--lv-mint); z-index:0; transition:transform .45s var(--spring), opacity .2s; pointer-events:none}
+.lv-askt{position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; gap:2px; height:86px; justify-content:flex-start; font-size:12px; font-weight:800; color:var(--lv-deep)}
+.lv-askb{position:relative; width:60px; height:60px; margin-top:-4px; border-radius:50%; display:grid; place-items:center; color:#fff; background:linear-gradient(145deg,#17A898,#0A5C55); box-shadow:0 0 0 4px #FFD86B, 0 0 0 7px var(--surface), 0 14px 24px -10px rgba(10,92,85,.9); transition:transform .3s var(--spring)}
+.lv-askb svg{width:24px; height:24px} .lv-askt:active .lv-askb{transform:scale(.9)}
+.lv-askb i{position:absolute; inset:-4px; border-radius:50%; border:2px solid rgba(255,216,107,.8); animation:ringpulse 2.4s ease-out infinite}
+body[data-app="customer"] .lvdock .cartbadge{display:none}
 
-/* ---------- shared inner screens, toned to match ---------- */
-body[data-app="customer"] .st-card,body[data-app="customer"] .pd-sheet .pd-store{border-radius:24px}
-body[data-app="customer"] .st-tabs button.on{background:var(--hot); color:#fff}
-body[data-app="customer"] .pd-bar{background:#14161A; color:#fff} body[data-app="customer"] .pd-bar small,body[data-app="customer"] .pd-bar s{color:#9AA3A1}
-body[data-app="customer"] .pd-ctl .qc-add{background:var(--hot); border-color:var(--hot)}
-body[data-app="customer"] .pd-ctl .qc-step{background:var(--hot)}
-body[data-app="customer"] .brow{border:0; box-shadow:var(--shadow); border-radius:20px}
+/* floating cart bar: teal pill with coral "View cart" */
+body[data-app="customer"] .qc-cartwrap{bottom:calc(80px + var(--bottom))}
+body[data-app="customer"] .qc-cartbar{background:var(--lv-deep); border-radius:20px; padding:8px 8px 10px 10px; box-shadow:0 16px 30px -14px rgba(10,92,85,.9)}
+body[data-app="customer"] .qc-cgo{background:var(--lv-coral); color:#fff; border-radius:14px; padding:10px 14px}
+body[data-app="customer"] .qc-thumbs i{border-color:var(--lv-deep)}
+body[data-app="customer"] .qc-cbt small{color:#BFE7E1}
 
-/* dark mode */
-body.cdark .cx-line{background:var(--surface-2) !important}
-body.cdark .cx-paybar,body.cdark .qc-cartbar,body.cdark .pd-bar{background:#000}
-@media (prefers-reduced-motion:reduce){ .screen > *{animation:none !important} }
-html.lite .cx-hero > img.ph{display:none} html.lite .cx-offer::before,html.lite .cx-blob{animation:none}
-/* no delivery-time claims; keep bars tidy */
-body[data-app="customer"] .qc-time{display:none !important}
-.cx-bar > .clang{display:none}
-.cx-splash p{color:#E6FAF6}
-
-/* =====================================================================
-   v33 — customer motion layer (matches partner interactions)
-   ===================================================================== */
-/* scroll reveal */
+/* ---------- motion helpers ---------- */
 body[data-app="customer"] .rv{opacity:0; transform:translateY(22px) scale(.98); transition:opacity .55s var(--ease) var(--rd,0ms), transform .65s var(--spring) var(--rd,0ms)}
 body[data-app="customer"] .rv.in{opacity:1; transform:none}
-/* depth carousels: cards tilt/scale by distance from centre */
-.cx-offers{perspective:900px}
-.cx-offers .cx-offer{transform:rotateY(calc(var(--d,0) * -14deg)) scale(calc(1 - (var(--d,0) * var(--d,0)) * .12)); opacity:calc(1 - (var(--d,0) * var(--d,0)) * .35); transition:transform .18s linear, opacity .18s linear}
-.cx-offers .cx-oimg{transform:translateX(calc(var(--d,0) * 26px)) rotate(calc(var(--d,0) * 25deg))}
-.cx-offers .cx-ot{transform:translateX(calc(var(--d,0) * -14px))}
-.cx-rail > *{transform:scale(calc(1 - max(0, (var(--d,0) * var(--d,0)) - .25) * .12)); transition:transform .2s linear}
-.cx-cats .cx-cat > span{transform:rotate(calc(var(--d,0) * 18deg))}
-/* story-style progress dots */
-.cx-odots i{position:relative; overflow:hidden}
-.cx-odots i.on{background:color-mix(in srgb,var(--hot) 30%,transparent); width:30px}
-.cx-odots i.on::after{content:""; position:absolute; inset:0; background:var(--hot); transform-origin:left; animation:cxStory 3.2s linear forwards}
-@keyframes cxStory{from{transform:scaleX(0)}}
-/* hero parallax + collapse */
-.cx-hero > img.ph.on{transform:translateY(calc(var(--hs,0) * 60px)) scale(calc(1.04 + var(--hs,0) * .1))}
-.cx-hello{transform:translateY(calc(var(--hs,0) * -24px)); opacity:calc(1 - var(--hs,0) * 1.4)}
-.cx-mini{position:sticky; top:0; z-index:12; height:0; overflow:visible; pointer-events:none}
-.cx-mini > *{pointer-events:auto}
-.cx-mini{display:flex; align-items:flex-start; gap:8px; padding:0 12px}
-.cx-mini::before{content:""; position:absolute; left:0; right:0; top:0; height:calc(64px + var(--top)); background:linear-gradient(160deg,#0C8F82,#0A5C55); border-radius:0 0 22px 22px; box-shadow:0 12px 24px -16px rgba(7,63,58,.8); transform:translateY(-110%); transition:transform .4s var(--spring)}
-.cx-mini > *{position:relative; margin-top:calc(10px + var(--top)); opacity:0; transform:translateY(-14px); transition:opacity .3s, transform .4s var(--spring)}
-.cx-mini.on::before{transform:none} .cx-mini.on > *{opacity:1; transform:none}
-.cx-mini.on > *:nth-child(2){transition-delay:.04s} .cx-mini.on > *:nth-child(3){transition-delay:.08s}
-.cx-mini:not(.on) > *{pointer-events:none}
-.cx-mlogo{width:44px; height:44px; display:grid; place-items:center}
-.cx-msearch{flex:1; min-width:0; display:flex; align-items:center; gap:8px; height:44px; padding:0 14px; border-radius:14px; background:#fff; color:#6E777E; font-size:14px; white-space:nowrap; overflow:hidden}
-.cx-msearch svg{width:18px; height:18px; flex:none}
-.cx-mmic{width:44px; height:44px; flex:none; border-radius:14px; display:grid; place-items:center; background:var(--hot); color:#fff} .cx-mmic svg{width:19px; height:19px}
-/* sliding dock indicator */
-.cxdock{position:relative}
-.cx-ind{position:absolute; top:6px; left:0; width:48px; height:32px; border-radius:12px; background:var(--brand-50); z-index:0; transition:transform .45s var(--spring), opacity .2s; pointer-events:none}
-.cxdock .vtab{position:relative; z-index:1}
-.cxdock .vtab.on .vico{background:transparent !important; animation:cxHop .5s var(--spring)}
-@keyframes cxHop{40%{transform:translateY(-4px) scale(1.12)}}
-/* ripple, fly-to-cart, bump */
-.cx-rip{position:absolute; border-radius:50%; background:currentColor; opacity:.18; transform:scale(0); pointer-events:none; animation:cxRip .6s var(--ease) forwards; z-index:5}
+.cx-rip{position:absolute; border-radius:50%; background:currentColor; opacity:.16; transform:scale(0); pointer-events:none; animation:cxRip .6s var(--ease) forwards; z-index:5}
 @keyframes cxRip{to{transform:scale(1); opacity:0}}
-.cx-fly{position:fixed; z-index:999; width:44px; height:44px; border-radius:50%; background:var(--hot) center/cover; box-shadow:0 0 0 3px #fff, 0 10px 20px -6px rgba(0,0,0,.4); transition:transform .55s cubic-bezier(.5,-.3,.7,.9), opacity .55s ease-in; pointer-events:none}
-.cx-bump{animation:cxBump .45s var(--spring)}
-@keyframes cxBump{40%{transform:scale(1.06)}}
-/* grid items pop in with stagger when filters change */
-.cx-grid > *{animation:cxPop .45s var(--spring) both; animation-delay:calc(min(var(--i,0), 8) * 40ms)}
-.cx-grid > *:nth-child(2){--i:1} .cx-grid > *:nth-child(3){--i:2} .cx-grid > *:nth-child(4){--i:3} .cx-grid > *:nth-child(5){--i:4} .cx-grid > *:nth-child(6){--i:5}
-@keyframes cxPop{from{opacity:0; transform:translateY(14px) scale(.94)}}
-.cx-chip span{transition:transform .35s var(--spring), background .25s, color .25s, box-shadow .25s}
-/* press feedback everywhere */
-body[data-app="customer"] :is(.cx-store,.cx-offer,.cx-ccard,.cx-cat,.cx-po,.cx-pay,.qc-card,.brow):active{transform:scale(.97) !important; transition-duration:.1s}
-/* skeleton shimmer for customer */
+.cx-fly{position:fixed; z-index:999; width:44px; height:44px; border-radius:50%; background:var(--lv-coral) center/cover; box-shadow:0 0 0 3px #fff, 0 10px 20px -6px rgba(0,0,0,.4); transition:transform .55s cubic-bezier(.5,-.3,.7,.9), opacity .55s ease-in; pointer-events:none}
+.cx-bump{animation:cxBump .45s var(--spring)} @keyframes cxBump{40%{transform:scale(1.06)}}
+body[data-app="customer"] :is(.lv-scard,.lv-srow,.lv-pcard,.lv-ban,.lv-ctile,.lv-pay,.lv-prow,.lv-row,.lv-sold):active{transform:scale(.97) !important; transition-duration:.1s}
 body[data-app="customer"] .sk{background:linear-gradient(100deg,var(--surface-2) 30%,var(--surface) 50%,var(--surface-2) 70%) 0 0/300% 100%; animation:cxShim 1.2s linear infinite}
 @keyframes cxShim{to{background-position:-150% 0}}
-/* checkout steps pulse, live map ping */
-.cx-steps span.on i{animation:cxPing 1.8s ease-out infinite}
-@keyframes cxPing{0%{box-shadow:0 0 0 0 rgba(12,143,130,.5)} 100%{box-shadow:0 0 0 10px rgba(12,143,130,0)}}
-@media (prefers-reduced-motion:reduce){ body[data-app="customer"] .rv{opacity:1; transform:none} .cx-offers .cx-offer,.cx-rail > *{transform:none} }
 
-/* ---- mobile sizing: same rules as the partner app ---- */
-body[data-app="customer"]{font-size:15px}
-/* calmer headings */
-body[data-app="customer"] .chead h2,body[data-app="customer"] .vgreet b{font-size:24px !important; line-height:1.05}
-body[data-app="customer"] .pt-head h2{font-size:26px}
-body[data-app="customer"] .row.px[style*="sticky"] h3{font-size:22px !important}
-body[data-app="customer"] .vgreet span{font-size:14px}
-/* minimum readable sizes */
-body[data-app="customer"] :is(.badge,.fc-pc,.fc-basis,.fc-why span,.pt-do small,.pt-card small,.pt-q small,.fc-mrow small,.fc-mrow i,.fc-bandl,.fc-big small,.fc-kpi span,.fc-evs span,.pt-filt button i,.olab){font-size:12px !important}
-body[data-app="customer"] .fc-chart text{font-size:10px}
-body[data-app="customer"] .fc-ring span{font-size:8px}
-body[data-app="customer"] .olab{line-height:1.15}
-body[data-app="customer"] .muted{font-size:max(12px,1em)}
-/* tap targets ≥44px */
-body[data-app="customer"] :is(.pmbtn,.btn.sm,.pt-filt button,.pt-th button,.lang-toggle button,.tb-btn,.pt-live){min-height:44px}
-body[data-app="customer"] .pmbtn{padding:0 14px; font-size:13px}
-body[data-app="customer"] .lang-toggle button{min-width:44px}
-body[data-app="customer"] .pt-sw{min-height:44px}
-body[data-app="customer"] .pt-acts .pmbtn.danger{min-width:44px; justify-content:center}
-body[data-app="customer"] .plist > :is(a,button){min-height:56px}
-/* 8 / 16 / 24 spacing rhythm */
-body[data-app="customer"] .pt-today,body[data-app="customer"] #fcEntry{margin-top:16px}
-body[data-app="customer"] .pt-dos{gap:8px}
-body[data-app="customer"] .pt-quick{gap:8px; margin-top:8px}
-body[data-app="customer"] #body > *{margin-top:16px !important}
-body[data-app="customer"] .sec-head{margin:24px 0 8px !important}
-body[data-app="customer"] .grid2{gap:8px !important}
-body[data-app="customer"] :is(.cx-see,.cx-again,.cx-skip,.cx-ch button,.qc-add,.clang button){min-height:44px}
-body[data-app="customer"] :is(small,.cx-steps span,.cx-odots + *){font-size:max(12px,1em)}
-body[data-app="customer"] .cx-sec{margin-top:24px} body[data-app="customer"] .cx-sh{padding-bottom:8px}
-
-/* =====================================================================
-   v34 — premium pass on store, product and search (customer)
-   ===================================================================== */
-/* STORE */
-body[data-app="customer"] .st-hero{border-radius:0 0 32px 32px; overflow:hidden}
-body[data-app="customer"] .st-card{box-shadow:0 24px 44px -26px rgba(7,63,58,.55); border:0}
-body[data-app="customer"] .st-logo{border-radius:20px; box-shadow:0 0 0 5px var(--surface), 0 14px 26px -10px rgba(10,92,85,.7); animation:pop .6s var(--spring) both}
-body[data-app="customer"] .st-acts > *{border-radius:16px; border:0; background:var(--brand-50); color:var(--brand); min-height:60px; transition:transform .25s var(--spring)}
-body[data-app="customer"] .st-acts > *:active{transform:scale(.93)}
-body[data-app="customer"] .st-coupon{border:1.5px dashed var(--hot); border-radius:18px; background:linear-gradient(120deg,var(--hot-50),var(--surface)); box-shadow:var(--shadow)}
-body[data-app="customer"] .st-tabs{position:sticky; top:0; z-index:8; padding:10px 16px; background:color-mix(in srgb,#F6F8F7 92%,transparent); backdrop-filter:blur(12px)}
-body[data-app="customer"].cdark .st-tabs{background:color-mix(in srgb,var(--bg) 92%,transparent)}
-body[data-app="customer"] .st-tabs button{min-height:40px; border-radius:999px; padding:0 16px; font-weight:700; transition:background .3s, color .3s, transform .3s var(--spring)}
-body[data-app="customer"] .st-tabs button.on{box-shadow:0 8px 16px -8px rgba(240,82,58,.8); transform:translateY(-1px)}
-body[data-app="customer"] .st-menu{display:grid; gap:12px; padding:12px 16px}
-body[data-app="customer"] .st-item{display:grid; grid-template-columns:minmax(0,1fr) 118px; gap:12px; align-items:center; padding:12px; border:0 !important; border-radius:22px; background:var(--surface); box-shadow:var(--shadow); animation:rise .45s var(--ease) both}
-body[data-app="customer"] .st-item:nth-child(2){animation-delay:.05s} body[data-app="customer"] .st-item:nth-child(3){animation-delay:.1s} body[data-app="customer"] .st-item:nth-child(n+4){animation-delay:.15s}
-body[data-app="customer"] .st-item h4{font-size:15.5px; font-weight:800}
-body[data-app="customer"] .st-price b{font-size:17px; color:var(--ink)} body[data-app="customer"] .st-price em{background:var(--ok-50); color:var(--ok); border-radius:8px; padding:2px 6px; font-style:normal; font-size:12px; font-weight:800}
-body[data-app="customer"] .st-item p{font-size:13px; color:var(--muted); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
-body[data-app="customer"] .st-ip{position:relative; width:118px; height:118px; border-radius:20px; overflow:visible; display:grid; place-items:center; color:var(--brand); background:linear-gradient(150deg,#E2F5F1,#CDEDE7)}
-body[data-app="customer"] .st-item:nth-child(3n+2) .st-ip{background:linear-gradient(150deg,#FFF1EC,#FFE3D9); color:var(--hot)}
-body[data-app="customer"] .st-item:nth-child(3n+3) .st-ip{background:linear-gradient(150deg,#FFF6DC,#FDEBB5); color:#B07800}
-body[data-app="customer"].cdark .st-ip{background:var(--surface-2) !important}
-body[data-app="customer"] .st-ip img.ph{border-radius:20px}
-body[data-app="customer"] .st-ip > .gi svg{width:34px; height:34px; opacity:.55}
-body[data-app="customer"] .st-ip :is(.qc-add,.qc-step){position:absolute; left:50%; bottom:-14px; transform:translateX(-50%); min-width:88px; box-shadow:0 8px 16px -8px rgba(0,0,0,.35)}
-body[data-app="customer"] .st-ip .qc-add{background:var(--surface); color:var(--hot); border:1.5px solid var(--hot); font-weight:800}
-
-/* PRODUCT */
-body[data-app="customer"] .pd-hero{position:relative; overflow:hidden; border-radius:0 0 36px 36px; background:radial-gradient(260px 200px at 50% 55%, #fff, transparent 70%), linear-gradient(160deg,#E2F5F1,#BFE7E1)}
-body[data-app="customer"].cdark .pd-hero{background:var(--surface-2)}
-body[data-app="customer"] .pd-hero::before{content:""; position:absolute; left:50%; top:52%; width:220px; height:220px; margin:-110px 0 0 -110px; border-radius:42% 58% 63% 37% / 41% 44% 56% 59%; background:rgba(255,255,255,.55); animation:cxBlob 9s ease-in-out infinite}
-body[data-app="customer"] .pd-hero > .gi{position:relative; animation:logoBob 3.5s ease-in-out infinite}
-body[data-app="customer"] .pd-hero > .gi svg{color:var(--brand); opacity:.75}
-body[data-app="customer"] .pd-sheet{margin-top:-28px; position:relative; border-radius:30px 30px 0 0; background:var(--surface); padding-top:24px; box-shadow:0 -16px 30px -24px rgba(0,0,0,.4); animation:rise .5s var(--spring) .1s both}
-body[data-app="customer"] .pd-sheet h1{font-size:24px; font-weight:800; letter-spacing:-.03em}
-body[data-app="customer"] .pd-price b{color:var(--hot)}
-body[data-app="customer"] .pd-store{border:0 !important; background:var(--brand-50) !important}
-body[data-app="customer"] .pd-perks{display:flex !important; gap:8px; overflow-x:auto; scrollbar-width:none}
-body[data-app="customer"] .pd-perks > div{flex:1 0 100px; border-radius:18px; padding:12px 10px; background:var(--surface-2); text-align:center; animation:moodIn .5s var(--spring) both}
-body[data-app="customer"] .pd-perks > div:nth-child(2){animation-delay:.08s} body[data-app="customer"] .pd-perks > div:nth-child(3){animation-delay:.16s}
-body[data-app="customer"] .pd-perks .gi{display:grid; place-items:center; width:36px; height:36px; margin:0 auto 6px; border-radius:12px; background:var(--brand); color:#fff}
-body[data-app="customer"] .pd-perks .gi svg{width:18px; height:18px}
-body[data-app="customer"] .pd-perks b{display:block; font-size:13px} body[data-app="customer"] .pd-perks small{font-size:12px; color:var(--muted)}
-body[data-app="customer"] .pd-bar{border-radius:26px 26px 0 0; animation:qcBarIn .5s var(--spring) both}
-
-/* SEARCH */
-body[data-app="customer"] .sr-top{padding-top:calc(12px + var(--top)); background:linear-gradient(160deg,#0C8F82,#0A5C55); border-radius:0 0 26px 26px; padding-bottom:14px; box-shadow:0 16px 30px -22px rgba(7,63,58,.8)}
-body[data-app="customer"] .sr-top .tb-btn,body[data-app="customer"] .sr-top > button:first-child{background:rgba(255,255,255,.18); color:#fff; border:0}
-body[data-app="customer"] .sr-box{background:#fff; border:0 !important; border-radius:16px; min-height:48px; box-shadow:0 12px 24px -14px rgba(0,0,0,.5); animation:cxGrow .45s var(--spring) both}
-@keyframes cxGrow{from{transform:scaleX(.85); opacity:0}}
-body[data-app="customer"] .sr-trend > *{border-radius:20px; animation:moodIn .45s var(--spring) both; box-shadow:var(--shadow)}
-body[data-app="customer"] .sr-trend > *:nth-child(2){animation-delay:.04s} body[data-app="customer"] .sr-trend > *:nth-child(3){animation-delay:.08s} body[data-app="customer"] .sr-trend > *:nth-child(4){animation-delay:.12s}
-body[data-app="customer"] .sr-trend > *:nth-child(n+5){animation-delay:.16s}
-body[data-app="customer"] .sr-chip{min-height:40px; border-radius:999px}
-body[data-app="customer"] .pd-perks .gi svg{color:#fff}
-body[data-app="customer"] .pd-h{font-size:17px; font-weight:800}
+/* dark */
+body.cdark .lv-ban{filter:brightness(.92)} body.cdark .lv-omsg{background:#3A2418} body.cdark .lv-omsg b{color:#FFC8AE} body.cdark .lv-omsg small{color:#D9A58C}
+body.cdark .lv-coupon,body.cdark .lv-reo,body.cdark .lv-logout{background:#3A2418}
+body.cdark .lv-search,body.cdark .cx-msearch{background:var(--surface)}
+@media (prefers-reduced-motion:reduce){ body[data-app="customer"] *{animation-duration:.01ms !important; animation-iteration-count:1 !important} body[data-app="customer"] .rv{opacity:1; transform:none} }
+html.lite .lv-head::after{animation:none}
+body[data-app="customer"] .lvdock{height:calc(76px + var(--bottom)); padding-bottom:calc(10px + var(--bottom)); align-items:center}
+.lvdock .vtab{height:58px; justify-content:center}
+.lvdock .cx-ind{top:9px}
+.lv-askt{height:76px; justify-content:flex-end; padding-bottom:4px}
+.lv-askb{margin-top:-30px; margin-bottom:2px}
+.lvdock .vtab.on > span:last-child{display:block !important; opacity:1 !important; color:var(--lv-deep) !important}
+.lvdock .vtab::after,.lvdock .vtab.on::after{display:none !important}
