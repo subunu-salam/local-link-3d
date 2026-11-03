@@ -370,3 +370,94 @@ html.lite .cx-hero > img.ph{display:none} html.lite .cx-offer::before,html.lite 
 body[data-app="customer"] .qc-time{display:none !important}
 .cx-bar > .clang{display:none}
 .cx-splash p{color:#E6FAF6}
+
+/* =====================================================================
+   v33 — customer motion layer (matches partner interactions)
+   ===================================================================== */
+/* scroll reveal */
+body[data-app="customer"] .rv{opacity:0; transform:translateY(22px) scale(.98); transition:opacity .55s var(--ease) var(--rd,0ms), transform .65s var(--spring) var(--rd,0ms)}
+body[data-app="customer"] .rv.in{opacity:1; transform:none}
+/* depth carousels: cards tilt/scale by distance from centre */
+.cx-offers{perspective:900px}
+.cx-offers .cx-offer{transform:rotateY(calc(var(--d,0) * -14deg)) scale(calc(1 - (var(--d,0) * var(--d,0)) * .12)); opacity:calc(1 - (var(--d,0) * var(--d,0)) * .35); transition:transform .18s linear, opacity .18s linear}
+.cx-offers .cx-oimg{transform:translateX(calc(var(--d,0) * 26px)) rotate(calc(var(--d,0) * 25deg))}
+.cx-offers .cx-ot{transform:translateX(calc(var(--d,0) * -14px))}
+.cx-rail > *{transform:scale(calc(1 - max(0, (var(--d,0) * var(--d,0)) - .25) * .12)); transition:transform .2s linear}
+.cx-cats .cx-cat > span{transform:rotate(calc(var(--d,0) * 18deg))}
+/* story-style progress dots */
+.cx-odots i{position:relative; overflow:hidden}
+.cx-odots i.on{background:color-mix(in srgb,var(--hot) 30%,transparent); width:30px}
+.cx-odots i.on::after{content:""; position:absolute; inset:0; background:var(--hot); transform-origin:left; animation:cxStory 3.2s linear forwards}
+@keyframes cxStory{from{transform:scaleX(0)}}
+/* hero parallax + collapse */
+.cx-hero > img.ph.on{transform:translateY(calc(var(--hs,0) * 60px)) scale(calc(1.04 + var(--hs,0) * .1))}
+.cx-hello{transform:translateY(calc(var(--hs,0) * -24px)); opacity:calc(1 - var(--hs,0) * 1.4)}
+.cx-mini{position:sticky; top:0; z-index:12; height:0; overflow:visible; pointer-events:none}
+.cx-mini > *{pointer-events:auto}
+.cx-mini{display:flex; align-items:flex-start; gap:8px; padding:0 12px}
+.cx-mini::before{content:""; position:absolute; left:0; right:0; top:0; height:calc(64px + var(--top)); background:linear-gradient(160deg,#0C8F82,#0A5C55); border-radius:0 0 22px 22px; box-shadow:0 12px 24px -16px rgba(7,63,58,.8); transform:translateY(-110%); transition:transform .4s var(--spring)}
+.cx-mini > *{position:relative; margin-top:calc(10px + var(--top)); opacity:0; transform:translateY(-14px); transition:opacity .3s, transform .4s var(--spring)}
+.cx-mini.on::before{transform:none} .cx-mini.on > *{opacity:1; transform:none}
+.cx-mini.on > *:nth-child(2){transition-delay:.04s} .cx-mini.on > *:nth-child(3){transition-delay:.08s}
+.cx-mini:not(.on) > *{pointer-events:none}
+.cx-mlogo{width:44px; height:44px; display:grid; place-items:center}
+.cx-msearch{flex:1; min-width:0; display:flex; align-items:center; gap:8px; height:44px; padding:0 14px; border-radius:14px; background:#fff; color:#6E777E; font-size:14px; white-space:nowrap; overflow:hidden}
+.cx-msearch svg{width:18px; height:18px; flex:none}
+.cx-mmic{width:44px; height:44px; flex:none; border-radius:14px; display:grid; place-items:center; background:var(--hot); color:#fff} .cx-mmic svg{width:19px; height:19px}
+/* sliding dock indicator */
+.cxdock{position:relative}
+.cx-ind{position:absolute; top:6px; left:0; width:48px; height:32px; border-radius:12px; background:var(--brand-50); z-index:0; transition:transform .45s var(--spring), opacity .2s; pointer-events:none}
+.cxdock .vtab{position:relative; z-index:1}
+.cxdock .vtab.on .vico{background:transparent !important; animation:cxHop .5s var(--spring)}
+@keyframes cxHop{40%{transform:translateY(-4px) scale(1.12)}}
+/* ripple, fly-to-cart, bump */
+.cx-rip{position:absolute; border-radius:50%; background:currentColor; opacity:.18; transform:scale(0); pointer-events:none; animation:cxRip .6s var(--ease) forwards; z-index:5}
+@keyframes cxRip{to{transform:scale(1); opacity:0}}
+.cx-fly{position:fixed; z-index:999; width:44px; height:44px; border-radius:50%; background:var(--hot) center/cover; box-shadow:0 0 0 3px #fff, 0 10px 20px -6px rgba(0,0,0,.4); transition:transform .55s cubic-bezier(.5,-.3,.7,.9), opacity .55s ease-in; pointer-events:none}
+.cx-bump{animation:cxBump .45s var(--spring)}
+@keyframes cxBump{40%{transform:scale(1.06)}}
+/* grid items pop in with stagger when filters change */
+.cx-grid > *{animation:cxPop .45s var(--spring) both; animation-delay:calc(min(var(--i,0), 8) * 40ms)}
+.cx-grid > *:nth-child(2){--i:1} .cx-grid > *:nth-child(3){--i:2} .cx-grid > *:nth-child(4){--i:3} .cx-grid > *:nth-child(5){--i:4} .cx-grid > *:nth-child(6){--i:5}
+@keyframes cxPop{from{opacity:0; transform:translateY(14px) scale(.94)}}
+.cx-chip span{transition:transform .35s var(--spring), background .25s, color .25s, box-shadow .25s}
+/* press feedback everywhere */
+body[data-app="customer"] :is(.cx-store,.cx-offer,.cx-ccard,.cx-cat,.cx-po,.cx-pay,.qc-card,.brow):active{transform:scale(.97) !important; transition-duration:.1s}
+/* skeleton shimmer for customer */
+body[data-app="customer"] .sk{background:linear-gradient(100deg,var(--surface-2) 30%,var(--surface) 50%,var(--surface-2) 70%) 0 0/300% 100%; animation:cxShim 1.2s linear infinite}
+@keyframes cxShim{to{background-position:-150% 0}}
+/* checkout steps pulse, live map ping */
+.cx-steps span.on i{animation:cxPing 1.8s ease-out infinite}
+@keyframes cxPing{0%{box-shadow:0 0 0 0 rgba(12,143,130,.5)} 100%{box-shadow:0 0 0 10px rgba(12,143,130,0)}}
+@media (prefers-reduced-motion:reduce){ body[data-app="customer"] .rv{opacity:1; transform:none} .cx-offers .cx-offer,.cx-rail > *{transform:none} }
+
+/* ---- mobile sizing: same rules as the partner app ---- */
+body[data-app="customer"]{font-size:15px}
+/* calmer headings */
+body[data-app="customer"] .chead h2,body[data-app="customer"] .vgreet b{font-size:24px !important; line-height:1.05}
+body[data-app="customer"] .pt-head h2{font-size:26px}
+body[data-app="customer"] .row.px[style*="sticky"] h3{font-size:22px !important}
+body[data-app="customer"] .vgreet span{font-size:14px}
+/* minimum readable sizes */
+body[data-app="customer"] :is(.badge,.fc-pc,.fc-basis,.fc-why span,.pt-do small,.pt-card small,.pt-q small,.fc-mrow small,.fc-mrow i,.fc-bandl,.fc-big small,.fc-kpi span,.fc-evs span,.pt-filt button i,.olab){font-size:12px !important}
+body[data-app="customer"] .fc-chart text{font-size:10px}
+body[data-app="customer"] .fc-ring span{font-size:8px}
+body[data-app="customer"] .olab{line-height:1.15}
+body[data-app="customer"] .muted{font-size:max(12px,1em)}
+/* tap targets ≥44px */
+body[data-app="customer"] :is(.pmbtn,.btn.sm,.pt-filt button,.pt-th button,.lang-toggle button,.tb-btn,.pt-live){min-height:44px}
+body[data-app="customer"] .pmbtn{padding:0 14px; font-size:13px}
+body[data-app="customer"] .lang-toggle button{min-width:44px}
+body[data-app="customer"] .pt-sw{min-height:44px}
+body[data-app="customer"] .pt-acts .pmbtn.danger{min-width:44px; justify-content:center}
+body[data-app="customer"] .plist > :is(a,button){min-height:56px}
+/* 8 / 16 / 24 spacing rhythm */
+body[data-app="customer"] .pt-today,body[data-app="customer"] #fcEntry{margin-top:16px}
+body[data-app="customer"] .pt-dos{gap:8px}
+body[data-app="customer"] .pt-quick{gap:8px; margin-top:8px}
+body[data-app="customer"] #body > *{margin-top:16px !important}
+body[data-app="customer"] .sec-head{margin:24px 0 8px !important}
+body[data-app="customer"] .grid2{gap:8px !important}
+body[data-app="customer"] :is(.cx-see,.cx-again,.cx-skip,.cx-ch button,.qc-add,.clang button){min-height:44px}
+body[data-app="customer"] :is(small,.cx-steps span,.cx-odots + *){font-size:max(12px,1em)}
+body[data-app="customer"] .cx-sec{margin-top:24px} body[data-app="customer"] .cx-sh{padding-bottom:8px}
