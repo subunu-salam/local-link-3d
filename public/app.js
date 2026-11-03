@@ -686,7 +686,7 @@ function renderBottomNav(){
   const tab=(r,icon,lab,extra='')=>`<button class="vtab ${cur===r?'on':''}" data-tabnav="${r}" ${cur===r?'aria-current="page"':''}><span class="vico">${icon}${extra}</span><span>${esc(lab)}</span></button>`;
   const talk=(lab,icon)=>`<button class="vtalk" data-tabnav="__talk" aria-label="${esc(lab)}"><span class="t-glow"></span><span class="t-ring"></span><span class="t-core">${icon}</span><span class="t-lab">${esc(lab)}</span></button>`;
   if (state.view==='customer'){
-    if (['splash','location','intro','register','login','cart','checkout','orderDone'].includes(cur)){ holder.innerHTML=''; return; }
+    if (['splash','location','intro','register','login','cart','checkout','orderDone','assistant'].includes(cur)){ holder.innerHTML=''; return; }
     const cb=`<span class="cartbadge" ${cartCount()?'':'hidden'}>${cartCount()}</span>`;
     if (cur==='product'){ holder.innerHTML='<div id="qcCartBar" class="qc-cartwrap onpd" aria-live="polite" hidden></div>'; renderCartBar(); return; }
     const hideBar=['cart','checkout','chat'].includes(cur);
@@ -3551,6 +3551,415 @@ SCREENS.login = (el) => {
     catch(e){ btn.disabled=false; btn.classList.remove('busy'); const c=$('.lv-login'); c.classList.remove('fx-shake'); void c.offsetWidth; c.classList.add('fx-shake'); toast(e.message||'Login failed'); } };
   $('#lsubmit').onclick=submit; $('#lpw').onkeydown=e=>{ if(e.key==='Enter') submit(); };
 };
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CUSTOMER APP v3 (lw) — every remaining screen rebuilt + spec modules:
+   assistant, search, location, notifications, wishlist, offers, community,
+   support, profile/addresses/preferences, register, bookings, workers,
+   rides, local info, recently viewed, map view, pickup, coupons, notes,
+   cancel, rate, invoice.
+   ═══════════════════════════════════════════════════════════════════════ */
+const lwLS=(k,d)=>{ try{ const v=JSON.parse(localStorage.getItem(k)); return v==null?d:v; }catch(e){ return d; } };
+const lwSet=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} };
+function lwRecent(b){ if(!b||!b.id) return; let r=lwLS('ll_recent',[]).filter(x=>x.id!==b.id); r.unshift({id:b.id,name:b.name,subcategory:b.subcategory||b.category_name||'',rating:b.rating,review_count:b.review_count,is_open:b.is_open,cover_url:b.cover_url,area_name:b.area_name,color1:b.color1,color2:b.color2}); lwSet('ll_recent',r.slice(0,10)); }
+function lwPrefs(){ return Object.assign({orders:true,offers:true,stores:true,bookings:true},lwLS('ll_notif',{})); }
+function lwPct(label){ const m=String(label||'').match(/(\d{1,2})\s*%/); return m?Number(m[1]):0; }
+function lwField(id,label,val='',attrs=''){ return `<div class="field"><label for="${id}">${label}</label><div class="input"><input id="${id}" value="${esc(val||'')}" ${attrs}/></div></div>`; }
+
+/* track recently viewed stores */
+const _lvBiz=SCREENS.business;
+SCREENS.business=async(el,p)=>{ await _lvBiz(el,p); try{ const b=await api('/businesses/'+p.id); lwRecent(b);
+  // services: book with date + time instead of a bare request
+  el.querySelectorAll('[data-req]').forEach(x=>x.onclick=()=>lwBook(b,x.dataset.req)); 
+  const tabs=$('#tabs'); if(tabs) tabs.addEventListener('click',()=>setTimeout(()=>el.querySelectorAll('[data-req]').forEach(x=>x.onclick=()=>lwBook(b,x.dataset.req)),30)); }catch(e){} };
+
+/* ---------- service booking (sent to the provider as an enquiry) ---------- */
+function lwBook(b,svc){
+  if(!token) return gateAction('book this service',()=>{});
+  const d=new Date(); const days=Array.from({length:6},(_,i)=>{ const x=new Date(d); x.setDate(d.getDate()+i); return x; });
+  const slots=['9:00 AM','11:00 AM','1:00 PM','3:00 PM','5:00 PM','7:00 PM'];
+  showSheet(`Book ${esc(svc)}`,`<div class="lw-book"><p class="lw-bp">${GI.store} ${esc(b.name)}</p>
+    <h4>Pick a day</h4><div class="lw-days" id="bd">${days.map((x,i)=>`<button class="${i?'':'on'}" data-d="${x.toDateString()}"><small>${i?x.toLocaleDateString('en-IN',{weekday:'short'}):'Today'}</small><b>${x.getDate()}</b></button>`).join('')}</div>
+    <h4>Pick a time</h4><div class="lw-slots" id="bt">${slots.map((s,i)=>`<button class="${i?'':'on'}" data-t="${s}">${s}</button>`).join('')}</div>
+    <div class="field"><label for="bn">Notes for ${esc(b.name)}</label><div class="input"><textarea id="bn" rows="2" placeholder="What needs doing? Any landmark?"></textarea></div></div>
+    <button class="lv-btn" id="bgo">Send booking request</button><p class="lw-fine">${esc(b.name)} will confirm the slot by call or chat.</p></div>`,()=>{
+    const pick=(id)=>$('#'+id).onclick=e=>{ const x=e.target.closest('button'); if(!x) return; $('#'+id).querySelectorAll('button').forEach(y=>y.classList.toggle('on',y===x)); buzz(); };
+    pick('bd'); pick('bt');
+    $('#bgo').onclick=async()=>{ const day=$('#bd .on').dataset.d, tm=$('#bt .on').dataset.t, note=$('#bn').value.trim(); const btn=$('#bgo'); btn.classList.add('busy'); btn.disabled=true;
+      try{ await api('/enquiries',{method:'POST',body:{business_id:b.id,message:`Booking request: ${svc} on ${day} at ${tm}.${note?' Notes: '+note:''}`}});
+        const bk=lwLS('ll_bookings',[]); bk.unshift({id:Date.now(),svc,biz:b.name,bizId:b.id,day,tm,note,status:'requested'}); lwSet('ll_bookings',bk.slice(0,30));
+        closeSheet(); lwConfirm('Booking requested',`${esc(svc)} · ${esc(day)}, ${esc(tm)}<br>${esc(b.name)} will confirm with you.`); }
+      catch(e){ btn.classList.remove('busy'); btn.disabled=false; toast(e.message); } };
+  });
+}
+function lwConfirm(title,html){ showSheet('',`<div class="lw-ok"><div class="lw-okc"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="18"/><path d="M12 21l6 6 11-12"/></svg></div><h3>${title}</h3><p>${html}</p><button class="lv-btn" id="okx">Done</button></div>`,()=>{ $('#okx').onclick=closeSheet; buzz(25); }); }
+
+/* ---------- AI ASSISTANT (full screen) ---------- */
+const _openAsk=openAsk;
+openAsk=function(prefill,opts={}){ if(state.view!=='customer') return _openAsk(prefill,opts); closeSheet(); go('assistant',{q:prefill||'',voice:!!opts.voice}); };
+SCREENS.assistant=(el,{q,voice})=>{
+  const nm=token&&me?me.name.split(' ')[0]:'';
+  const S=[[I.store,'Find a nearby restaurant','biriyani restaurant'],[GI.cart,'Get groceries','vegetables and milk'],[GI.wrench||I.cog,'Book a home service','electrician'],[GI.package,'Track my order','__track'],[GI.percent,'Discover local offers','__offers']];
+  el.innerHTML=`<div class="lw-ai"><header class="lw-aih"><button class="lv-ib" id="__back" aria-label="Back">${I.back}</button><span class="lw-aiw">${Array.from({length:9},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span><div class="lw-ailang" id="ail"><button data-vl="en-IN">EN</button><button data-vl="ml-IN">മ</button></div></header>
+    <div class="lw-aititle"><h1>Ask Local Link</h1><p>Your local shopping assistant</p></div>
+    <div class="lw-msgs" id="msgs"><div class="lw-b bot">Hi${nm?' '+esc(nm):''}! 👋<br>How can I help you today? You can ask for several things at once — like “vegetables, chicken biryani and an electrician”.</div>
+      <div class="lw-sugg" id="sugg">${S.map((s,i)=>`<button data-s="${esc(s[2])}" style="--n:${i}"><span>${s[0]}</span>${esc(s[1])}</button>`).join('')}</div></div>
+    <div class="lw-orbz" id="orbz"><button class="lw-orb" id="orb" aria-label="Speak"><span class="h1"></span><span class="h2"></span><span class="c">${GI.mic}</span></button><small id="ost">Tap to speak</small></div>
+    <div class="lw-in"><input id="aq" placeholder="Type or speak…" autocomplete="off"/><button class="lw-mic" id="amic" aria-label="Voice">${GI.mic}</button><button class="lw-send" id="asend" aria-label="Send">${GI.send}</button></div></div>`;
+  backWire(el);
+  const msgs=$('#msgs'), inp=$('#aq'); const down=()=>msgs.scrollTo({top:msgs.scrollHeight,behavior:'smooth'});
+  $('#ail').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.vl===aiVoiceLang); b.onclick=()=>{ aiVoiceLang=b.dataset.vl; localStorage.setItem('ll_voicelang',aiVoiceLang); $('#ail').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); }; });
+  const card=x=>{ const bizId=x.type==='business'?x.id:x.business_id; const ic={business:I.store,product:GI.cart,service:GI.wrench||I.cog,worker:GI.helmet||I.user,driver:GI.car||I.pin}[x.type]||I.pin;
+    const sub=x.type==='business'?`${esc(x.subcategory||'')}${x.rating?` · ★ ${Number(x.rating).toFixed(1)}`:''}`:x.type==='product'?`${money(x.price)} · ${esc(x.business||'')}`:x.type==='service'?`from ${money(x.starting_price)} · ${esc(x.business||'')}`:x.type==='worker'?`${esc(x.skills||'')}${x.rate?' · '+esc(x.rate):''}`:esc(x.fare_note||x.service_type||'');
+    const acts=[x.type==='product'?`<button class="lw-ac hot" data-add="1" data-pid="${x.id}" data-pname="${esc(x.name)}" data-pprice="${x.price}" data-pmrp="${x.mrp||''}" data-pimg="${esc(x.image_url||'')}" data-pbiz="${esc(x.business||'')}" data-pbizid="${x.business_id||''}">${I.plus} Add to cart</button>`:'',
+      x.type==='service'?`<button class="lw-ac hot" data-book="${bizId}" data-svc="${esc(x.name)}">${GI.calendar||I.plus} Book</button>`:'',
+      x.phone?`<a class="lw-ac" href="tel:${esc(x.phone)}">${I.phone} Call</a>`:'',
+      bizId?`<button class="lw-ac" data-open="${bizId}">Open ${I.chev}</button>`:''].join('');
+    return `<div class="lw-rc t-${x.type}"><span class="lw-ri">${ic}</span><div><small>${esc(x.type)}</small><b>${esc(x.name)}</b><p>${sub}</p>${acts?`<div class="lw-acts">${acts}</div>`:''}</div></div>`; };
+  const add=(cls,html)=>{ const d=document.createElement('div'); d.className=cls; d.innerHTML=html; msgs.appendChild(d); down(); return d; };
+  const run=async(text)=>{ text=(text||inp.value).trim(); if(!text) return; inp.value=''; const sg=$('#sugg'); if(sg) sg.remove(); $('#orbz').classList.add('mini');
+    add('lw-b me',esc(text)); const ld=add('lw-turn',`<div class="lw-b bot"><span class="ai-typing"><i></i><i></i><i></i></span></div>`); el.classList.add('thinking');
+    try{
+      if(text==='__track'||/\b(my order|track|where is)\b/i.test(text)){ if(!token){ ld.innerHTML=`<div class="lw-b bot">Log in to see your orders.</div><div class="lw-acts"><button class="lw-ac hot" data-login>Log in</button></div>`; }
+        else { const os=await api('/orders'); const live=os.filter(o=>!['completed','rejected','cancelled'].includes(o.status));
+          ld.innerHTML=`<div class="lw-b bot">${live.length?`You have ${live.length} active order${live.length>1?'s':''}:`:'You have no active orders right now.'}</div>`+live.map(o=>`<div class="lw-rc"><span class="lw-ri">${GI.package}</span><div><small>Order #LL-${10000+o.id}</small><b>${esc(o.business)}</b><p>${esc(o.status.replace(/_/g,' '))} · ${money(o.total)}</p><div class="lw-acts"><button class="lw-ac hot" data-tab="orders">Track ${I.chev}</button></div></div></div>`).join(''); } }
+      else if(text==='__offers'){ const of=await api('/offers'); ld.innerHTML=`<div class="lw-b bot">Here are offers from shops near ${esc(state.areaName)}:</div>`+of.slice(0,5).map(o=>`<div class="lw-rc"><span class="lw-ri">${GI.percent}</span><div><small>${esc(o.business||'')}</small><b>${esc(o.discount_label)} · ${esc(o.title)}</b>${o.code?`<p>Code <b>${esc(o.code)}</b></p>`:''}<div class="lw-acts"><button class="lw-ac" data-open="${o.business_id}">Open ${I.chev}</button></div></div></div>`).join(''); }
+      else { const parts=text.split(/\s*(?:,|\band\b|&|\+|\bplus\b|\balso\b)\s*/i).map(s=>s.trim()).filter(s=>s.length>1).slice(0,4); const qs=parts.length>1?parts:[text];
+        const rs=await Promise.all(qs.map(x=>api('/ask',{method:'POST',body:{query:x,lang:state.lang}}).catch(()=>({answer:'',results:[]}))));
+        ld.innerHTML = qs.length>1 ? `<div class="lw-b bot">I split that into ${qs.length} things — here's what I found nearby:</div>`+rs.map((r,i)=>`<div class="lw-grp"><h5>${esc(qs[i])}</h5>${(r.results||[]).slice(0,3).map(card).join('')||`<p class="lw-none">Nothing nearby for this yet.</p>`}</div>`).join('')
+          : `<div class="lw-b bot">${esc(rs[0].answer||'Here is what I found.')}</div>`+(rs[0].results||[]).slice(0,6).map(card).join(''); track('ask_used'); }
+    }catch(e){ ld.innerHTML=`<div class="lw-b bot">${esc(e.message||'Something went wrong')}</div>`; }
+    el.classList.remove('thinking'); down();
+    ld.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>go('business',{id:Number(b.dataset.open)}));
+    ld.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+    ld.querySelectorAll('[data-login]').forEach(b=>b.onclick=()=>go('login'));
+    ld.querySelectorAll('[data-book]').forEach(b=>b.onclick=async()=>{ try{ lwBook(await api('/businesses/'+b.dataset.book),b.dataset.svc); }catch(e){ toast(e.message); } }); };
+  el.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>run(b.dataset.s==='__track'||b.dataset.s==='__offers'?b.dataset.s:b.dataset.s));
+  $('#asend').onclick=()=>run(); inp.onkeydown=e=>{ if(e.key==='Enter') run(); };
+  setupVoice($('#amic'),inp,run); $('#orb').onclick=()=>$('#amic').click();
+  new MutationObserver(()=>{ const on=$('#amic')&&$('#amic').classList.contains('listening'); el.classList.toggle('listening',!!on); const s=$('#ost'); if(s) s.textContent=on?(aiVoiceLang==='ml-IN'?'കേൾക്കുന്നു…':'Listening…'):'Tap to speak'; }).observe($('#amic'),{attributes:true,attributeFilter:['class']});
+  if(q) run(q); else if(voice && (window.SpeechRecognition||window.webkitSpeechRecognition)) setTimeout(()=>$('#amic').click(),400);
+};
+
+/* ---------- SEARCH ---------- */
+SCREENS.searchScreen=async(el)=>{
+  const rec=lwLS('ll_srch',[]);
+  el.innerHTML=`<header class="lw-sh"><button class="lv-ib" id="__back" aria-label="Back">${I.back}</button><label class="lw-sbox">${I.search}<input id="sq" placeholder="Search shops, food, services…" autocomplete="off"/><button id="sx" hidden aria-label="Clear">×</button></label><button class="lw-smic" id="smic" aria-label="Voice search">${GI.mic}</button></header>
+    <div id="sbody"></div>`;
+  backWire(el); const inp=$('#sq'), body=$('#sbody'); setTimeout(()=>inp.focus(),300);
+  const idle=()=>{ const r=lwLS('ll_srch',[]); body.innerHTML=`${r.length?`<div class="lv-sh"><h2>Recent searches</h2><button class="lv-see" id="clr">Clear</button></div><div class="lw-recent">${r.map((x,i)=>`<button data-q="${esc(x)}" style="--n:${i}">${gi('clock')}${esc(x)}</button>`).join('')}</div>`:''}
+    <div class="lv-sh"><h2>Trending near you</h2></div><div class="lw-trend">${ROTATE.map(x=>x.replace(/^Search\s*"?|"$/g,'')).concat(['electrician','pharmacy','cake']).slice(0,9).map((x,i)=>`<button data-q="${esc(x)}" style="--n:${i}">${I.search}<span>${esc(x)}</span></button>`).join('')}</div>
+    <button class="lv-ask" data-ask><span class="lv-aorb">${GI.mic}</span><span><b>Not sure what to search?</b><small>Ask Local Link in your own words</small></span></button>`;
+    const c=$('#clr'); if(c) c.onclick=()=>{ lwSet('ll_srch',[]); idle(); };
+    body.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{ inp.value=b.dataset.q; find(); });
+    body.querySelector('[data-ask]').onclick=()=>openAsk('',{voice:false}); };
+  let tm=null, seq=0;
+  const find=async()=>{ const q=inp.value.trim(); $('#sx').hidden=!q; if(!q) return idle(); const my=++seq;
+    body.innerHTML=`<div class="px">${skeletonRow(3)}</div>`;
+    const r=await api('/search?q='+encodeURIComponent(q)).catch(()=>null); if(my!==seq||!r) return;
+    const n=r.businesses.length+r.products.length+r.services.length+r.workers.length+r.drivers.length;
+    if(n){ const s=lwLS('ll_srch',[]).filter(x=>x.toLowerCase()!==q.toLowerCase()); s.unshift(q); lwSet('ll_srch',s.slice(0,8)); }
+    body.innerHTML = !n ? `<div class="lv-empty"><div class="lv-eill"><span class="lv-halo"></span>${I.search}</div><h2>No match for “${esc(q)}”</h2><p>Try a different word, or ask the assistant to look for you.</p><button class="lv-btn" id="askq">Ask Local Link</button></div>`
+      : `${r.businesses.length?`<div class="lv-sh"><h2>Stores</h2><small>${r.businesses.length}</small></div><div class="lv-list">${r.businesses.map(lvStoreRow).join('')}</div>`:''}
+         ${r.products.length?`<div class="lv-sh"><h2>Products</h2><small>${r.products.length}</small></div><div class="lv-rail">${r.products.map((p,i)=>lvProd(p,null,i)).join('')}</div>`:''}
+         ${r.services.length?`<div class="lv-sh"><h2>Services</h2></div><div class="lv-list">${r.services.map((s,i)=>`<button class="lv-srow" data-nav="business" data-id="${s.business_id}" style="--n:${i}"><span class="lv-rimg">${dIcon(s,'wrench')}</span><span class="lv-rt"><b>${esc(s.name)}</b><span class="lv-sm"><span>from <b>${money(s.starting_price)}</b> · ${esc(s.business)}</span></span></span></button>`).join('')}</div>`:''}
+         ${r.workers.length?`<div class="lv-sh"><h2>Local workers</h2></div><div class="lv-list" id="sw"></div>`:''}${r.drivers.length?`<div class="lv-sh"><h2>Rides</h2></div><div class="lv-list" id="sd"></div>`:''}<div style="height:20px"></div>`;
+    if(r.workers.length) renderWorkers($('#sw'),r.workers); if(r.drivers.length) renderDrivers($('#sd'),r.drivers);
+    const aq=$('#askq'); if(aq) aq.onclick=()=>openAsk(q,{}); };
+  inp.oninput=()=>{ clearTimeout(tm); tm=setTimeout(find,260); };
+  $('#sx').onclick=()=>{ inp.value=''; find(); inp.focus(); };
+  $('#smic').onclick=()=>openAsk('',{voice:true});
+  idle();
+};
+
+/* ---------- LOCATION ---------- */
+SCREENS.location=(el)=>{
+  const first=!localStorage.getItem('ll_area_set');
+  el.innerHTML=`<div class="lw-loc">${first?'':`<button class="lv-ib" id="__back" aria-label="Back">${I.back}</button>`}
+    <div class="lw-lmap"><svg viewBox="0 0 260 200" aria-hidden="true"><g class="st"><path d="M0 60H260M0 140H260M70 0V200M180 0V200M0 190L120 0M150 200L260 40"/></g><g class="pk"><rect x="190" y="70" width="50" height="50" rx="10"/><rect x="10" y="150" width="40" height="30" rx="8"/></g></svg>
+      <span class="lw-pin">${I.pin}</span><span class="lw-pr"></span><span class="lw-pr r2"></span></div>
+    <h1>Find what's near you</h1><p>Allow location to explore local shops, restaurants, services and offers.</p>
+    <button class="lv-btn" id="gps">${I.dir} Use my location</button>
+    <div class="lv-or"><span>or choose your area</span></div>
+    <label class="lw-sbox in">${I.search}<input id="af" placeholder="Search area or panchayath"/></label>
+    <div class="lw-areas" id="al"></div></div>`;
+  backWire(el);
+  const draw=f=>{ const l=ref.areas.filter(a=>{ const p=ref.panchayaths.find(x=>x.id===a.panchayath_id); return !f||(a.name+' '+(p?p.name:'')).toLowerCase().includes(f); });
+    $('#al').innerHTML=l.slice(0,30).map((a,i)=>{ const p=ref.panchayaths.find(x=>x.id===a.panchayath_id); return `<button data-area="${a.id}" data-name="${esc(a.name)}" style="--n:${Math.min(i,8)}" class="${a.id==state.areaId?'on':''}"><span>${I.pin}</span><div><b>${esc(a.name)}</b><small>${esc(p?p.name:'')}, Kozhikode</small></div>${a.id==state.areaId?`<em>Current</em>`:I.chev}</button>`; }).join('')||`<p class="lv-empty-s">No area matches that.</p>`;
+    el.querySelectorAll('[data-area]').forEach(b=>b.onclick=()=>{ localStorage.setItem('ll_area_set','1'); pickArea(Number(b.dataset.area),b.dataset.name); }); };
+  draw(''); $('#af').oninput=e=>draw(e.target.value.trim().toLowerCase());
+  $('#gps').onclick=()=>{ const b=$('#gps'); b.classList.add('busy'); b.disabled=true;
+    const nearest=(lat,lng)=>{ let best=null,bd=1e9; ref.areas.forEach(a=>{ if(a.lat==null) return; const d=(a.lat-lat)**2+(a.lng-lng)**2; if(d<bd){bd=d;best=a;} }); return best; };
+    const done=a=>{ localStorage.setItem('ll_area_set','1'); if(a) pickArea(a.id,a.name); else { b.classList.remove('busy'); b.disabled=false; toast('Could not match your location — please pick your area'); } };
+    if(!navigator.geolocation) return done(null);
+    navigator.geolocation.getCurrentPosition(p=>done(nearest(p.coords.latitude,p.coords.longitude)),()=>{ b.classList.remove('busy'); b.disabled=false; toast('Location is off — please pick your area below'); },{timeout:6000,maximumAge:600000}); };
+};
+// onboarding ends at location the first time
+const _lvIntro=SCREENS.intro;
+SCREENS.intro=(el)=>{ _lvIntro(el); const hook=()=>{ const nx=$('#nx'), sk=$('#skip'); if(!nx) return;
+    const fin=()=>{ state.introSeen=true; localStorage.setItem('ll_intro','1'); nav.customer=[{name: localStorage.getItem('ll_area_set')?'home':'location'}]; routeRender(); };
+    sk.onclick=fin; if(/Get Started/.test(nx.textContent)){ nx.onclick=fin; const lg=document.createElement('div'); lg.className='lw-lang'; lg.innerHTML=`<small>Choose your language</small><div><button data-l="en" class="${state.lang==='en'?'on':''}">English</button><button data-l="ml" class="${state.lang==='ml'?'on':''}">മലയാളം</button></div>`; nx.before(lg);
+      lg.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{ state.lang=b.dataset.l; localStorage.setItem('ll_lang',state.lang); lg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); buzz(); }); } };
+  hook(); new MutationObserver(hook).observe(el,{childList:true}); };
+
+/* ---------- NOTIFICATIONS ---------- */
+SCREENS.notifications=async(el)=>{
+  el.innerHTML=`${lvHead('Notifications',`<button class="lv-ib" data-nav="prefs" aria-label="Notification settings">${I.cog}</button>`)}<div class="lv-list" id="l">${skeletonRow(3)}</div>`; backWire(el);
+  if(!token){ $('#l').innerHTML=`<div class="lv-empty"><div class="lv-eill"><span class="lv-halo"></span>${I.bell}</div><h2>Stay in the loop</h2><p>Log in to get order updates, booking reminders and offers from shops you follow.</p><button class="lv-btn" id="lg">Log in</button></div>`; $('#lg').onclick=()=>go('login'); return; }
+  const n=await api('/notifications').catch(()=>[]); const pr=lwPrefs();
+  const ic=t=>({order:GI.package,offer:GI.percent,booking:GI.calendar||I.bell,store:I.store})[t]||I.bell;
+  const show=n.filter(x=>x.type==='order'?pr.orders:x.type==='offer'?pr.offers:true);
+  const ago=s=>{ const d=(Date.now()-new Date((s||'').replace(' ','T')+'Z'))/6e4; return isNaN(d)?'':d<60?Math.max(1,Math.round(d))+'m ago':d<1440?Math.round(d/60)+'h ago':Math.round(d/1440)+'d ago'; };
+  $('#l').innerHTML=show.length?show.map((x,i)=>`<div class="lw-nt t-${esc(x.type||'info')} ${x.read?'':'new'}" style="--n:${Math.min(i,8)}"><span>${ic(x.type)}</span><div><b>${esc(x.title)}</b><p>${esc(x.body||'')}</p><small>${ago(x.created_at)}</small></div></div>`).join('')
+    :`<div class="lv-empty"><div class="lv-eill"><span class="lv-halo"></span>${I.bell}</div><h2>All caught up</h2><p>Order updates and offers from your favourite shops will show up here.</p></div>`;
+};
+
+/* ---------- WISHLIST ---------- */
+SCREENS.saved=async(el)=>{
+  el.innerHTML=`${lvHead('Wishlist')}<div class="lv-seg" id="seg"><i></i><button class="on" data-s="business">Stores</button><button data-s="product">Products</button></div><div id="l"></div>`; backWire(el);
+  const draw=t=>{ const l=saved.filter(s=>s.type===t); const box=$('#l'); box.classList.remove('lv-tin'); void box.offsetWidth; box.classList.add('lv-tin');
+    if(!l.length){ box.innerHTML=`<div class="lv-empty"><div class="lv-eill"><span class="lv-halo"></span>${I.heart}</div><h2>Nothing saved yet</h2><p>Tap the heart on any ${t==='business'?'store':'product'} to keep it here.</p><button class="lv-btn" id="ex">Explore</button></div>`; $('#ex').onclick=()=>setTab('home'); return; }
+    box.innerHTML = t==='business' ? `<div class="lv-list">${l.map((s,i)=>lvStoreRow({id:s.id,name:s.name,subcategory:s.sub,cover_url:s.image},i)).join('')}</div>`
+      : `<div class="lv-pgrid">${l.map((s,i)=>lvProd({id:s.id,name:s.name,price:s.price,image_url:s.image},null,i)).join('')}</div>`; };
+  const seg=$('#seg'); seg.onclick=e=>{ const b=e.target.closest('[data-s]'); if(!b) return; seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); seg.classList.toggle('r',b.dataset.s==='product'); draw(b.dataset.s); }; draw('business');
+};
+
+/* ---------- OFFERS & COUPONS ---------- */
+SCREENS.offers=async(el)=>{
+  el.innerHTML=`${lvHead('Offers & Coupons')}<div id="l" class="lv-list">${skeletonRow(3)}</div>`; backWire(el);
+  const of=await api('/offers');
+  $('#l').innerHTML=of.length?of.map((o,i)=>`<div class="lw-cpn" style="--n:${Math.min(i,8)}"><div class="lw-cl"><b>${esc(o.discount_label||'OFFER')}</b><small>${esc(o.business||'')}</small></div><div class="lw-cr"><b>${esc(o.title)}</b><p>${esc(o.description||'')}</p>
+      <div class="lw-cact">${o.code?`<button class="lw-code" data-code="${esc(o.code)}">${esc(o.code)} <span>Copy</span></button>`:''}<button class="lv-btn sm" data-nav="business" data-id="${o.business_id}">Shop ${I.chev}</button></div></div></div>`).join('')
+    :`<div class="lv-empty"><div class="lv-eill"><span class="lv-halo"></span>${GI.percent}</div><h2>No offers right now</h2><p>Check back soon — local shops add deals every week.</p></div>`;
+  el.querySelectorAll('[data-code]').forEach(b=>b.onclick=()=>{ try{ navigator.clipboard.writeText(b.dataset.code); }catch(e){} b.classList.add('ok'); b.querySelector('span').textContent='Copied'; buzz(); toast('Code copied — apply it at checkout'); });
+};
+
+/* ---------- COMMUNITY ---------- */
+SCREENS.community=async(el)=>{
+  el.innerHTML=`${lvHead('Your Neighbourhood')}<div class="lw-chero"><h2>Shop local.<br>Grow local.</h2><p>Every order keeps a neighbourhood business going.</p><span class="lw-cb1"></span><span class="lw-cb2"></span></div>
+    <div class="lv-sh"><h2>New in ${esc(state.areaName)}</h2></div><div class="lv-rail" id="nw">${skeletonCards(2)}</div>
+    <div class="lv-sh"><h2>Neighbourhood favourites</h2></div><div class="lv-list" id="fav">${skeletonRow(2)}</div>
+    <div class="lv-sh"><h2>Events &amp; announcements</h2><button class="lv-see" data-nav="events">See all ${I.chev}</button></div><div class="lv-list" id="ev"></div>
+    <div class="lv-sh"><h2>Local news</h2><button class="lv-see" data-nav="news">See all ${I.chev}</button></div><div class="lv-rail" id="nwz"></div>
+    <div class="lv-sh"><h2>Latest reviews</h2></div><div class="lv-list" id="rv"></div>
+    <section class="lw-refer"><span>${I.store}</span><div><b>Know a great local business?</b><p>Refer them to Local Link and help them get found.</p></div><button class="lv-btn sm" id="ref">Refer</button></section><div style="height:24px"></div>`;
+  backWire(el);
+  const [biz,ev,news]=await Promise.all([api('/businesses'),api('/events'),api('/news')]);
+  $('#nw').innerHTML=biz.slice().sort((a,b)=>b.id-a.id).slice(0,8).map((b,i)=>lvStoreCard(b,i).replace('lv-scard"','lv-scard" data-new="1"')).join('');
+  $('#fav').innerHTML=biz.slice().sort((a,b)=>(b.review_count||0)-(a.review_count||0)).slice(0,4).map(lvStoreRow).join('');
+  $('#ev').innerHTML=ev.slice(0,3).map(eventCard).join(''); $('#nwz').innerHTML=news.slice(0,5).map(newsCard).join('');
+  const withRev=await Promise.all(biz.slice().sort((a,b)=>(b.review_count||0)-(a.review_count||0)).slice(0,3).map(b=>api('/businesses/'+b.id).catch(()=>null)));
+  const rv=[]; withRev.forEach(b=>b&&(b.reviews||[]).slice(0,2).forEach(r=>rv.push({...r,biz:b.name,bizId:b.id})));
+  $('#rv').innerHTML=rv.length?rv.slice(0,4).map(r=>`<button class="lw-rv" data-nav="business" data-id="${r.bizId}"><div><b>${esc(r.author_name)}</b>${stars(r.rating)}</div><p>“${esc(r.comment)}”</p><small>${esc(r.biz)}</small></button>`).join(''):`<p class="lv-empty-s">No reviews yet.</p>`;
+  $('#ref').onclick=()=>gateAction('refer a business',()=>showSheet('Refer a local business',`<div class="lw-book">${lwField('rn','Business name')}${lwField('rp','Their phone (optional)','','inputmode="tel"')}<div class="field"><label for="rw">What do they do?</label><div class="input"><textarea id="rw" rows="2" placeholder="e.g. Home bakery near the temple"></textarea></div></div><button class="lv-btn" id="rgo">Send referral</button></div>`,()=>{
+    $('#rgo').onclick=async()=>{ const n=$('#rn').value.trim(); if(!n) return toast('Please add the business name'); try{ await api('/leads',{method:'POST',body:{type:'enquiry',area_id:state.areaId,query:'Business referral: '+n,message:[$('#rw').value.trim(),$('#rp').value.trim()].filter(Boolean).join(' · ')}}); closeSheet(); lwConfirm('Thanks for the referral!',`We'll reach out to <b>${esc(n)}</b> about joining Local Link.`); }catch(e){ toast(e.message); } }; }));
+};
+
+/* ---------- HELP & SUPPORT ---------- */
+SCREENS.support=async(el)=>{
+  const F=[['How do I track my order?','Open Orders. Your live order shows each step — placed, accepted, preparing, on the way — and you can chat with or call the shop.'],
+    ['Can I cancel an order?','Yes, until the shop accepts it. Open the order and tap Cancel order. After that, chat with the shop.'],
+    ['How do I pay?','Each shop chooses what it accepts — usually cash on delivery, card on delivery or UPI directly to the shop. You will see the options at checkout.'],
+    ['Can I pick up instead of delivery?','Yes. Choose Pickup at checkout and collect from the shop.'],
+    ['How do coupons work?','Copy a code from Offers & Coupons and apply it at checkout for that shop.'],
+    ['How do I book a service?','Open a service provider, pick a day and time, and send the request. The provider confirms by call or chat.']];
+  el.innerHTML=`${lvHead('Help & Support')}<button class="lv-ask" data-ask><span class="lv-aorb">${GI.mic}</span><span><b>Ask Local Link</b><small>Get instant answers about orders and shops</small></span></button>
+    <div class="lw-sgrid"><button data-k="order">${GI.package}<b>Order issue</b></button><button data-k="refund">${GI.card}<b>Refund / payment</b></button><button data-k="shop">${I.store}<b>Contact a shop</b></button><button data-k="complaint">${GI.megaphone||I.bell}<b>Raise a complaint</b></button></div>
+    <div class="lv-sh"><h2>FAQs</h2></div><div class="lw-faq">${F.map((f,i)=>`<details style="--n:${i}"><summary>${esc(f[0])}<i>${I.plus}</i></summary><p>${esc(f[1])}</p></details>`).join('')}</div><div style="height:24px"></div>`;
+  backWire(el); el.querySelector('[data-ask]').onclick=()=>openAsk('',{});
+  el.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>gateAction('get help',async()=>{ const os=await api('/orders').catch(()=>[]); const k=b.dataset.k;
+    if(k==='shop'){ const seen=new Map(); os.forEach(o=>seen.set(o.business_id,o.business)); if(!seen.size) return toast('Order from a shop first, or open any store to call or chat');
+      return showSheet('Contact a shop',`<div class="lv-list" style="padding:0">${[...seen].map(([id,n])=>`<button class="lv-row" style="width:100%;margin:0" data-sid="${id}" data-sn="${esc(n)}"><span class="lv-ri">${I.store}</span><div><b>${esc(n)}</b><small>Chat or call</small></div>${I.chev}</button>`).join('')}</div>`,()=>document.querySelectorAll('[data-sid]').forEach(x=>x.onclick=()=>{ closeSheet(); go('business',{id:Number(x.dataset.sid)}); })); }
+    if(!os.length) return toast('You have no orders yet');
+    const title={order:'Order issue',refund:'Refund or payment',complaint:'Raise a complaint'}[k];
+    showSheet(title,`<div class="lw-book"><div class="field"><label for="so">Which order?</label><div class="input"><select id="so">${os.slice(0,12).map(o=>`<option value="${o.id}" data-b="${o.business_id}">#LL-${10000+o.id} · ${esc(o.business)} · ${money(o.total)}</option>`).join('')}</select></div></div>
+      <div class="field"><label for="sm">Tell us what happened</label><div class="input"><textarea id="sm" rows="3" placeholder="Describe the issue"></textarea></div></div><button class="lv-btn" id="sgo">Send to the shop</button><p class="lw-fine">The shop receives this straight away and will reply in chat.</p></div>`,()=>{
+      $('#sgo').onclick=async()=>{ const s=$('#so'), m=$('#sm').value.trim(); if(!m) return toast('Please describe the issue'); const bid=Number(s.selectedOptions[0].dataset.b);
+        try{ await api('/enquiries',{method:'POST',body:{business_id:bid,message:`${title} — order #LL-${10000+Number(s.value)}: ${m}`}}); closeSheet(); lwConfirm('Sent to the shop','They will reply in chat. You can also call them from the store page.'); }catch(e){ toast(e.message); } }; }); }));
+};
+
+/* ---------- PROFILE / ADDRESSES / PREFERENCES / PAYMENTS ---------- */
+SCREENS.profile=(el)=>{
+  if(!token) return go('login');
+  el.innerHTML=`${lvHead('Edit Profile')}<div class="lw-pf"><span class="lv-mav big">${esc((me.name||'?')[0])}</span>${lwField('pn','Full name',me.name,'autocomplete="name"')}${lwField('pp','Phone',me.phone,'inputmode="tel" autocomplete="tel"')}<div class="field"><label>Email</label><div class="input dis"><input value="${esc(me.email||'')}" disabled/></div></div><button class="lv-btn" id="psv">Save changes</button></div>`;
+  backWire(el); $('#psv').onclick=async()=>{ const b=$('#psv'); b.classList.add('busy'); b.disabled=true;
+    try{ const r=await api('/me',{method:'PATCH',body:{name:$('#pn').value,phone:$('#pp').value}}); me=r.user; localStorage.setItem('ll_user',JSON.stringify(me)); toast('Profile updated'); back(); }
+    catch(e){ b.classList.remove('busy'); b.disabled=false; toast(e.message); } };
+};
+SCREENS.addresses=(el)=>{
+  const list=()=>{ let l=lwLS('ll_addrs',null); if(!l){ const a=lwLS('ll_addr',null); l=a&&a.line?[{...a,label:'Home',id:1}]:[]; lwSet('ll_addrs',l); } return l; };
+  const draw=()=>{ const l=list(); const def=lwLS('ll_addr',{});
+    el.innerHTML=`${lvHead('My Addresses')}<div class="lv-list">${l.map((a,i)=>`<div class="lw-adr ${a.line===def.line?'on':''}" style="--n:${i}"><span>${a.label==='Work'?I.store:I.home}</span><div><b>${esc(a.label||'Address')}</b><p>${esc(a.name||'')} · ${esc(a.phone||'')}</p><p>${esc(a.line)}, ${esc(a.area||'')}</p>
+      <div class="lw-aact">${a.line===def.line?'<em>Default</em>':`<button data-def="${a.id}">Set default</button>`}<button data-del="${a.id}">Remove</button></div></div></div>`).join('')||`<p class="lv-empty-s">No saved addresses yet.</p>`}</div>
+      <button class="lv-btn ghost" id="addA" style="margin:16px;width:calc(100% - 32px)">${I.plus} Add new address</button>`;
+    backWire(el);
+    el.querySelectorAll('[data-def]').forEach(b=>b.onclick=()=>{ const a=l.find(x=>x.id==b.dataset.def); lwSet('ll_addr',a); buzz(); draw(); });
+    el.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ lwSet('ll_addrs',l.filter(x=>x.id!=b.dataset.del)); draw(); });
+    $('#addA').onclick=()=>showSheet('New address',`<div class="lw-book"><div class="lw-slots" id="lb"><button class="on" data-t="Home">Home</button><button data-t="Work">Work</button><button data-t="Other">Other</button></div>${lwField('an','Full name',me?me.name:'')}${lwField('ap','Phone',me?me.phone:'','inputmode="tel"')}<div class="field"><label for="al2">Address</label><div class="input"><textarea id="al2" rows="2" placeholder="House / building, street, landmark"></textarea></div></div>${lwField('aa','Area',state.areaName)}<button class="lv-btn" id="asv">Save address</button></div>`,()=>{
+      $('#lb').onclick=e=>{ const x=e.target.closest('button'); if(x) $('#lb').querySelectorAll('button').forEach(y=>y.classList.toggle('on',y===x)); };
+      $('#asv').onclick=()=>{ const a={id:Date.now(),label:$('#lb .on').dataset.t,name:$('#an').value.trim(),phone:$('#ap').value.trim(),line:$('#al2').value.trim(),area:$('#aa').value.trim()}; if(!a.name||!a.phone||!a.line) return toast('Please fill name, phone and address');
+        const l2=list(); l2.push(a); lwSet('ll_addrs',l2); if(!lwLS('ll_addr',{}).line) lwSet('ll_addr',a); closeSheet(); draw(); toast('Address saved'); }; }); };
+  draw();
+};
+SCREENS.prefs=(el)=>{
+  const p=lwPrefs(); const row=(k,t,s)=>`<label class="lw-tg"><div><b>${t}</b><small>${s}</small></div><input type="checkbox" data-k="${k}" ${p[k]?'checked':''}/><i></i></label>`;
+  el.innerHTML=`${lvHead('Preferences')}<div class="lv-sh"><h2>Language</h2></div><div class="lw-langs"><button data-l="en" class="${state.lang==='en'?'on':''}"><b>English</b><small>English</small></button><button data-l="ml" class="${state.lang==='ml'?'on':''}"><b>മലയാളം</b><small>Malayalam</small></button></div>
+    <div class="lv-sh"><h2>Notifications</h2></div><div class="lv-menu lw-tgs">${row('orders','Order updates','Accepted, preparing, on the way')}${row('bookings','Booking reminders','Service bookings you request')}${row('offers','New local offers','Deals from shops near you')}${row('stores','Favourite store updates','When saved stores post something new')}</div>
+    <div class="lv-sh"><h2>Appearance</h2></div><div class="lv-menu lw-tgs"><label class="lw-tg"><div><b>Dark mode</b><small>Easier on the eyes at night</small></div><input type="checkbox" id="dk" ${state.custTheme==='dark'?'checked':''}/><i></i></label></div>`;
+  backWire(el);
+  el.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{ state.lang=b.dataset.l; localStorage.setItem('ll_lang',state.lang); renderShell(); });
+  el.querySelectorAll('[data-k]').forEach(c=>c.onchange=()=>{ const q=lwPrefs(); q[c.dataset.k]=c.checked; lwSet('ll_notif',q); buzz(); });
+  $('#dk').onchange=()=>{ toggleCustTheme(); routeRender(); };
+};
+SCREENS.payments=(el)=>{
+  el.innerHTML=`${lvHead('Payment Methods')}<div class="lw-pay-i"><span>${GI.card}</span><p>You pay the shop directly. Each shop chooses what it accepts, and you'll see the options at checkout.</p></div>
+    <div class="lv-menu">${[['Cash on Delivery','Pay when your order arrives',GI.card],['Card on Delivery','Swipe at your door',GI.card],['UPI to the shop','GPay, PhonePe, Paytm and more',GI.chat]].map(m=>`<div class="lw-pm"><span class="lv-mi">${m[2]}</span><div><b>${m[0]}</b><small>${m[1]}</small></div></div>`).join('')}</div>`;
+  backWire(el);
+};
+
+/* ---------- ACCOUNT (adds the new pages) ---------- */
+const _lvAcct=SCREENS.account;
+SCREENS.account=async(el)=>{ await _lvAcct(el);
+  const m=el.querySelectorAll('.lv-menu');
+  const row=(attr,ic,label,right='')=>`<button ${attr}><span class="lv-mi">${ic}</span><b>${label}</b>${right?`<small>${right}</small>`:''}${I.chev}</button>`;
+  if(m[0]){ m[0].querySelector('[data-nav="location"]').outerHTML=row('data-nav="addresses"',I.pin,'My Addresses'); m[0].insertAdjacentHTML('beforeend',row('data-nav="payments"',GI.card,'Payment Methods')+row('data-nav="community"',I.users||I.heart,'Your Neighbourhood')); }
+  if(m[1]){ const lr=m[1].querySelector('#langrow'); if(lr) lr.outerHTML=row('data-nav="prefs"',I.globe,'Language & notifications',state.lang==='ml'?'മലയാളം':'English'); const h=m[1].querySelector('#help'); if(h) h.outerHTML=row('data-nav="support"',GI.chat,'Help & Support'); }
+  const pe=el.querySelector('.lv-me [data-tabnav="profile"]'); if(pe){ pe.removeAttribute('data-tabnav'); pe.onclick=()=>go('profile'); }
+  el.querySelectorAll('[data-tabnav]').forEach(b=>b.onclick=()=>setTab(b.dataset.tabnav));
+};
+
+/* ---------- REGISTER ---------- */
+SCREENS.register=(el)=>{
+  el.innerHTML=`<div class="lv-login"><button class="lv-ib" id="rb" aria-label="Back">${I.back}</button><div class="lv-lbrand">${logoMark(40)}<b>Local</b><b>Link</b></div>
+    <h2>Create your account</h2><p>Order, book services and support your neighbourhood.</p>
+    <div class="field"><label for="rn">Full name</label><div class="input">${I.user}<input id="rn" placeholder="Your name" autocomplete="name"/></div></div>
+    <div class="field"><label for="rp">Mobile number</label><div class="input"><span class="lw-cc">+91</span><input id="rp" type="tel" inputmode="tel" placeholder="98765 43210" autocomplete="tel"/></div></div>
+    <div class="field"><label for="re">Email</label><div class="input"><span class="gi">${GI.chat}</span><input id="re" type="email" placeholder="you@email.com" autocomplete="email"/></div></div>
+    <div class="field"><label for="rpw">Password</label><div class="input"><span class="gi">${GI.lock}</span><input id="rpw" type="password" placeholder="At least 6 characters" autocomplete="new-password"/><button class="lw-eye" id="eye" type="button">Show</button></div><div class="lw-str" id="str"><i></i><i></i><i></i></div></div>
+    <button class="lv-btn" id="rsubmit">Create account ${I.chev}</button><p class="lv-alt">Already have an account? <a href="#" id="gologin">Log in</a></p><p class="lv-terms">By continuing, you agree to our Terms &amp; Privacy Policy</p></div>`;
+  $('#rb').onclick=back; $('#gologin').onclick=e=>{ e.preventDefault(); go('login'); };
+  $('#eye').onclick=()=>{ const i=$('#rpw'); i.type=i.type==='password'?'text':'password'; $('#eye').textContent=i.type==='password'?'Show':'Hide'; };
+  $('#rpw').oninput=e=>{ const v=e.target.value; const s=(v.length>=6)+(/[0-9]/.test(v)&&/[a-z]/i.test(v))+(v.length>=10); $('#str').dataset.s=s; };
+  $('#rsubmit').onclick=async()=>{ const name=$('#rn').value.trim(), email=$('#re').value.trim(), ph=$('#rp').value.replace(/\s/g,''), pw=$('#rpw').value;
+    if(!name||!email||!ph||!pw) return toast('Please fill in all fields'); if(pw.length<6) return toast('Password must be at least 6 characters');
+    const btn=$('#rsubmit'); btn.classList.add('busy'); btn.disabled=true;
+    try{ const r=await api('/auth/register',{method:'POST',body:{name,email,phone:ph.startsWith('+')?ph:'+91'+ph,password:pw}}); token=r.token; me=r.user; localStorage.setItem('ll_token',token); localStorage.setItem('ll_user',JSON.stringify(me)); toast('Welcome to Local Link, '+me.name.split(' ')[0]+'!'); routeAfterLogin(); }
+    catch(e){ btn.classList.remove('busy'); btn.disabled=false; const c=$('.lv-login'); c.classList.remove('fx-shake'); void c.offsetWidth; c.classList.add('fx-shake'); toast(e.message); } };
+};
+
+/* ---------- workers / rides / local info ---------- */
+renderWorkers=function(elm,data){ elm.innerHTML=data.map((w,i)=>`<div class="lw-pro" style="--n:${Math.min(i,8)}"><span class="lw-pav">${esc((w.name||'?')[0])}<i class="${w.available?'on':''}"></i></span><div class="lw-pt"><b>${esc(w.name)}</b><p>${esc(w.skills||'')}</p>
+  <div class="lv-sm">${lvRate(w.rating)}<i>·</i><span>${w.experience_years||0} yrs exp</span>${w.area_name?`<i>·</i><span>${esc(w.area_name)}</span>`:''}</div><div class="lw-ptags"><em>${esc(w.rate||'')}</em><em class="${w.available?'ok':''}">${w.available?'Available':'Busy'}</em></div>
+  <div class="lw-pact"><a class="lv-btn sm" href="tel:${esc(w.phone||'')}">${I.phone} Call</a><a class="lv-btn sm soft" href="https://wa.me/${(w.whatsapp||'').replace(/[^0-9]/g,'')}" target="_blank" rel="noopener">${I.wa} WhatsApp</a></div></div></div>`).join('')||`<p class="lv-empty-s">No workers listed here yet.</p>`; };
+renderDrivers=function(elm,data){ elm.innerHTML=data.map((d,i)=>`<div class="lw-pro" style="--n:${Math.min(i,8)}"><span class="lw-pav car">${driverIcon(d.service_type)}<i class="${d.available?'on':''}"></i></span><div class="lw-pt"><b>${esc(d.name)}</b><p>${esc(d.vehicle_model||'')} · ${esc(d.vehicle_number||'')}</p>
+  <div class="lv-sm">${lvRate(d.rating)}<i>·</i><span>${esc(d.service_type||'')}</span></div><div class="lw-ptags"><em>${esc(d.fare_note||'')}</em><em class="${d.available?'ok':''}">${d.available?'Available':'Offline'}</em></div>
+  <div class="lw-pact"><a class="lv-btn sm" href="tel:${esc(d.phone||'')}">${I.phone} Call</a><a class="lv-btn sm soft" href="https://wa.me/${(d.whatsapp||'').replace(/[^0-9]/g,'')}" target="_blank" rel="noopener">${I.wa} Book</a></div></div></div>`).join('')||`<p class="lv-empty-s">No rides listed here yet.</p>`; };
+renderLocalInfo=function(elm,data){ const g={}; data.forEach(i=>(g[i.category]=g[i.category]||[]).push(i));
+  elm.innerHTML=Object.entries(g).map(([k,items])=>`<h3 class="lw-ig">${esc(k)}</h3>${items.map((i,x)=>`<div class="lw-li ${i.emergency?'sos':''}" style="--n:${Math.min(x,6)}"><span>${i.emergency?GI.warning||I.bell:GI.building}</span><div><b>${esc(i.name)}</b><p>${esc(i.description||'')}</p>${i.hours?`<small>${esc(i.hours)}</small>`:''}</div>${i.phone?`<a href="tel:${esc(i.phone)}" aria-label="Call ${esc(i.name)}">${I.phone}</a>`:''}</div>`).join('')}`).join(''); };
+SCREENS.localinfo=async(el)=>{ el.innerHTML=`${lvHead('Local Info')}<div class="lv-list" id="l">${skeletonRow(3)}</div>`; backWire(el); renderLocalInfo($('#l'),await api('/local-info')); };
+SCREENS.events=async(el)=>{ el.innerHTML=`${lvHead('Events')}<div class="lv-list" id="l">${skeletonRow(3)}</div>`; backWire(el); $('#l').innerHTML=(await api('/events')).map(eventCard).join('')||`<p class="lv-empty-s">No upcoming events.</p>`; };
+SCREENS.news=async(el)=>{ el.innerHTML=`${lvHead('Local News')}<div class="lv-list" id="l">${skeletonRow(3)}</div>`; backWire(el); $('#l').innerHTML=(await api('/news')).map(n=>newsCard(n)).join(''); };
+
+/* ---------- CATEGORY: map / list toggle ---------- */
+const _lvCat=SCREENS.category;
+SCREENS.category=async(el,p)=>{ await _lvCat(el,p); const list=$('#list'); if(!list||!el.querySelector('#qcCount')) return;
+  const head=el.querySelector('#qcCount').parentNode; head.insertAdjacentHTML('beforeend',`<div class="lw-vt" id="vt"><i></i><button class="on" data-v="list" aria-label="List view">${I.grid}</button><button data-v="map" aria-label="Map view">${I.pin}</button></div>`);
+  const mapBox=document.createElement('div'); mapBox.className='lw-mapv'; mapBox.hidden=true; list.before(mapBox);
+  const drawMap=()=>{ const rows=[...list.querySelectorAll('.lv-srow')].slice(0,12);
+    mapBox.innerHTML=`<svg viewBox="0 0 340 220" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g class="st"><path d="M-10 50H350M-10 130H350M-10 190H350M60 -10V230M170 -10V230M280 -10V230M-10 220L140 -10M200 230L350 30"/></g><g class="pk"><rect x="190" y="64" width="70" height="50" rx="10"/><rect x="18" y="146" width="36" height="30" rx="8"/></g></svg>
+      <span class="lw-me">${I.user}</span>${rows.map((r,i)=>{ let h=0; const s=r.querySelector('b').textContent; for(const c of s) h=(h*31+c.charCodeAt(0))%9973; const x=12+(h%76), y=12+((h>>3)%70);
+      return `<button class="lw-mpin" style="left:${x}%;top:${y}%;--n:${i}" data-i="${i}"><span>${i+1}</span></button>`; }).join('')}
+      <p class="lw-mnote">Pins show stores in ${esc(state.areaName)} · tap a pin</p><div class="lw-mcard" id="mc"></div>`;
+    mapBox.querySelectorAll('.lw-mpin').forEach(b=>b.onclick=()=>{ mapBox.querySelectorAll('.lw-mpin').forEach(x=>x.classList.toggle('on',x===b)); const c=$('#mc'); c.innerHTML=rows[b.dataset.i].outerHTML; c.classList.remove('in'); void c.offsetWidth; c.classList.add('in'); buzz(); }); };
+  $('#vt').onclick=e=>{ const b=e.target.closest('[data-v]'); if(!b) return; const v=b.dataset.v; $('#vt').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); $('#vt').classList.toggle('r',v==='map');
+    if(v==='map'){ drawMap(); mapBox.hidden=false; list.hidden=true; } else { mapBox.hidden=true; list.hidden=false; } buzz(); };
+};
+
+/* ---------- HOME: recently viewed, recommended services, community ---------- */
+const _lvHome=SCREENS.home;
+SCREENS.home=async(el)=>{ await _lvHome(el);
+  const rec=lwLS('ll_recent',[]); const pop=$('#lvPop'); if(!pop) return; const anchor=pop.closest('.lv-sec');
+  let html='';
+  if(rec.length) html+=`<section class="lv-sec"><div class="lv-sh"><h2>Recently viewed</h2><button class="lv-see" id="rclr">Clear</button></div><div class="lv-rail">${rec.map(lvStoreCard).join('')}</div></section>`;
+  html+=`<section class="lv-sec"><div class="lv-sh"><h2>Recommended services</h2><button class="lv-see" data-nav="category" data-slug="services">See all ${I.chev}</button></div><div class="lv-list" id="lwSvc">${skeletonRow(2)}</div></section>
+    <button class="lw-comm" data-nav="community"><span class="lw-cav">${['A','R','S'].map(x=>`<i>${x}</i>`).join('')}</span><span><b>Your Neighbourhood</b><small>New shops, events, reviews &amp; local news</small></span>${I.chev}</button>`;
+  anchor.insertAdjacentHTML('afterend',html);
+  const rc=$('#rclr'); if(rc) rc.onclick=()=>{ lwSet('ll_recent',[]); rc.closest('.lv-sec').remove(); };
+  const sv=await api('/services').catch(()=>[]); const box=$('#lwSvc'); if(box) box.innerHTML=sv.slice(0,3).map((s,i)=>`<button class="lv-srow" data-svc="${esc(s.name)}" data-bid="${s.business_id}" style="--n:${i}"><span class="lv-rimg">${dIcon(s,'wrench')}</span><span class="lv-rt"><b>${esc(s.name)}</b><span class="lv-sm"><span>from <b>${money(s.starting_price)}</b>${s.business?' · '+esc(s.business):''}</span></span></span><span class="lv-req">Book</span></button>`).join('');
+  el.querySelectorAll('[data-svc]').forEach(b=>b.onclick=async e=>{ if(e.target.closest('.lv-req')){ e.stopPropagation(); try{ lwBook(await api('/businesses/'+b.dataset.bid),b.dataset.svc); }catch(x){ toast(x.message); } } else go('business',{id:Number(b.dataset.bid)}); });
+};
+
+/* ---------- CHECKOUT: pickup / delivery, coupon, note, per-store split ---------- */
+const _lvChk=SCREENS.checkout;
+SCREENS.checkout=async(el)=>{ await _lvChk(el); const place=$('#place'); if(!place) return;
+  const groups={}; cart.forEach(i=>{ (groups[i.bizId||1]=groups[i.bizId||1]||{name:i.biz,items:[]}).items.push(i); });
+  const offers=await api('/offers').catch(()=>[]); const bid=Number(cartBizId()||0); const avail=offers.filter(o=>o.business_id===bid);
+  const steps=el.querySelector('.lv-steps');
+  steps.insertAdjacentHTML('afterend',`<div class="lw-ful" id="ful"><i></i><button class="on" data-f="delivery">${GI.package} Delivery</button><button data-f="pickup">${I.store} Pickup</button></div><p class="lw-pick" id="pk" hidden>${I.store} Collect from <b>${esc(cart[0]?.biz||'the shop')}</b>. They'll tell you when it's ready.</p>`);
+  const paySh=el.querySelector('.lv-pays').previousElementSibling;
+  paySh.insertAdjacentHTML('beforebegin',`${Object.keys(groups).length>1?`<div class="lv-sh"><h2>${Object.keys(groups).length} separate orders</h2></div><div class="lv-list">${Object.values(groups).map(g=>`<div class="lw-split">${I.store}<b>${esc(g.name||'Shop')}</b><small>${g.items.length} item${g.items.length>1?'s':''} · delivered separately</small></div>`).join('')}</div>`:''}
+    <div class="lv-sh"><h2>Coupon</h2></div><div class="lw-cpin"><label class="lv-stxt in">${GI.percent}<input id="cc" placeholder="Enter coupon code" autocapitalize="characters"/></label><button class="lv-btn sm" id="ccgo">Apply</button></div>
+    ${avail.filter(o=>o.code).length?`<div class="lw-cpsug">${avail.filter(o=>o.code).map(o=>`<button data-cc="${esc(o.code)}">${esc(o.code)} · ${esc(o.discount_label)}</button>`).join('')}</div>`:''}
+    <div class="lv-sh"><h2>Note for the shop</h2></div><div class="lw-note"><textarea id="note" rows="2" placeholder="e.g. less spicy, call on arrival"></textarea></div>`);
+  let ful='delivery', disc=0, code='';
+  const bill=$('#billd'), tot=el.querySelector('.lv-tot b'); const base=cartTotal(); const deliv=()=>ful==='pickup'?0:(base>=499?0:29);
+  const redraw=()=>{ const pay=Math.max(0,base-disc+deliv()); tot.textContent=money(pay); tot.classList.remove('lw-tick'); void tot.offsetWidth; tot.classList.add('lw-tick');
+    bill.innerHTML=`<div><span>Items</span><b>${money(base)}</b></div>${disc?`<div class="lw-dl"><span>Coupon ${esc(code)}</span><b>−${money(disc)}</b></div>`:''}<div><span>${ful==='pickup'?'Pickup':'Delivery'}</span><b>${deliv()?money(deliv()):'<em>FREE</em>'}</b></div><div class="tot"><span>To pay</span><b>${money(pay)}</b></div>`; };
+  redraw();
+  $('#ful').onclick=e=>{ const b=e.target.closest('[data-f]'); if(!b) return; ful=b.dataset.f; $('#ful').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); $('#ful').classList.toggle('r',ful==='pickup'); $('#pk').hidden=ful!=='pickup'; const ar=$('#addrRow'); if(ar&&!ar.hidden&&ful==='pickup') ar.classList.add('dim'); else ar&&ar.classList.remove('dim'); buzz(); redraw(); };
+  const apply=c=>{ c=(c||$('#cc').value).trim().toUpperCase(); const o=avail.find(x=>(x.code||'').toUpperCase()===c); if(!o){ disc=0; code=''; redraw(); const i=$('#cc').closest('.lv-stxt'); i.classList.remove('fx-shake'); void i.offsetWidth; i.classList.add('fx-shake'); return toast(c?'That code isn’t valid for this shop':'Enter a code'); }
+    const pct=lwPct(o.discount_label); disc=pct?Math.round(base*pct/100):0; code=c; $('#cc').value=c; redraw(); buzz(20); toast(disc?`${c} applied — you save ${money(disc)}`:`${c} applied — the shop will apply this offer`); };
+  $('#ccgo').onclick=()=>apply(); el.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>apply(b.dataset.cc));
+  // replace the order submit to include fulfilment, coupon and note
+  const np=place.cloneNode(true); place.replaceWith(np);
+  np.onclick=async()=>{ const name=$('#cn').value.trim(), phone=$('#cp').value.trim(), line=$('#cl').value.trim(), area=$('#ca').value.trim();
+    if(ful==='delivery'&&(!name||!phone||!line)){ $('#addrRow').hidden=true; $('#addrEdit').hidden=false; return toast('Please fill name, phone and address'); }
+    if(ful==='delivery') localStorage.setItem('ll_addr',JSON.stringify({name,phone,line,area}));
+    const pm=(el.querySelector('.lv-pay.on')||{}).dataset?.pay||'cash'; np.disabled=true; np.classList.add('busy');
+    try{ let last=null; const n=Object.keys(groups).length;
+      for(const [b,g] of Object.entries(groups)){ const sub=g.items.reduce((s,i)=>s+i.qty*i.price,0); const d=Number(b)===bid?disc:0;
+        const r=await api('/orders',{method:'POST',body:{business_id:Number(b),total:Math.max(0,sub-d+(ful==='pickup'?0:(sub>=499?0:29))),item_summary:g.items.map(i=>`${i.qty}× ${i.name}`).join(', ')+(ful==='pickup'?' · PICKUP':''),payment_method:pm,
+          items_json:g.items.map(i=>({id:i.id,name:i.name,price:i.price,qty:i.qty,image:i.image||''})),fulfilment:ful,address:ful==='delivery'?`${name}, ${phone}, ${line}, ${area}`:null,note:$('#note').value.trim()||null,discount:d}}); last=r&&r.id; }
+      const pay=Math.max(0,base-disc+deliv()); track('order_placed',{total:pay,fulfilment:ful}); const shop=n>1?`${n} shops`:(cart[0]?.biz||''); cart=[]; saveCart(); updateCartBadge(); buzz(30);
+      nav.customer=[{name:'orderDone',params:{shop,total:pay,oid:last,pickup:ful==='pickup'}}]; routeRender(); }
+    catch(e){ np.disabled=false; np.classList.remove('busy'); toast(e.message); } };
+};
+
+/* ---------- ORDERS: cancel, rate, invoice, bookings tab ---------- */
+function lwInvoice(o){ const it=(typeof o.items_json==='string'?safeParse(o.items_json):o.items_json)||[]; const w=window.open('','_blank'); if(!w) return toast('Allow pop-ups to download the invoice');
+  w.document.write(`<!doctype html><title>Invoice #LL-${10000+o.id}</title><style>body{font:14px system-ui;max-width:560px;margin:32px auto;color:#14161A}h1{color:#07594F;font-size:22px}table{width:100%;border-collapse:collapse;margin:16px 0}td,th{padding:8px;border-bottom:1px solid #ddd;text-align:left}td:last-child,th:last-child{text-align:right}.t{font-weight:800;font-size:16px}small{color:#666}</style>
+  <h1>Local Link</h1><p><b>Invoice #LL-${10000+o.id}</b><br><small>${esc(o.created_at||'')}</small></p><p>Sold by <b>${esc(o.business)}</b><br>${o.fulfilment==='pickup'?'Pickup from shop':'Delivery'}${o.address?'<br>'+esc(o.address):''}</p>
+  <table><tr><th>Item</th><th>Qty</th><th>Amount</th></tr>${it.length?it.map(i=>`<tr><td>${esc(i.name)}</td><td>${i.qty||1}</td><td>₹${((i.price||0)*(i.qty||1)).toFixed(2)}</td></tr>`).join(''):`<tr><td colspan=3>${esc(o.item_summary||'')}</td></tr>`}
+  ${o.discount?`<tr><td colspan=2>Discount</td><td>−₹${Number(o.discount).toFixed(2)}</td></tr>`:''}<tr class="t"><td colspan=2>Total</td><td>₹${Number(o.total).toFixed(2)}</td></tr></table>
+  <p><small>Paid via ${esc(o.payment_method||'cash')} to the shop · Status: ${esc(o.status)}</small></p><script>setTimeout(()=>print(),300)<\/script>`); w.document.close(); }
+const _lvOrders=SCREENS.orders;
+SCREENS.orders=async(el,p)=>{ await _lvOrders(el,p); const seg=$('#seg'); if(!seg) return;
+  const os=await api('/orders').catch(()=>[]); const byId=Object.fromEntries(os.map(o=>[o.id,o]));
+  seg.style.gridTemplateColumns='1fr 1fr 1fr'; seg.querySelector('i').style.width='calc(33.3% - 3px)'; seg.insertAdjacentHTML('beforeend',`<button data-s="book">Bookings</button>`);
+  const enhance=()=>{ const l=$('#l');
+    l.querySelectorAll('.lv-ocard').forEach(c=>{ if(c.dataset.lw) return; c.dataset.lw=1; const id=Number((c.querySelector('.lv-ohead b').textContent.match(/\d+/)||[0])[0])-10000; const o=byId[id]; if(!o) return;
+      const extra=[]; if(o.status==='pending') extra.push(`<button class="lw-x" data-cancel="${o.id}">Cancel order</button>`); extra.push(`<button class="lw-x g" data-inv="${o.id}">${GI.download||''} Invoice</button>`);
+      if(o.fulfilment==='pickup') c.querySelector('.lv-ost').textContent='Pickup';
+      c.insertAdjacentHTML('beforeend',`<div class="lw-oextra">${extra.join('')}</div>`); });
+    l.querySelectorAll('.lv-prow').forEach(r=>{ if(r.dataset.lw) return; r.dataset.lw=1; const btn=r.querySelector('[data-reorder]'); let d={}; try{ d=JSON.parse(btn.dataset.reorder); }catch(e){}
+      const o=os.find(x=>x.business_id===d.bizId&&x.item_summary===r.querySelector('small').textContent)||null; if(!o) return;
+      r.insertAdjacentHTML('beforeend',`<div class="lw-prx">${o.status==='completed'?(o.rating?`<span class="lw-rated">${'★'.repeat(o.rating)}</span>`:`<span class="lw-stars" data-rate="${o.id}">${[1,2,3,4,5].map(n=>`<button data-n="${n}" aria-label="${n} stars">★</button>`).join('')}</span>`):''}<button class="lw-x g" data-inv="${o.id}">Invoice</button>${o.status==='cancelled'?'<small class="lw-ref">Cancelled · nothing was charged</small>':''}</div>`); });
+    l.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=async()=>{ const ok=await confirmDialog({title:'Cancel this order?',message:'The shop has not accepted it yet, so it will be cancelled straight away.',ok:'Cancel order',cancel:'Keep it',danger:true,icon:GI.package}); if(!ok) return;
+      try{ await api(`/orders/${b.dataset.cancel}/cancel`,{method:'POST'}); toast('Order cancelled'); routeRender(); }catch(e){ toast(e.message); } });
+    l.querySelectorAll('[data-inv]').forEach(b=>b.onclick=()=>lwInvoice(byId[b.dataset.inv]));
+    l.querySelectorAll('[data-rate]').forEach(s=>s.onclick=async e=>{ const n=Number(e.target.dataset.n); if(!n) return; s.querySelectorAll('button').forEach(x=>x.classList.toggle('on',Number(x.dataset.n)<=n)); buzz(20);
+      try{ await api(`/orders/${s.dataset.rate}/rate`,{method:'POST',body:{rating:n}}); const o=byId[s.dataset.rate]; o.rating=n; setTimeout(()=>{ s.outerHTML=`<span class="lw-rated">${'★'.repeat(n)}</span>`; toast('Thanks for rating!'); },400);
+        if(n>=4) setTimeout(async()=>{ try{ openReview(await api('/businesses/'+o.business_id)); }catch(_){} },700); }catch(x){ toast(x.message); } }); };
+  enhance(); new MutationObserver(enhance).observe($('#l'),{childList:true});
+  seg.addEventListener('click',e=>{ const b=e.target.closest('[data-s]'); if(!b) return; const k=['on','past','book'].indexOf(b.dataset.s); seg.querySelector('i').style.transform=`translateX(${k*100}%)`;
+    if(b.dataset.s!=='book') return; e.stopImmediatePropagation(); seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+    const bk=lwLS('ll_bookings',[]); const l=$('#l'); l.classList.remove('lv-tin'); void l.offsetWidth; l.classList.add('lv-tin');
+    l.innerHTML=bk.length?bk.map((x,i)=>`<article class="lv-prow" style="--n:${i}"><span class="lv-oimg">${GI.calendar||I.bell}</span><div><b>${esc(x.svc)}</b><small>${esc(x.biz)}</small><small>${esc(x.day)} · ${esc(x.tm)} · <span class="lw-req">Requested</span></small></div><button class="lv-reo" data-bk="${x.bizId}">Contact</button></article>`).join('')
+      :`<div class="lv-empty"><div class="lv-eill"><span class="lv-halo"></span>${GI.calendar||I.bell}</div><h2>No bookings yet</h2><p>Book electricians, plumbers, cleaning and more from local providers.</p><button class="lv-btn" id="bs">Find a service</button></div>`;
+    const bs=$('#bs'); if(bs) bs.onclick=()=>go('category',{slug:'services'}); l.querySelectorAll('[data-bk]').forEach(x=>x.onclick=()=>go('business',{id:Number(x.dataset.bk)})); },true);
+};
+const _lvDone=SCREENS.orderDone;
+SCREENS.orderDone=(el,p)=>{ _lvDone(el,p); if(p&&p.pickup){ const m=el.querySelector('.lv-dmsg'); if(m) m.innerHTML=`${esc(p.shop||'The shop')} will tell you when it's ready to collect${p.total?` · <b>${money(p.total)}</b>`:''}.`; } };
 
 /* ================= CUSTOMER MOTION LAYER ================= */
 const CX_TABS=['home','categories','orders','account'];

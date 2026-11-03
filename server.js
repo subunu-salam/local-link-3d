@@ -262,10 +262,38 @@ app.post('/api/reviews', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 app.post('/api/orders', requireAuth, (req, res) => {
-  const { business_id, total, item_summary, payment_method, items_json } = req.body || {};
-  const info = db.prepare("INSERT INTO orders(customer_id,business_id,status,total,item_summary,payment_method,items_json) VALUES (?,?,'pending',?,?,?,?)")
-    .run(req.user.id, business_id, total || 0, item_summary || '', payment_method || 'cod', items_json ? JSON.stringify(items_json) : null);
+  const { business_id, total, item_summary, payment_method, items_json, fulfilment, address, note, discount } = req.body || {};
+  const ful = fulfilment === 'pickup' ? 'pickup' : 'delivery';
+  const info = db.prepare("INSERT INTO orders(customer_id,business_id,status,total,item_summary,payment_method,items_json,fulfilment,address,note,discount) VALUES (?,?,'pending',?,?,?,?,?,?,?,?)")
+    .run(req.user.id, business_id, total || 0, item_summary || '', payment_method || 'cod', items_json ? JSON.stringify(items_json) : null, ful, address || null, note || null, Number(discount) || 0);
+  try { db.prepare("INSERT INTO notifications(user_id,type,title,body) VALUES (?,?,?,?)").run(req.user.id, 'order', 'Order placed', `Order #LL-${10000 + Number(info.lastInsertRowid)} was sent to the shop.`); } catch {}
   res.json({ id: info.lastInsertRowid, ok: true });
+});
+// customer can cancel while the shop has not accepted yet
+app.post('/api/orders/:id/cancel', requireAuth, (req, res) => {
+  const o = db.prepare('SELECT * FROM orders WHERE id=? AND customer_id=?').get(req.params.id, req.user.id);
+  if (!o) return res.status(404).json({ error: 'Order not found' });
+  if (o.status !== 'pending') return res.status(400).json({ error: 'The shop has already accepted this order. Please contact them to cancel.' });
+  db.prepare("UPDATE orders SET status='cancelled' WHERE id=?").run(o.id);
+  try { db.prepare("INSERT INTO notifications(user_id,type,title,body) VALUES (?,?,?,?)").run(req.user.id, 'order', 'Order cancelled', `Order #LL-${10000 + o.id} was cancelled.`); } catch {}
+  res.json({ ok: true });
+});
+// rate a completed order (1–5)
+app.post('/api/orders/:id/rate', requireAuth, (req, res) => {
+  const r = Math.max(1, Math.min(5, Number((req.body || {}).rating) || 0));
+  const o = db.prepare('SELECT * FROM orders WHERE id=? AND customer_id=?').get(req.params.id, req.user.id);
+  if (!o) return res.status(404).json({ error: 'Order not found' });
+  db.prepare('UPDATE orders SET rating=? WHERE id=?').run(r, o.id);
+  res.json({ ok: true });
+});
+// update own profile
+app.patch('/api/me', requireAuth, (req, res) => {
+  const { name, phone } = req.body || {};
+  if (name !== undefined && !String(name).trim()) return res.status(400).json({ error: 'Name is required' });
+  if (name !== undefined) db.prepare('UPDATE users SET name=? WHERE id=?').run(String(name).trim().slice(0, 80), req.user.id);
+  if (phone !== undefined) { try { db.prepare('UPDATE users SET phone=? WHERE id=?').run(String(phone).trim().slice(0, 20) || null, req.user.id); } catch (e) { return res.status(400).json({ error: 'That phone number is already in use' }); } }
+  const u = db.prepare('SELECT * FROM users WHERE id=?').get(req.user.id);
+  res.json({ user: publicUser(u) });
 });
 app.get('/api/saved', requireAuth, (req, res) => res.json(db.prepare('SELECT * FROM saved_items WHERE user_id=?').all(req.user.id)));
 app.post('/api/saved', requireAuth, (req, res) => {

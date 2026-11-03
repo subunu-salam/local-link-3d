@@ -161,6 +161,11 @@ function migrate() {
   add('orders', 'items_json', 'TEXT');
   add('businesses', 'payment_methods', "TEXT DEFAULT 'cash'");
   add('businesses', 'upi_id', 'TEXT');
+  add('orders', 'fulfilment', "TEXT DEFAULT 'delivery'");
+  add('orders', 'address', 'TEXT');
+  add('orders', 'note', 'TEXT');
+  add('orders', 'discount', 'REAL DEFAULT 0');
+  add('orders', 'rating', 'INTEGER');
 }
 
 export function seed({ force = false } = {}) {
