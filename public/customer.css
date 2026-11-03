@@ -965,3 +965,12 @@ body.cdark .lx-arr{background:#173431} body.cdark .lx-arr b{color:#7FE0CF} body.
 .lx-pcard > b{margin-top:6px}
 body[data-app="customer"] .qc-cartwrap.onpd{bottom:calc(14px + var(--bottom))}
 body[data-app="customer"] .phone:has(.qc-cartwrap.onpd:not([hidden])) .screen{padding-bottom:100px}
+/* 3D emoji objects (template style) */
+.lx-emo{display:block; line-height:1; filter:drop-shadow(0 10px 10px rgba(0,0,0,.22)); animation:lxFloat2 3.2s ease-in-out infinite}
+.lx-quick span{font-size:26px; background:#fff !important; box-shadow:0 8px 16px -8px rgba(0,0,0,.45) !important}
+.lx-quick button:nth-child(2) span,.lx-quick button:nth-child(3) span{background:#FFE7A6 !important}
+.lx-quick span .lx-emo,.lx-quick span{animation:none}
+.lx-cimg{background:transparent !important; box-shadow:none !important; width:100px; height:90px}
+.lx-cimg .lx-emo{font-size:64px}
+.lx-ctile:nth-child(odd) .lx-emo{animation-delay:-1.4s}
+.lx-bag{width:auto; height:auto; right:14px; bottom:8px} .lx-bag .lx-emo{font-size:96px}

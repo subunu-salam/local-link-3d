@@ -4046,7 +4046,7 @@ SCREENS.location=(el)=>{ _lwLoc(el); const w=el.querySelector('.lw-loc'); if(!w)
 /* ---------- 4. HOME ---------- */
 SCREENS.home=async(el)=>{
   const nm=token&&me?me.name.split(' ')[0]:''; const cats=ref.categories||[];
-  const Q=[['Shops',GI.bag||I.store,'category',{slug:'shopping'}],['Food',GI.fork||I.store,'category',{slug:'food-grocery',vfilter:'food',vlabel:'Food & Restaurants'}],['Grocery',GI.cart,'category',{slug:'food-grocery',vfilter:'grocery',vlabel:'Grocery'}],['Services',GI.wrench||I.cog,'category',{slug:'services'}],['More',I.grid,'categories',{}]];
+  const Q=[['Shops','🛍️','category',{slug:'shopping'}],['Food','🍔','category',{slug:'food-grocery',vfilter:'food',vlabel:'Food & Restaurants'}],['Grocery','🛒','category',{slug:'food-grocery',vfilter:'grocery',vlabel:'Grocery'}],['Services','🛠️','category',{slug:'services'}],['More','✨','categories',{}]];
   el.innerHTML=`<header class="lx-head"><div class="lx-htop"><span class="lx-brand">${logoMark(30)}<b>Local</b><b>Link</b></span><span style="flex:1"></span>
       <button class="lx-hb" data-nav="notifications" aria-label="Notifications">${I.bell}<i></i></button><button class="lx-av" data-tabnav="account" aria-label="Account">${nm?esc(nm[0]):I.user}</button></div>
     <button class="lx-loc2" data-tabnav-loc>${I.pin}<b>${esc(state.areaName)}, Kozhikode</b>${I.chev.replace('m9 6 6 6-6 6','m6 9 6 6 6-6')}</button>
@@ -4072,7 +4072,7 @@ SCREENS.home=async(el)=>{
   const [offers,biz,deals,places,sv]=await Promise.all([api('/offers'),api('/businesses?featured=1'),api('/products?deal=1&limit=10'),api('/places?area_id='+state.areaId).catch(()=>[]),api('/services').catch(()=>[])]);
   const best=offers.reduce((m,o)=>Math.max(m,lwPct(o.discount_label)),0);
   const B=[{brand:1}].concat(offers.slice(0,4)); const ban=$('#ban');
-  ban.innerHTML=B.map((o,k)=>o.brand?`<button class="lx-ban b0" data-nav="offers"><span class="lx-bt"><b>Discover<br>Local Deals</b>${best?`<em>Up to ${best}% Off</em>`:'<em>See offers</em>'}</span><span class="lx-bag"><span class="h"></span><span class="b"></span><span class="b2"></span></span></button>`
+  ban.innerHTML=B.map((o,k)=>o.brand?`<button class="lx-ban b0" data-nav="offers"><span class="lx-bt"><b>Discover<br>Local Deals</b>${best?`<em>Up to ${best}% Off</em>`:'<em>See offers</em>'}</span><span class="lx-bag"><span class="lx-emo">🛍️</span></span></button>`
     :`<button class="lx-ban b${k%3}" data-nav="business" data-id="${o.business_id}"><span class="lx-bt"><small>${esc(o.business||'')}</small><b>${esc(o.title)}</b><em>${esc(o.discount_label||'Offer')}</em></span><span class="lx-bimg">${photoLayer(o.image_url||pic(coverKw({subcategory:o.business||''})+','+(o.title||''),700+(o.id||0),400,400))}${GI.percent}</span></button>`).join('');
   $('#bdots').innerHTML=B.map((_,k)=>`<i class="${k?'':'on'}"></i>`).join(''); lvCarousel(ban,$('#bdots'),3400);
   const near=[]; const seen=new Set(); (places||[]).concat(biz).forEach(b=>{ const k=(b.name||'').toLowerCase(); if(!seen.has(k)){ seen.add(k); near.push(b); } }); near.sort((a,b)=>(b.is_open?1:0)-(a.is_open?1:0));
@@ -4090,7 +4090,7 @@ SCREENS.categories=async(el)=>{
     ['Pharmacy','category',{slug:'healthcare'},'pharmacy medicine bottles',2],['Services','category',{slug:'services'},'tools hammer wrench',3],['Local Workers','category',{slug:'workers'},'construction helmet worker',4],['Fashion & Jewellery','category',{slug:'shopping'},'gold jewellery necklace',5],
     ['Transport','category',{slug:'transport'},'auto rickshaw taxi',0],['Local Info','localinfo',{},'town hall building',2],['Events','events',{},'festival lights event',1],['News','news',{},'newspaper',3]];
   el.innerHTML=`<header class="lx-bar"><button class="lv-ib" id="__back" aria-label="Back">${I.back}</button><h1>Categories</h1><button class="lv-ib" data-nav="searchScreen" aria-label="Search">${I.search}</button></header>
-    <div class="lx-cgrid">${T.map((c,k)=>`<button class="lx-ctile c${c[4]}" data-k="${k}" style="--n:${k}"><span class="lx-cimg">${photoLayer(pic(c[3],900+k,320,320))}<span class="gi">${GI[['cart','fork','pharmacy','wrench','helmet','gem'][c[4]]]||I.store}</span></span><b>${esc(c[0])}</b></button>`).join('')}</div>
+    <div class="lx-cgrid">${T.map((c,k)=>`<button class="lx-ctile c${c[4]}" data-k="${k}" style="--n:${k}"><span class="lx-cimg"><span class="lx-emo">${['🧺','🍔','💊','🛠️','👷','💍','🛺','🏛️','🎉','📰'][k]}</span></span><b>${esc(c[0])}</b></button>`).join('')}</div>
     <div class="lv-sh"><h2>Popular nearby stores</h2></div><div class="lv-list" id="pop">${skeletonRow(3)}</div><div style="height:16px"></div>`;
   const bk=$('#__back'); if(stack().length>1) bk.onclick=back; else bk.onclick=()=>setTab('home');
   el.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{ const c=T[b.dataset.k]; buzz(); go(c[1],c[2]); });
