@@ -1096,7 +1096,7 @@ SCREENS.product = async (el, {id}) => {
       <div class="pd-price"><b>${money(p.price)}</b>${disc?`<s>MRP ${money(p.mrp)}</s><em>Save ${money(p.mrp-p.price)}</em>`:''}</div>
       <p class="pd-tax">Inclusive of all taxes</p>
       <button class="pd-store" data-nav="business" data-id="${p.business_id}"><span>${GI.store}</span><div><small>Sold by</small><b>${esc(p.business)}</b></div>${I.chev}</button>
-      <div class="pd-perks"><div>${gi('bolt')}<b>Fast delivery</b><small>from a store near you</small></div><div>${gi('shield')}<b>${oos?'Out of stock':'In stock'}</b><small>${esc(p.category_name||'Local')}</small></div><div>${gi('chat')}<b>Ask the store</b><small>chat or call</small></div></div>
+      <div class="pd-perks"><div>${gi('pin')}<b>Local shop</b><small>right in your area</small></div><div>${gi('shield')}<b>${oos?'Out of stock':'In stock'}</b><small>${esc(p.category_name||'Local')}</small></div><div>${gi('chat')}<b>Ask the store</b><small>chat or call</small></div></div>
       ${p.description?`<h3 class="pd-h">About this item</h3><p class="pd-desc">${esc(p.description)}</p>`:''}
       <div id="related"></div><div style="height:120px"></div></section>
     <div class="pd-bar">${oos?`<button class="btn block" disabled style="opacity:.6">Out of stock</button>`:`

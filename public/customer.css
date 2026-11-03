@@ -461,3 +461,62 @@ body[data-app="customer"] .grid2{gap:8px !important}
 body[data-app="customer"] :is(.cx-see,.cx-again,.cx-skip,.cx-ch button,.qc-add,.clang button){min-height:44px}
 body[data-app="customer"] :is(small,.cx-steps span,.cx-odots + *){font-size:max(12px,1em)}
 body[data-app="customer"] .cx-sec{margin-top:24px} body[data-app="customer"] .cx-sh{padding-bottom:8px}
+
+/* =====================================================================
+   v34 — premium pass on store, product and search (customer)
+   ===================================================================== */
+/* STORE */
+body[data-app="customer"] .st-hero{border-radius:0 0 32px 32px; overflow:hidden}
+body[data-app="customer"] .st-card{box-shadow:0 24px 44px -26px rgba(7,63,58,.55); border:0}
+body[data-app="customer"] .st-logo{border-radius:20px; box-shadow:0 0 0 5px var(--surface), 0 14px 26px -10px rgba(10,92,85,.7); animation:pop .6s var(--spring) both}
+body[data-app="customer"] .st-acts > *{border-radius:16px; border:0; background:var(--brand-50); color:var(--brand); min-height:60px; transition:transform .25s var(--spring)}
+body[data-app="customer"] .st-acts > *:active{transform:scale(.93)}
+body[data-app="customer"] .st-coupon{border:1.5px dashed var(--hot); border-radius:18px; background:linear-gradient(120deg,var(--hot-50),var(--surface)); box-shadow:var(--shadow)}
+body[data-app="customer"] .st-tabs{position:sticky; top:0; z-index:8; padding:10px 16px; background:color-mix(in srgb,#F6F8F7 92%,transparent); backdrop-filter:blur(12px)}
+body[data-app="customer"].cdark .st-tabs{background:color-mix(in srgb,var(--bg) 92%,transparent)}
+body[data-app="customer"] .st-tabs button{min-height:40px; border-radius:999px; padding:0 16px; font-weight:700; transition:background .3s, color .3s, transform .3s var(--spring)}
+body[data-app="customer"] .st-tabs button.on{box-shadow:0 8px 16px -8px rgba(240,82,58,.8); transform:translateY(-1px)}
+body[data-app="customer"] .st-menu{display:grid; gap:12px; padding:12px 16px}
+body[data-app="customer"] .st-item{display:grid; grid-template-columns:minmax(0,1fr) 118px; gap:12px; align-items:center; padding:12px; border:0 !important; border-radius:22px; background:var(--surface); box-shadow:var(--shadow); animation:rise .45s var(--ease) both}
+body[data-app="customer"] .st-item:nth-child(2){animation-delay:.05s} body[data-app="customer"] .st-item:nth-child(3){animation-delay:.1s} body[data-app="customer"] .st-item:nth-child(n+4){animation-delay:.15s}
+body[data-app="customer"] .st-item h4{font-size:15.5px; font-weight:800}
+body[data-app="customer"] .st-price b{font-size:17px; color:var(--ink)} body[data-app="customer"] .st-price em{background:var(--ok-50); color:var(--ok); border-radius:8px; padding:2px 6px; font-style:normal; font-size:12px; font-weight:800}
+body[data-app="customer"] .st-item p{font-size:13px; color:var(--muted); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+body[data-app="customer"] .st-ip{position:relative; width:118px; height:118px; border-radius:20px; overflow:visible; display:grid; place-items:center; color:var(--brand); background:linear-gradient(150deg,#E2F5F1,#CDEDE7)}
+body[data-app="customer"] .st-item:nth-child(3n+2) .st-ip{background:linear-gradient(150deg,#FFF1EC,#FFE3D9); color:var(--hot)}
+body[data-app="customer"] .st-item:nth-child(3n+3) .st-ip{background:linear-gradient(150deg,#FFF6DC,#FDEBB5); color:#B07800}
+body[data-app="customer"].cdark .st-ip{background:var(--surface-2) !important}
+body[data-app="customer"] .st-ip img.ph{border-radius:20px}
+body[data-app="customer"] .st-ip > .gi svg{width:34px; height:34px; opacity:.55}
+body[data-app="customer"] .st-ip :is(.qc-add,.qc-step){position:absolute; left:50%; bottom:-14px; transform:translateX(-50%); min-width:88px; box-shadow:0 8px 16px -8px rgba(0,0,0,.35)}
+body[data-app="customer"] .st-ip .qc-add{background:var(--surface); color:var(--hot); border:1.5px solid var(--hot); font-weight:800}
+
+/* PRODUCT */
+body[data-app="customer"] .pd-hero{position:relative; overflow:hidden; border-radius:0 0 36px 36px; background:radial-gradient(260px 200px at 50% 55%, #fff, transparent 70%), linear-gradient(160deg,#E2F5F1,#BFE7E1)}
+body[data-app="customer"].cdark .pd-hero{background:var(--surface-2)}
+body[data-app="customer"] .pd-hero::before{content:""; position:absolute; left:50%; top:52%; width:220px; height:220px; margin:-110px 0 0 -110px; border-radius:42% 58% 63% 37% / 41% 44% 56% 59%; background:rgba(255,255,255,.55); animation:cxBlob 9s ease-in-out infinite}
+body[data-app="customer"] .pd-hero > .gi{position:relative; animation:logoBob 3.5s ease-in-out infinite}
+body[data-app="customer"] .pd-hero > .gi svg{color:var(--brand); opacity:.75}
+body[data-app="customer"] .pd-sheet{margin-top:-28px; position:relative; border-radius:30px 30px 0 0; background:var(--surface); padding-top:24px; box-shadow:0 -16px 30px -24px rgba(0,0,0,.4); animation:rise .5s var(--spring) .1s both}
+body[data-app="customer"] .pd-sheet h1{font-size:24px; font-weight:800; letter-spacing:-.03em}
+body[data-app="customer"] .pd-price b{color:var(--hot)}
+body[data-app="customer"] .pd-store{border:0 !important; background:var(--brand-50) !important}
+body[data-app="customer"] .pd-perks{display:flex !important; gap:8px; overflow-x:auto; scrollbar-width:none}
+body[data-app="customer"] .pd-perks > div{flex:1 0 100px; border-radius:18px; padding:12px 10px; background:var(--surface-2); text-align:center; animation:moodIn .5s var(--spring) both}
+body[data-app="customer"] .pd-perks > div:nth-child(2){animation-delay:.08s} body[data-app="customer"] .pd-perks > div:nth-child(3){animation-delay:.16s}
+body[data-app="customer"] .pd-perks .gi{display:grid; place-items:center; width:36px; height:36px; margin:0 auto 6px; border-radius:12px; background:var(--brand); color:#fff}
+body[data-app="customer"] .pd-perks .gi svg{width:18px; height:18px}
+body[data-app="customer"] .pd-perks b{display:block; font-size:13px} body[data-app="customer"] .pd-perks small{font-size:12px; color:var(--muted)}
+body[data-app="customer"] .pd-bar{border-radius:26px 26px 0 0; animation:qcBarIn .5s var(--spring) both}
+
+/* SEARCH */
+body[data-app="customer"] .sr-top{padding-top:calc(12px + var(--top)); background:linear-gradient(160deg,#0C8F82,#0A5C55); border-radius:0 0 26px 26px; padding-bottom:14px; box-shadow:0 16px 30px -22px rgba(7,63,58,.8)}
+body[data-app="customer"] .sr-top .tb-btn,body[data-app="customer"] .sr-top > button:first-child{background:rgba(255,255,255,.18); color:#fff; border:0}
+body[data-app="customer"] .sr-box{background:#fff; border:0 !important; border-radius:16px; min-height:48px; box-shadow:0 12px 24px -14px rgba(0,0,0,.5); animation:cxGrow .45s var(--spring) both}
+@keyframes cxGrow{from{transform:scaleX(.85); opacity:0}}
+body[data-app="customer"] .sr-trend > *{border-radius:20px; animation:moodIn .45s var(--spring) both; box-shadow:var(--shadow)}
+body[data-app="customer"] .sr-trend > *:nth-child(2){animation-delay:.04s} body[data-app="customer"] .sr-trend > *:nth-child(3){animation-delay:.08s} body[data-app="customer"] .sr-trend > *:nth-child(4){animation-delay:.12s}
+body[data-app="customer"] .sr-trend > *:nth-child(n+5){animation-delay:.16s}
+body[data-app="customer"] .sr-chip{min-height:40px; border-radius:999px}
+body[data-app="customer"] .pd-perks .gi svg{color:#fff}
+body[data-app="customer"] .pd-h{font-size:17px; font-weight:800}
