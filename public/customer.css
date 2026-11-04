@@ -1398,3 +1398,5 @@ body.cdark .lx-plus .qc-add{background:#2BC9AE !important}
 .lx-plus .qc-add::before,.lx-plus .qc-add::after{content:none !important; display:none !important}
 /* no dot under the active nav tab */
 .vbx-nav .cx-ind::after,.lvdock .cx-ind::after,.lvdock .vtab::after,.lvdock .vtab.on::after,.lvdock .vtab.on::before{content:none !important; display:none !important}
+/* hide intermediate home layouts while the final one is assembled (no flash of old UI) */
+.screen.ll-hold > *{visibility:hidden !important; opacity:0 !important; animation:none !important}

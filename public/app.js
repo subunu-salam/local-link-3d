@@ -436,8 +436,10 @@ async function routeRender(){
   const fn = SCREENS[cur.name];
   if (!fn){ screen.innerHTML = emptyState('compass','Screen not found',''); return; }
   if(state.view==='customer'){ screen.classList.remove('cx-fwd','cx-back','cx-tab'); void screen.offsetWidth; screen.classList.add('cx-'+NAV_DIR); NAV_DIR='tab'; }
+  const hold = state.view==='customer' && cur.name==='home'; if(hold) screen.classList.add('ll-hold');
   try { await fn(screen, cur.params||{}); }
   catch(e){ screen.innerHTML = errorState(e.message, ()=>routeRender()); }
+  finally { if(hold) screen.classList.remove('ll-hold'); }
   screen.scrollTop = 0;                 // and again after async data loads
   renderBottomNav();
   if(state.view==='customer') try{ cxMotion(screen); }catch(e){}
@@ -1596,37 +1598,41 @@ function openAsk(prefill, opts={}){
   orb.onclick=()=>micB.click();
   new MutationObserver(()=>{ const on=micB.classList.contains('listening'); panel.classList.toggle('listening',on);
     if(vst) vst.textContent = on ? (aiVoiceLang==='ml-IN'?'കേൾക്കുന്നു…':'Listening…') : 'Tap the orb and speak'; }).observe(micB,{attributes:true,attributeFilter:['class']});
-  if(prefill) run(prefill); else if(opts.voice && (window.SpeechRecognition||window.webkitSpeechRecognition)) setTimeout(()=>micB.click(),350); else setTimeout(()=>input.focus(),200);
+  if(prefill) run(prefill); else setTimeout(()=>input.focus(),200);
 }
 
 /* voice input (English + Malayalam) via Web Speech API */
 let _recog=null;
 function setupVoice(micBtn, input, run){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR){ micBtn.classList.add('disabled'); micBtn.title='Voice not supported on this device'; micBtn.onclick=()=>toast('Voice input isn’t supported on this browser'); return; }
-  let listening=false;
-  micBtn.onclick=async()=>{
-    if(listening){ try{_recog.stop();}catch(e){} return; }
-    if(!localStorage.getItem('ll_micok')){
-      const ok=await confirmDialog({title:'Use your microphone?',message:'Local Link listens only while the orb is active, to turn what you say into a search. Nothing is recorded or stored. Your browser will ask for permission next.',ok:'Allow mic',cancel:'Type instead',icon:GI.mic});
-      if(!ok){ input.focus(); return; } localStorage.setItem('ll_micok','1'); }
-    try{ _recog = new SR(); }catch(e){ toast('Voice unavailable'); return; }
-    _recog.lang = aiVoiceLang; _recog.interimResults = true; _recog.maxAlternatives = 1; _recog.continuous=false;
-    listening=true; micBtn.classList.add('listening'); input.placeholder = aiVoiceLang==='ml-IN'?'കേൾക്കുന്നു…':'Listening…';
-    let finalText='';
-    _recog.onresult=(ev)=>{ let interim=''; for(let i=ev.resultIndex;i<ev.results.length;i++){ const tr=ev.results[i]; if(tr.isFinal) finalText+=tr[0].transcript; else interim+=tr[0].transcript; } input.value = (finalText+interim).trim(); };
-    _recog.onerror=(ev)=>{ if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){ localStorage.removeItem('ll_micok'); toast('Mic is blocked — you can type your question instead'); input.focus(); } else if(ev.error!=='no-speech' && ev.error!=='aborted') toast('Didn\'t catch that — try again or type'); };
-    _recog.onend=()=>{ listening=false; micBtn.classList.remove('listening'); input.placeholder=t('askPh');
-      const said=finalText.trim(); if(!said) return;
-      input.value=said; const bar=input.closest('.ai-inputbar'); if(bar) bar.classList.add('heard');
-      const hint=document.createElement('div'); hint.className='ai-heard'; hint.innerHTML=`Heard: “<b>${esc(said)}</b>” — sending… <button>Edit</button>`;
-      bar && bar.parentNode.insertBefore(hint, bar);
-      let tm=setTimeout(()=>{ hint.remove(); bar&&bar.classList.remove('heard'); run(input.value.trim()); }, 1800);
-      const cancel=()=>{ clearTimeout(tm); hint.innerHTML='Fix any word, then press send'; bar&&bar.classList.remove('heard'); input.focus(); input.select(); };
-      hint.querySelector('button').onclick=cancel; input.addEventListener('focus', cancel, {once:true}); };
-    try{ _recog.start(); }catch(e){ listening=false; micBtn.classList.remove('listening'); }
+  const typeInstead=(msg)=>{ toast(msg); const bar=input.closest('.lw-in'); if(bar) bar.classList.remove('lx-hide'); setTimeout(()=>input.focus(),60); };
+  if(!SR){ micBtn.classList.add('disabled'); micBtn.onclick=()=>typeInstead('Voice isn’t supported in this browser — type instead'); return; }
+  let rec=null, listening=false, finalText='', watchdog=null, gotAudio=false;
+  const reset=()=>{ listening=false; clearTimeout(watchdog); micBtn.classList.remove('listening'); input.placeholder=t('askPh')||'Type or speak…'; };
+  const finish=()=>{ const said=(finalText||input.value||'').trim(); reset(); rec=null; if(said){ input.value=said; run(said); } };
+  micBtn.onclick=()=>{
+    if(listening){ try{ rec&&rec.stop(); }catch(e){} return; }
+    try{ rec&&rec.abort(); }catch(e){}
+    // start synchronously inside the tap — iOS Safari only allows mic start from a user gesture
+    try{ rec=new SR(); }catch(e){ return typeInstead('Voice unavailable — type instead'); }
+    rec.lang=aiVoiceLang||'en-IN'; rec.interimResults=true; rec.maxAlternatives=1; rec.continuous=false;
+    finalText=''; gotAudio=false; input.value='';
+    rec.onstart=()=>{ listening=true; micBtn.classList.add('listening'); input.placeholder=aiVoiceLang==='ml-IN'?'കേൾക്കുന്നു…':'Listening… speak now'; buzz(); };
+    rec.onaudiostart=()=>{ gotAudio=true; };
+    rec.onresult=(ev)=>{ let interim=''; for(let i=ev.resultIndex;i<ev.results.length;i++){ const r=ev.results[i]; if(r.isFinal) finalText+=r[0].transcript; else interim+=r[0].transcript; } input.value=(finalText+interim).trim();
+      clearTimeout(watchdog); watchdog=setTimeout(()=>{ try{ rec.stop(); }catch(e){} },1800); };
+    rec.onerror=(ev)=>{ const e=ev.error; if(e==='not-allowed'||e==='service-not-allowed') typeInstead('Microphone is blocked — allow it in browser settings, or type instead');
+      else if(e==='no-speech') toast('Didn’t hear anything — tap the mic and speak');
+      else if(e==='audio-capture') typeInstead('No microphone found — type instead');
+      else if(e==='network') typeInstead('Voice needs an internet connection — type instead');
+      else if(e!=='aborted') toast('Voice stopped — please try again'); };
+    rec.onend=finish;
+    try{ rec.start(); listening=true; micBtn.classList.add('listening'); }catch(e){ reset(); return typeInstead('Couldn’t start the microphone — type instead'); }
+    // if the browser never starts or never ends (seen on iOS), recover instead of getting stuck
+    watchdog=setTimeout(()=>{ if(!gotAudio){ try{ rec.abort(); }catch(e){} reset(); typeInstead('Voice didn’t start — tap the mic again or type'); } else { try{ rec.stop(); }catch(e){} } },9000);
   };
 }
+
 function aiResultRow(x){
   const map={business:['store','#0EA5A4','Business',x.id],service:['wrench','#6366F1','Service',x.business_id],product:['cart','#F97362','Product',x.business_id],worker:['helmet','#F59E0B','Worker',null],driver:['car','#0EA5E9','Ride',null]};
   const [emoji,color,label,bizId]=map[x.type]||['pin','#0D9488','Result',null];
@@ -3642,7 +3648,7 @@ SCREENS.assistant=(el,{q,voice})=>{
   $('#asend').onclick=()=>run(); inp.onkeydown=e=>{ if(e.key==='Enter') run(); };
   setupVoice($('#amic'),inp,run); $('#orb').onclick=()=>$('#amic').click();
   new MutationObserver(()=>{ const on=$('#amic')&&$('#amic').classList.contains('listening'); el.classList.toggle('listening',!!on); const s=$('#ost'); if(s) s.textContent=on?(aiVoiceLang==='ml-IN'?'കേൾക്കുന്നു…':'Listening…'):'Tap to speak'; }).observe($('#amic'),{attributes:true,attributeFilter:['class']});
-  if(q) run(q); else if(voice && (window.SpeechRecognition||window.webkitSpeechRecognition)) setTimeout(()=>$('#amic').click(),400);
+  if(q) run(q);
 };
 
 /* ---------- SEARCH ---------- */
