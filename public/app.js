@@ -4222,7 +4222,7 @@ renderBottomNav=function(){ _lxRBN(); const n=document.querySelector('.lvdock');
    ═══════════════════════════════════════════════════════════════════════ */
 function vbxAtmo(){ const ph=document.querySelector('.phone'); if(!ph||ph.querySelector('.vbx-atmo')||state.view!=='customer') return;
   const a=document.createElement('div'); a.className='vbx-atmo'; a.setAttribute('aria-hidden','true');
-  a.innerHTML='<i></i><i></i><i></i>'+['🛒','🍛','🛠️','💊','🧺','🛍️','☕','🌿'].map((e,k)=>`<b class="vbx-fl" style="--x:${8+k*12}%;--d:${14+k%4*3}s;--dl:${-k*2.3}s;--s:${.8+(k%3)*.25}">${e}</b>`).join('');
+  a.innerHTML='<i></i><i></i><i></i><svg class="vbx-rib" viewBox="0 0 400 300" preserveAspectRatio="none">'+[0,1,2,3,4].map(k=>`<path style="--k:${k}" d="M-40 ${150+k*14} C 80 ${60+k*10}, 200 ${250-k*12}, 440 ${90+k*16}"/>`).join('')+'</svg>';
   ph.prepend(a); }
 const vbxGreet=()=>{ const h=new Date().getHours(); return h<5?['Late night','🌙']:h<11?['Good morning','☀️']:h<15?['Lunch o’clock','☀️']:h<18?['Good afternoon','🌤️']:h<22?['Good evening','🌆']:['Late night','🌙']; };
 SCREENS.home=async(el)=>{
