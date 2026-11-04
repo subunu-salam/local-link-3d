@@ -1225,3 +1225,19 @@ body.cdark .px-how > div{background:var(--surface)}
 .rd-tick.in .rd-te{animation:pop .45s var(--spring)} .rd-tick.in .rd-tt{animation:vbxSwap .5s var(--ease)}
 body.cdark .rd-tick{background:var(--surface); color:var(--ink)}
 @media (prefers-reduced-motion:reduce){ .rd-sweep,.rd-h span{animation:none} }
+
+/* compact category tabs under the search */
+.ct-tabs{position:relative; display:flex; gap:2px; margin:12px -16px -12px; padding:0 12px; overflow-x:auto; scrollbar-width:none} .ct-tabs::-webkit-scrollbar{display:none}
+.ct-tabs button{position:relative; z-index:1; flex:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; min-width:64px; height:62px; padding:6px 8px 8px; font-size:12px; font-weight:600; color:var(--vbx-soft); animation:rise .45s var(--ease) both; animation-delay:calc(.2s + var(--n) * 40ms); transition:color .3s}
+.ct-tabs button svg{width:22px; height:22px; transition:transform .4s var(--spring)}
+.ct-tabs button.on{color:var(--vbx-deep); font-weight:700} .ct-tabs button.on svg{color:var(--vbx-brand); transform:translateY(-2px) scale(1.1)}
+.ct-tabs button:active svg{transform:scale(.85)}
+/* active tab = white "tab" that merges into the page below */
+.ct-ind{position:absolute; left:0; bottom:0; height:62px; border-radius:16px 16px 0 0; background:var(--vbx-canvas); transition:transform .45s var(--spring), width .35s var(--ease)}
+.ct-ind::before,.ct-ind::after{content:""; position:absolute; bottom:0; width:16px; height:16px; background:radial-gradient(circle at 0 0, transparent 15.5px, var(--vbx-canvas) 16px)}
+.ct-ind::before{left:-16px; background:radial-gradient(circle at 0 0, transparent 15.5px, var(--vbx-canvas) 16px)} .ct-ind::after{right:-16px; background:radial-gradient(circle at 100% 0, transparent 15.5px, var(--vbx-canvas) 16px)}
+body.cdark .ct-ind,body.cdark .ct-ind::before,body.cdark .ct-ind::after{--vbx-canvas:#0E1715}
+.vbx-hd:has(.ct-tabs){border-radius:0; padding-bottom:12px; box-shadow:none}
+.vbx-hd:has(.ct-tabs) + #orderPill + .vbx-sec .vbx-promos{padding-top:12px}
+.vbx-hd:has(.ct-tabs){background:#F2F9F6} body.cdark .vbx-hd:has(.ct-tabs){background:#13201D}
+.ct-tabs{margin-bottom:-12px; padding-bottom:0}

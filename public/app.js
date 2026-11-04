@@ -4366,6 +4366,40 @@ SCREENS.home=async(el)=>{ await _pxHome(el);
   show(); const tmr=setInterval(()=>{ if(!document.body.contains(tick)) return clearInterval(tmr); ti++; show(); },3000);
 };
 
+/* ═══════════════════════════════════════════════════════════════════════
+   HOME: compact category tabs under the search (replace the big category row)
+   ═══════════════════════════════════════════════════════════════════════ */
+const _rdHome=SCREENS.home;
+SCREENS.home=async(el)=>{ await _rdHome(el);
+  const hd=el.querySelector('.vbx-hd'); if(!hd) return;
+  const cats=el.querySelector('.vbx-cats'); if(cats) cats.closest('.vbx-sec').remove();
+  const sv='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">';
+  const IC={all:sv+'<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.5 2.5M15.2 15.2l2.5 2.5M6.3 17.7l2.5-2.5M15.2 8.8l2.5-2.5"/></svg>',
+    grocery:sv+'<path d="M4 9h16l-1.6 9.2a2 2 0 0 1-2 1.8H7.6a2 2 0 0 1-2-1.8z"/><path d="M8 9l3-5M16 9l-3-5M9 13v3M15 13v3M12 13v3"/></svg>',
+    food:sv+'<path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M16 3c-2 1.5-3 4-3 7h3v11"/></svg>',
+    fashion:sv+'<path d="M9 3l-5 3 2 4 2-1v12h8V9l2 1 2-4-5-3a3 3 0 0 1-6 0z"/></svg>',
+    services:sv+'<path d="M14.5 6.5a4 4 0 0 0 5 5L12 19a2.1 2.1 0 0 1-3-3l7.5-7.5"/><path d="M4 20l3-3"/></svg>',
+    health:sv+'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/></svg>',
+    workers:sv+'<path d="M4 15a8 8 0 0 1 16 0"/><path d="M3 15h18v2H3zM12 7V4M9 8V6M15 8V6"/></svg>',
+    rides:sv+'<path d="M5 16h14l-1.5-6.5a2 2 0 0 0-2-1.5h-7a2 2 0 0 0-2 1.5z"/><circle cx="8" cy="17.5" r="1.5"/><circle cx="16" cy="17.5" r="1.5"/></svg>'};
+  const T=[['all','All',null],['grocery','Grocery',{slug:'food-grocery',vfilter:'grocery',vlabel:'Grocery'}],['food','Food',{slug:'food-grocery',vfilter:'food',vlabel:'Food & Restaurants'}],['fashion','Fashion',{slug:'shopping'}],
+    ['services','Services',{slug:'services'}],['health','Health',{slug:'healthcare'}],['workers','Workers',{slug:'workers'}],['rides','Rides',{slug:'transport'}]];
+  hd.insertAdjacentHTML('beforeend',`<nav class="ct-tabs" id="ctTabs" role="tablist"><i class="ct-ind"></i>${T.map((t,k)=>`<button role="tab" data-ct="${k}" class="${k?'':'on'}" aria-selected="${!k}" style="--n:${k}">${IC[t[0]]}<span>${t[1]}</span></button>`).join('')}</nav>`);
+  const tb=$('#ctTabs'); const ind=tb.querySelector('.ct-ind');
+  const place=()=>{ const on=tb.querySelector('.on'); if(!on) return; ind.style.width=on.offsetWidth+'px'; ind.style.transform=`translateX(${on.offsetLeft}px)`; };
+  requestAnimationFrame(place);
+  const near=$('#near'), nearT=near&&near.closest('.vbx-sec').querySelector('h2'); const allNear=near?near.innerHTML:''; const allT=nearT?nearT.textContent:'';
+  tb.onclick=async e=>{ const b=e.target.closest('[data-ct]'); if(!b) return; const t=T[b.dataset.ct]; buzz();
+    tb.querySelectorAll('button').forEach(x=>{ x.classList.toggle('on',x===b); x.setAttribute('aria-selected',x===b); }); place(); b.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
+    if(!near) return; if(t[1]==='Workers'||t[1]==='Rides'){ go('category',t[2]); return; }
+    near.classList.add('lv-swap');
+    if(!t[2]){ near.innerHTML=allNear; nearT.textContent=allT; }
+    else { let l=await api('/businesses?category='+t[2].slug).catch(()=>[]); const re=t[2].vfilter&&VFILTERS[t[2].vfilter]; if(re) l=l.filter(x=>re.test((x.subcategory||'')+' '+(x.name||'')));
+      l.sort((a,b)=>(b.is_open?1:0)-(a.is_open?1:0)); near.innerHTML=l.slice(0,10).map(lvStoreCard).join('')||`<p class="lv-empty-s">No ${t[1].toLowerCase()} shops yet.</p>`; nearT.textContent=`${t[1]} near you`; }
+    near.scrollLeft=0; requestAnimationFrame(()=>near.classList.remove('lv-swap'));
+    const sec=near.closest('.vbx-sec'); if(sec.getBoundingClientRect().top>innerHeight*.8) sec.scrollIntoView({behavior:'smooth',block:'center'}); };
+};
+
 /* ================= CUSTOMER MOTION LAYER ================= */
 const CX_TABS=['home','categories','orders','account'];
 let cxIndX=null;
@@ -4432,7 +4466,7 @@ function cxDockInd(){
   let sx=null, sy=0, edge=false, inRail=false;
   document.addEventListener('touchstart',e=>{ if(state.view!=='customer') return; const t=e.touches[0]; sx=t.clientX; sy=t.clientY;
     const ph=document.querySelector('.phone'); const pl=ph?ph.getBoundingClientRect().left:0; edge=(sx-pl)<24;
-    inRail=!!e.target.closest('.vbx-promos,.vbx-cats,.vbx-moods,.lx-bans,.lx-fchips,.lv-banners,.lv-rail,.lv-tabs,.lv-chips,.lv-cmini,.lv-utabs,.pt-kpis,input,textarea,.sheet,[data-noswipe]'); },{passive:true});
+    inRail=!!e.target.closest('.ct-tabs,.vbx-promos,.vbx-cats,.vbx-moods,.lx-bans,.lx-fchips,.lv-banners,.lv-rail,.lv-tabs,.lv-chips,.lv-cmini,.lv-utabs,.pt-kpis,input,textarea,.sheet,[data-noswipe]'); },{passive:true});
   document.addEventListener('touchend',e=>{ if(sx===null||state.view!=='customer') return; const t=e.changedTouches[0]; const dx=t.clientX-sx, dy=t.clientY-sy; sx=null;
     if(Math.abs(dx)<70||Math.abs(dy)>Math.abs(dx)*.6) return;
     const cur=(stack()[stack().length-1]||{}).name;
