@@ -1267,3 +1267,26 @@ body.cdark .ct-ind,body.cdark .ct-ind::before,body.cdark .ct-ind::after{--vbx-ca
 .rd-te{width:28px; height:28px; border-radius:9px; color:#0C8F82} .rd-te svg{width:15px; height:15px}
 .rd-tt{font-size:12.5px}
 .px-trust span{display:inline-flex; align-items:center; gap:6px} .px-trust svg{width:14px; height:14px}
+/* first fold: Just-say-it right under the carousel, compact "What you can do" */
+.fd-ask{margin:12px 16px 0 !important; width:calc(100% - 32px); padding:10px 12px !important; border-radius:18px !important}
+.fd-ask .lv-aorb{width:40px; height:40px} .fd-ask .lv-aorb svg{width:18px; height:18px}
+.fd-ask b{font-size:15px !important} .fd-ask small{font-size:12px !important}
+.vbx-promos + .vbx-dots{margin-top:6px}
+.fd-do .vbx-sh{padding:16px 16px 8px} .fd-do .vbx-sh h2{font-size:20px !important}
+.fd-do .px-docard{width:132px; border-radius:16px}
+.fd-do .px-doimg{aspect-ratio:auto; height:70px}
+.fd-do .px-dot{padding:7px 9px 9px; gap:1px} .fd-do .px-dot b{font-size:12.5px; line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.fd-do .px-dot small{font-size:11.5px; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden}
+.fd-do .lv-rail{gap:10px; padding-bottom:6px}
+/* tighter first fold so promos, Just-say-it and What you can do fit on common phones */
+.vbx-hd{padding-top:calc(8px + var(--top)) !important; padding-bottom:10px !important}
+.vbx-brand{font-size:24px} .vbx-brand svg{width:26px; height:26px} .vbx-tag{font-size:11.5px; padding:5px 10px}
+.vbx-row + .vbx-row{margin-top:8px} .vbx-loc{min-height:46px; padding:4px 10px 4px 4px} .vbx-lico{width:36px; height:36px} .vbx-lang{width:42px; height:42px}
+.vbx-srch{margin-top:10px; padding:3px 3px 3px 14px} .vbx-mic{width:42px; height:42px}
+.ct-tabs{margin-top:8px} .ct-tabs button,.ct-ind{height:56px} .ct-tabs button svg{width:20px; height:20px}
+.vbx-promos{padding-top:12px !important}
+.vbx-promo{height:160px !important; padding:14px 128px 14px 14px !important}
+.vbx-promo h3{display:-webkit-box !important; -webkit-line-clamp:2 !important; -webkit-box-orient:vertical; overflow:hidden !important; font-size:clamp(19px,5.4vw,23px) !important}
+.vbx-deco{width:108px !important; height:108px !important; margin-top:-54px !important}
+.fd-ask{margin-top:10px !important}
+.fd-do .vbx-sh{padding-top:14px}
