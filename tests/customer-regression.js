@@ -17,11 +17,11 @@ const log=(t,m)=>{ out.push(`[${step}] ${t}: ${m}`); };
   await T('splash',async()=>{ await p.goto(B); await p.waitForTimeout(600); await S('splash'); await p.waitForTimeout(2000); await S('after_splash'); });
   await T('intro',async()=>{ await vis('.lx-intro','onboarding'); await c('#nx'); await c('#nx'); await vis('.lw-lang','language picker'); await S('intro3'); await c('#nx',{w:1500}); await S('after_intro'); });
   await T('location',async()=>{ await vis('.lw-loc','location screen'); await c('#man'); await p.fill('#af','kunna'); await p.waitForTimeout(400); await S('loc_search'); await c('#al [data-area]',{w:2500}); await S('home'); });
-  await T('home',async()=>{ await vis('.lx-head','home header'); await vis('.lx-ban','banners'); await vis('.lx-scard','near stores'); await vis('.lx-pcard','deals'); await c('.lx-quick button',{w:1500}); await S('quick_shops'); await c('#__back',{w:1200});
+  await T('home',async()=>{ await vis('.vbx-hd','home header'); await vis('.vbx-promo','banners'); await vis('.lx-scard','near stores'); await vis('.lx-pcard','deals'); await c('.vbx-cats button',{w:1500}); await S('quick_cat'); await c('#__back',{w:1200});
     
     await p.locator('#screen').evaluate(e=>e.scrollTo(0,900)); await p.waitForTimeout(900); await S('home_scrolled'); await vis('.cx-mini.on','compact sticky bar');
     await p.locator('#screen').evaluate(e=>e.scrollTo(0,2400)); await p.waitForTimeout(900); await S('home_bottom'); await p.locator('#screen').evaluate(e=>e.scrollTo(0,0)); });
-  await T('search',async()=>{ await c('.lx-stxt',{w:1200}); await vis('#sq','search input'); await p.fill('#sq','biriyani'); await p.waitForTimeout(1500); await S('search_results'); await vis('.lv-srow, .lv-pcard','search results');
+  await T('search',async()=>{ await c('.vbx-stxt',{w:1200}); await vis('#sq','search input'); await p.fill('#sq','biriyani'); await p.waitForTimeout(1500); await S('search_results'); await vis('.lv-srow, .lv-pcard','search results');
     await p.fill('#sq','zzzzqqq'); await p.waitForTimeout(1200); await S('search_empty'); await p.fill('#sq',''); await p.waitForTimeout(600); await vis('.lw-recent','recent searches'); await c('#__back'); });
   await T('store',async()=>{ await c('.lx-scard',{w:2000}); await S('store'); await vis('.lx-scard2','store card'); await vis('#fc','filter chips');
     const tabs=p.locator('#tabs button'); const n=await tabs.count(); for(let i=n-1;i>=0;i--){ await tabs.nth(i).click(); await p.waitForTimeout(500); } await S('store_tabs');

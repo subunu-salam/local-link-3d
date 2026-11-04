@@ -4211,6 +4211,69 @@ SCREENS.assistant=(el,p)=>{ _lwAsk(el,p); const z=$('#orbz'), inp=el.querySelect
 const _lxRBN=renderBottomNav;
 renderBottomNav=function(){ _lxRBN(); const n=document.querySelector('.lvdock'); if(!n) return; const c=n.querySelector('[data-tabnav="categories"] span:last-child'); if(c) c.textContent='Explore'; };
 
+/* ═══════════════════════════════════════════════════════════════════════
+   CUSTOMER APP — VOICEBITE PORT (vbx): VoiceBite's type, motion, carousel,
+   header, search, moods, category row, atmosphere and nav, in Local Link teal.
+   ═══════════════════════════════════════════════════════════════════════ */
+function vbxAtmo(){ const ph=document.querySelector('.phone'); if(!ph||ph.querySelector('.vbx-atmo')||state.view!=='customer') return;
+  const a=document.createElement('div'); a.className='vbx-atmo'; a.setAttribute('aria-hidden','true');
+  a.innerHTML='<i></i><i></i><i></i>'+['🛒','🍛','🛠️','💊','🧺','🛍️','☕','🌿'].map((e,k)=>`<b class="vbx-fl" style="--x:${8+k*12}%;--d:${14+k%4*3}s;--dl:${-k*2.3}s;--s:${.8+(k%3)*.25}">${e}</b>`).join('');
+  ph.prepend(a); }
+const vbxGreet=()=>{ const h=new Date().getHours(); return h<5?['Late night','🌙']:h<11?['Good morning','☀️']:h<15?['Lunch o’clock','☀️']:h<18?['Good afternoon','🌤️']:h<22?['Good evening','🌆']:['Late night','🌙']; };
+SCREENS.home=async(el)=>{
+  vbxAtmo(); const nm=token&&me?me.name.split(' ')[0]:''; const [g,gi2]=vbxGreet();
+  const M=[['🍛','Biriyani','biriyani'],['🥦','Fresh veggies','vegetables'],['❄️','Fix my AC','AC repair'],['💊','Medicines','pharmacy'],['🎂','Cakes','cake'],['💍','Gold & gifts','gold necklace'],['🛺','Need a ride','auto']];
+  const C=[['🧺','Grocery','category',{slug:'food-grocery',vfilter:'grocery',vlabel:'Grocery'}],['🍔','Food','category',{slug:'food-grocery',vfilter:'food',vlabel:'Food & Restaurants'}],['🛍️','Shopping','category',{slug:'shopping'}],['🛠️','Services','category',{slug:'services'}],['👷','Workers','category',{slug:'workers'}],['💊','Health','category',{slug:'healthcare'}],['🛺','Rides','category',{slug:'transport'}],['✨','All','categories',{}]];
+  el.innerHTML=`<header class="vbx-hd">
+      <div class="vbx-row"><span class="vbx-brand">${logoMark(30)}<b>Local</b><b>Link</b></span><span class="vbx-tag">Shop it · Local it</span></div>
+      <div class="vbx-row"><button class="vbx-loc" data-tabnav-loc><span class="vbx-lico">${I.pin}</span><span><small>Delivering in <em class="vbx-open">Open now</em></small><b>${esc(state.areaName)}, Kozhikode</b></span></button>
+        <button class="vbx-lang" id="lng" aria-label="Language">${state.lang==='ml'?'EN':'മ'}</button><button class="vbx-lang" data-nav="notifications" aria-label="Notifications">${I.bell}</button></div>
+      <div class="vbx-srch"><button class="vbx-stxt" data-nav="searchScreen">${I.search}<span id="rotsq">Try “biriyani near me”</span></button><button class="vbx-mic" id="askHome" aria-label="Ask by voice"><span class="w"></span><span class="w w2"></span>${GI.mic}</button></div></header>
+    <div id="orderPill"></div>
+    <section class="vbx-sec"><div class="vbx-promos" id="pr"><div class="sk" style="height:170px;flex:0 0 92%;border-radius:22px"></div></div><div class="vbx-dots" id="pd"></div></section>
+    <section class="vbx-sec vbx-greet"><h2>${esc(nm?g+', '+nm:g)} <span class="vbx-sun">${gi2}</span></h2><p>Say it, get it — from shops around you.</p>
+      <div class="vbx-moods">${M.map((m,k)=>`<button data-m="${esc(m[2])}" style="--n:${k}"><i>${m[0]}</i>${esc(m[1])}</button>`).join('')}</div></section>
+    <section class="vbx-sec"><div class="vbx-sh"><h2>Categories</h2><button class="vbx-see" data-nav="categories">See all →</button></div>
+      <div class="vbx-cats">${C.map((c,k)=>`<button data-c="${k}" style="--n:${k}"><span class="vbx-cpic c${k%4}"><b>${c[0]}</b></span>${esc(c[1])}</button>`).join('')}</div></section>
+    <section class="vbx-sec"><div class="vbx-sh"><h2>Popular near you</h2><button class="vbx-see" data-nav="categories">See all →</button></div><div class="lv-rail" id="near">${skeletonCards(2)}</div></section>
+    <button class="lv-ask vbx-ask" data-talk><span class="lv-aorb">${GI.mic}</span><span><b>Just say it</b><small>“Two biriyani and a plumber tomorrow”</small></span><span class="lv-wv">${Array.from({length:7},(_,k)=>`<i style="--n:${k}"></i>`).join('')}</span></button>
+    <section class="vbx-sec"><div class="vbx-sh"><h2>Local deals</h2><span class="lv-cd" id="megacd">${gi('clock')} --:--:--</span></div><div class="lv-rail" id="deals">${skeletonCards(3)}</div></section>
+    <section class="vbx-sec" id="recent"></section>
+    <section class="vbx-sec"><div class="vbx-sh"><h2>Book a service</h2><button class="vbx-see" data-nav="category" data-slug="services">See all →</button></div><div class="lv-list" id="lwSvc">${skeletonRow(2)}</div></section>
+    <section class="vbx-sec"><div class="vbx-sh"><h2>Top rated stores</h2></div><div class="lv-list" id="pop">${skeletonRow(2)}</div></section>
+    <button class="lw-comm" data-nav="community"><span class="lw-cav">${['A','R','S'].map(x=>`<i>${x}</i>`).join('')}</span><span><b>Your Neighbourhood</b><small>New shops, events, reviews &amp; local news</small></span>${I.chev}</button><div style="height:24px"></div>`;
+  el.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{ buzz(); openAsk(b.dataset.m,{}); });
+  el.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{ const c=C[b.dataset.c]; buzz(); c[2]==='categories'?setTab('categories'):go(c[2],c[3]); });
+  $('#lng').onclick=()=>{ state.lang=state.lang==='en'?'ml':'en'; localStorage.setItem('ll_lang',state.lang); renderShell(); };
+  $('#askHome').onclick=()=>openAsk('',{voice:true}); el.querySelectorAll('[data-talk]').forEach(b=>b.onclick=()=>openAsk('',{voice:true}));
+  el.querySelector('[data-tabnav-loc]').onclick=()=>go('location');
+  const RT=['Try “biriyani near me”','Try “plumber tomorrow”','Try “fresh fish”','Try “AC repair”','Try “gold necklace”','Try “cake for 10”'];
+  const rot=$('#rotsq'); let ri=0; const rtm=setInterval(()=>{ if(!document.body.contains(rot)) return clearInterval(rtm); ri=(ri+1)%RT.length; rot.textContent=RT[ri]; rot.classList.remove('vbx-swap'); void rot.offsetWidth; rot.classList.add('vbx-swap'); },2600);
+  if(token) api('/orders').then(os=>{ const live=(os||[]).find(o=>!['completed','rejected','cancelled'].includes(o.status)); const p=$('#orderPill'); if(!live||!p) return; const MSG={pending:'Waiting for the store',accepted:'Accepted by the store',preparing:'Being prepared',ready:'Ready',out_for_delivery:'On the way'};
+    p.innerHTML=`<button class="lv-pill" id="opGo"><span class="lv-pdot"></span><span><b>${esc(live.business)}</b><small>${MSG[live.status]||live.status.replace(/_/g,' ')}</small></span><em>Track ${I.chev}</em></button>`; $('#opGo').onclick=()=>setTab('orders'); }).catch(()=>{});
+  const [offers,biz,deals,places,sv]=await Promise.all([api('/offers'),api('/businesses?featured=1'),api('/products?deal=1&limit=10'),api('/places?area_id='+state.areaId).catch(()=>[]),api('/services').catch(()=>[])]);
+  const best=offers.reduce((m,o)=>Math.max(m,lwPct(o.discount_label)),0);
+  const P=[{k:'voice',tag:'Talk to order',h:'Just say<br>what you need',ch:['English','മലയാളം'],cta:'Start talking',emo:'🎙️',go:()=>openAsk('',{voice:true})},
+           {k:'deals',tag:'Local deals',h:`Up to ${best||20}% off<br>near you`,ch:[`${offers.length} live offers`],cta:'See offers',emo:'🛍️',go:()=>go('offers')}]
+    .concat(offers.slice(0,3).map(o=>({k:'o',tag:o.business||'Offer',h:esc(o.title),ch:[o.discount_label,o.code?'Code '+o.code:'In store'].filter(Boolean),cta:'Order now',img:o.image_url||pic(coverKw({subcategory:o.business||''})+','+(o.title||''),700+(o.id||0),400,400),go:()=>go('business',{id:o.business_id})})))
+    .concat([{k:'book',tag:'Home services',h:'Book a pro<br>in two taps',ch:['Electricians','Plumbers','Cleaning'],cta:'Book now',emo:'🛠️',go:()=>go('category',{slug:'services'})}]);
+  const pr=$('#pr'); pr.innerHTML=P.map((x,k)=>`<button class="vbx-promo t${k%4}" data-p="${k}"><span class="vbx-ptag">${esc(x.tag)}</span><h3>${x.h}</h3><span class="vbx-pch">${x.ch.map(c=>`<i>${esc(c)}</i>`).join('')}</span><span class="vbx-cta">${esc(x.cta)} <b>→</b></span>
+      <span class="vbx-deco">${x.img?photoLayer(x.img):''}${x.emo?`<em>${x.emo}</em>`:'<em>🏷️</em>'}</span>${x.k==='voice'?`<span class="vbx-pwave">${Array.from({length:9},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span>`:''}</button>`).join('');
+  pr.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{ buzz(); P[b.dataset.p].go(); });
+  $('#pd').innerHTML=P.map((_,k)=>`<i class="${k?'':'on'}"></i>`).join(''); lvCarousel(pr,$('#pd'),4000);
+  const near=[]; const seen=new Set(); (places||[]).concat(biz).forEach(b=>{ const k=(b.name||'').toLowerCase(); if(!seen.has(k)){ seen.add(k); near.push(b); } }); near.sort((a,b)=>(b.is_open?1:0)-(a.is_open?1:0));
+  $('#near').innerHTML=near.slice(0,10).map(lvStoreCard).join('');
+  $('#deals').innerHTML=deals.slice(0,10).map((p,k)=>lvProd(p,null,k)).join(''); startCountdown();
+  const rec=lwLS('ll_recent',[]); if(rec.length){ $('#recent').innerHTML=`<div class="vbx-sh"><h2>Recently viewed</h2><button class="vbx-see" id="rclr">Clear</button></div><div class="lv-rail">${rec.map(lvStoreCard).join('')}</div>`; $('#rclr').onclick=()=>{ lwSet('ll_recent',[]); $('#recent').innerHTML=''; }; }
+  $('#pop').innerHTML=biz.slice().sort((a,b)=>(b.rating||0)-(a.rating||0)).slice(0,4).map(lvStoreRow).join('');
+  $('#lwSvc').innerHTML=sv.slice(0,3).map((s,i)=>`<div class="lv-srow" style="--n:${i}"><button class="lw-svcgo" data-nav="business" data-id="${s.business_id}"><span class="lv-rimg">${dIcon(s,'wrench')}</span><span class="lv-rt"><b>${esc(s.name)}</b><span class="lv-sm"><span>from <b>${money(s.starting_price)}</b>${s.business?' · '+esc(s.business):''}</span></span></span></button><button class="lv-req" data-svc="${esc(s.name)}" data-bid="${s.business_id}">Book</button></div>`).join('');
+  el.querySelectorAll('.lv-req[data-svc]').forEach(b=>b.onclick=async()=>{ try{ lwBook(await api('/businesses/'+b.dataset.bid),b.dataset.svc); }catch(x){ toast(x.message); } });
+};
+/* images fade + scale in when they load (VoiceBite .pic img.in) — photoLayer already adds .on */
+/* atmosphere on every customer screen, header shrink, nav blob */
+const _vbxRBN=renderBottomNav;
+renderBottomNav=function(){ _vbxRBN(); if(state.view!=='customer') return; vbxAtmo(); const n=document.querySelector('.lvdock'); if(n) n.classList.add('vbx-nav'); };
+
 /* ================= CUSTOMER MOTION LAYER ================= */
 const CX_TABS=['home','categories','orders','account'];
 let cxIndX=null;
@@ -4223,7 +4286,7 @@ function cxMotion(screen){
     rv.forEach((n,i)=>{ n.classList.add('rv'); n.style.setProperty('--rd',(i%4)*60+'ms'); io.observe(n); });
   }
   // 2. depth on horizontal rails
-  screen.querySelectorAll('.lv-banners,.lx-bans,.lv-rail,.lv-cmini').forEach(r=>{
+  screen.querySelectorAll('.lv-banners,.lx-bans,.vbx-promos,.vbx-cats,.vbx-moods,.lv-rail,.lv-cmini').forEach(r=>{
     if(r.__d) return; r.__d=1;
     const f=()=>{ const rb=r.getBoundingClientRect(), c=rb.left+rb.width/2;
       [...r.children].forEach(ch=>{ const b=ch.getBoundingClientRect(); const d=Math.max(-1,Math.min(1,((b.left+b.width/2)-c)/rb.width)); ch.style.setProperty('--d',d.toFixed(3)); }); };
@@ -4235,7 +4298,7 @@ function cxMotion(screen){
     const mini=document.createElement('div'); mini.className='cx-mini';
     mini.innerHTML=`<span class="cx-mlogo">${logoMark(26)}</span><button class="cx-msearch" aria-label="Search">${I.search||''}<span>Search shops, food, services…</span></button><button class="cx-mmic" aria-label="Ask by voice">${GI.mic}</button>`;
     screen.prepend(mini);
-    mini.querySelector('.cx-msearch').onclick=()=>{ const t=screen.querySelector('.lx-stxt,.lv-stxt'); t?t.click():go('search'); };
+    mini.querySelector('.cx-msearch').onclick=()=>{ const t=screen.querySelector('.vbx-stxt,.lx-stxt,.lv-stxt'); t?t.click():go('search'); };
     mini.querySelector('.cx-mmic').onclick=()=>{ const m=screen.querySelector('#askHome'); m&&m.click(); };
     const onS=()=>{ const y=screen.scrollTop, h=hero.offsetHeight; hero.style.setProperty('--hs',Math.min(1,y/h).toFixed(3)); mini.classList.toggle('on',y>h-40); };
     screen.addEventListener('scroll',()=>requestAnimationFrame(onS),{passive:true});
@@ -4255,7 +4318,7 @@ function cxDockInd(){
 (function(){
   document.addEventListener('pointerdown',e=>{
     if(state.view!=='customer') return;
-    const b=e.target.closest('.lx-ctile,.lx-scard,.lx-quick button,.lx-fchips button,.lx-acts > *,.lv-ctile,.lv-scard,.lv-srow,.lv-ban,.lv-menu > *,.lv-pay,.lv-chips button,.lv-btn,.lv-tabs button,.vtab,.qc-add,.lv-reo,.lv-ask,.lv-row,.lv-cmini button');
+    const b=e.target.closest('.vbx-promo,.vbx-moods button,.vbx-cats button,.lx-ctile,.lx-scard,.lx-quick button,.lx-fchips button,.lx-acts > *,.lv-ctile,.lv-scard,.lv-srow,.lv-ban,.lv-menu > *,.lv-pay,.lv-chips button,.lv-btn,.lv-tabs button,.vtab,.qc-add,.lv-reo,.lv-ask,.lv-row,.lv-cmini button');
     if(!b) return; const r=b.getBoundingClientRect(); const s=document.createElement('span'); s.className='cx-rip';
     const d=Math.max(r.width,r.height)*1.2; s.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;
     if(getComputedStyle(b).position==='static') b.style.position='relative'; b.style.overflow='hidden'; b.appendChild(s); setTimeout(()=>s.remove(),600);
@@ -4277,7 +4340,7 @@ function cxDockInd(){
   let sx=null, sy=0, edge=false, inRail=false;
   document.addEventListener('touchstart',e=>{ if(state.view!=='customer') return; const t=e.touches[0]; sx=t.clientX; sy=t.clientY;
     const ph=document.querySelector('.phone'); const pl=ph?ph.getBoundingClientRect().left:0; edge=(sx-pl)<24;
-    inRail=!!e.target.closest('.lx-bans,.lx-fchips,.lv-banners,.lv-rail,.lv-tabs,.lv-chips,.lv-cmini,.lv-utabs,.pt-kpis,input,textarea,.sheet,[data-noswipe]'); },{passive:true});
+    inRail=!!e.target.closest('.vbx-promos,.vbx-cats,.vbx-moods,.lx-bans,.lx-fchips,.lv-banners,.lv-rail,.lv-tabs,.lv-chips,.lv-cmini,.lv-utabs,.pt-kpis,input,textarea,.sheet,[data-noswipe]'); },{passive:true});
   document.addEventListener('touchend',e=>{ if(sx===null||state.view!=='customer') return; const t=e.changedTouches[0]; const dx=t.clientX-sx, dy=t.clientY-sy; sx=null;
     if(Math.abs(dx)<70||Math.abs(dy)>Math.abs(dx)*.6) return;
     const cur=(stack()[stack().length-1]||{}).name;
