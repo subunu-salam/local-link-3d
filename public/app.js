@@ -4274,6 +4274,61 @@ SCREENS.home=async(el)=>{
 const _vbxRBN=renderBottomNav;
 renderBottomNav=function(){ _vbxRBN(); if(state.view!=='customer') return; vbxAtmo(); const n=document.querySelector('.lvdock'); if(n) n.classList.add('vbx-nav'); };
 
+/* ═══════════════════════════════════════════════════════════════════════
+   CUSTOMER APP — polish (px): real photos for categories and carousels,
+   aligned promo layout, a welcome screen, and "what Local Link does" chunks.
+   ═══════════════════════════════════════════════════════════════════════ */
+const PXU=(id,w=480,h=480)=>`https://images.unsplash.com/photo-${id}?w=${w}&h=${h}&q=72&auto=format&fit=crop`;
+const PX={grocery:'1542838132-92c53300491e',food:'1563379091339-03b21ab4a4f8',pharmacy:'1584308666744-24d5c474f2ae',services:'1581578731548-c64695cc6952',workers:'1504307651254-35680f356dfd',
+  fashion:'1515562141207-7a88fb7ce338',transport:'1449965408869-eaa3f722e40d',info:'1477959858617-67f85cf4f1df',events:'1492684223066-81342ee5ff30',news:'1504711434969-e33886168f5c',
+  shopping:'1489987707025-afc232f7ea0f',market:'1578916171728-46686eac8d58',veg:'1540420773420-3366772f4999',cake:'1578985545062-69928b1d9587',salon:'1560066984-138dadb4c035'};
+const pxImg=(k,emo,w,h)=>`<img class="ph" src="${PXU(PX[k],w,h)}" alt="" loading="lazy" onload="this.classList.add('on')" onerror="this.remove()"/><b class="px-emo">${emo}</b>`;
+
+/* ---------- WELCOME (replaces the onboarding slides) ---------- */
+SCREENS.intro=(el)=>{
+  const F=[['🛒','Order from local shops','Groceries, food, fashion and more from shops near you'],['🛠️','Book services & workers','Electricians, plumbers, cleaning, painters and helpers'],
+           ['🎙️','Just ask by voice','Say what you need in English or Malayalam'],['🏛️','Your neighbourhood','Rides, emergency numbers, events and local news']];
+  el.innerHTML=`<div class="px-wel"><button class="lx-skipt" id="skip">Skip</button>
+    <div class="px-col"><span class="p1">${pxImg('market','🛒',360,360)}</span><span class="p2">${pxImg('food','🍛',360,360)}</span><span class="p3">${pxImg('services','🛠️',360,360)}</span><span class="px-pin">${logoMark(54)}</span></div>
+    <h1>Welcome to<br><span>Local Link</span></h1><p class="px-sub">Everything local, in one app — shop, eat, book and support the businesses around you in ${esc(state.areaName||'Kozhikode')}.</p>
+    <div class="px-feats">${F.map((f,k)=>`<div style="--n:${k}"><i>${f[0]}</i><span><b>${f[1]}</b><small>${f[2]}</small></span></div>`).join('')}</div>
+    <div class="lw-lang"><small>Choose your language</small><div><button data-l="en" class="${state.lang==='en'?'on':''}">English</button><button data-l="ml" class="${state.lang==='ml'?'on':''}">മലയാളം</button></div></div>
+    <button class="lx-btn" id="go">Get Started <span>→</span></button><button class="px-login" id="lg">I already have an account · <b>Log in</b></button></div>`;
+  const fin=(dest)=>{ state.introSeen=true; localStorage.setItem('ll_intro','1'); nav.customer=[{name: localStorage.getItem('ll_area_set')?'home':'location'}]; routeRender(); if(dest) setTimeout(()=>go(dest),60); };
+  $('#skip').onclick=()=>fin(); $('#go').onclick=()=>fin(); $('#lg').onclick=()=>fin('login');
+  el.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{ state.lang=b.dataset.l; localStorage.setItem('ll_lang',state.lang); el.querySelectorAll('[data-l]').forEach(x=>x.classList.toggle('on',x===b)); buzz(); });
+};
+
+/* ---------- CATEGORIES: real photos, equal tiles ---------- */
+SCREENS.categories=async(el)=>{
+  const T=[['Grocery','grocery','🧺','category',{slug:'food-grocery',vfilter:'grocery',vlabel:'Grocery'}],['Food & Restaurants','food','🍛','category',{slug:'food-grocery',vfilter:'food',vlabel:'Food & Restaurants'}],
+    ['Pharmacy','pharmacy','💊','category',{slug:'healthcare'}],['Home Services','services','🛠️','category',{slug:'services'}],['Local Workers','workers','👷','category',{slug:'workers'}],['Fashion & Jewellery','fashion','💍','category',{slug:'shopping'}],
+    ['Rides & Transport','transport','🛺','category',{slug:'transport'}],['Local Info','info','🏛️','localinfo',{}],['Events','events','🎉','events',{}],['Local News','news','📰','news',{}]];
+  el.innerHTML=`<header class="lx-bar"><button class="lv-ib" id="__back" aria-label="Back">${I.back}</button><h1>Categories</h1><button class="lv-ib" data-nav="searchScreen" aria-label="Search">${I.search}</button></header>
+    <div class="px-cgrid">${T.map((c,k)=>`<button class="px-ctile" data-k="${k}" style="--n:${k}"><span class="px-cimg">${pxImg(c[1],c[2],420,320)}</span><b>${esc(c[0])}</b><i>${I.chev}</i></button>`).join('')}</div>
+    <div class="vbx-sh"><h2>Popular nearby stores</h2></div><div class="lv-list" id="pop">${skeletonRow(3)}</div><div style="height:16px"></div>`;
+  const bk=$('#__back'); bk.onclick=stack().length>1?back:()=>setTab('home');
+  el.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{ const c=T[b.dataset.k]; buzz(); go(c[3],c[4]); });
+  const biz=await api('/businesses'); $('#pop').innerHTML=biz.slice().sort((a,b)=>(b.rating||0)-(a.rating||0)).slice(0,6).map(lvStoreRow).join('');
+};
+SCREENS.explore=SCREENS.categories;
+
+/* ---------- HOME: photos in the category row + promos, and "what you can do" chunks ---------- */
+const _vbxHome=SCREENS.home;
+SCREENS.home=async(el)=>{ await _vbxHome(el);
+  const map={'Grocery':['grocery','🧺'],'Food':['food','🍛'],'Shopping':['shopping','🛍️'],'Services':['services','🛠️'],'Workers':['workers','👷'],'Health':['pharmacy','💊'],'Rides':['transport','🛺']};
+  el.querySelectorAll('.vbx-cats button').forEach(b=>{ const k=map[b.textContent.trim()]; if(k){ const p=b.querySelector('.vbx-cpic'); p.innerHTML=pxImg(k[0],k[1],200,200); p.classList.add('px-photo'); } });
+  const P={'Talk to order':null,'Local deals':['market','🛍️'],'Home services':['services','🛠️']};
+  el.querySelectorAll('.vbx-promo').forEach(c=>{ const t=c.querySelector('.vbx-ptag').textContent; const k=P[t]; const d=c.querySelector('.vbx-deco'); if(k&&d&&!d.querySelector('img')) d.innerHTML=pxImg(k[0],k[1],300,300); });
+  const cats=el.querySelector('.vbx-cats'); if(!cats) return; const sec=cats.closest('.vbx-sec');
+  const D=[['food','Order food & groceries','From local shops & restaurants','category',{slug:'food-grocery'}],['services','Book a home service','AC, plumbing, electrical, cleaning','category',{slug:'services'}],
+    ['workers','Hire local workers','Masons, painters, helpers by the day','category',{slug:'workers'}],['transport','Get a ride','Autos and taxis near you','category',{slug:'transport'}],['info','Local info & emergency','Police, hospitals, banks, offices','localinfo',{}]];
+  sec.insertAdjacentHTML('afterend',`<section class="vbx-sec"><div class="vbx-sh"><h2>What you can do</h2></div><div class="px-do lv-rail">${D.map((d,k)=>`<button class="px-docard" data-d="${k}" style="--n:${k}"><span class="px-doimg">${pxImg(d[0],'',480,360)}</span><span class="px-dot"><b>${d[1]}</b><small>${d[2]}</small></span></button>`).join('')}</div></section>
+    <section class="vbx-sec"><div class="vbx-sh"><h2>How it works</h2></div><div class="px-how">${[['🔎','Find','Search, browse or just ask by voice'],['🛒','Order or book','Add to cart or pick a time slot'],['🤝','Get it locally','Delivery, pickup or the pro comes over']].map((s,k)=>`<div style="--n:${k}"><i>${s[0]}</i><b>${k+1}. ${s[1]}</b><small>${s[2]}</small></div>`).join('')}</div>
+      <div class="px-trust"><span>✅ Verified local shops</span><span>💸 Pay the shop directly</span><span>💚 Supports your neighbourhood</span></div></section>`);
+  el.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{ const d=D[b.dataset.d]; buzz(); go(d[3],d[4]); });
+};
+
 /* ================= CUSTOMER MOTION LAYER ================= */
 const CX_TABS=['home','categories','orders','account'];
 let cxIndX=null;
@@ -4286,7 +4341,7 @@ function cxMotion(screen){
     rv.forEach((n,i)=>{ n.classList.add('rv'); n.style.setProperty('--rd',(i%4)*60+'ms'); io.observe(n); });
   }
   // 2. depth on horizontal rails
-  screen.querySelectorAll('.lv-banners,.lx-bans,.vbx-promos,.vbx-cats,.vbx-moods,.lv-rail,.lv-cmini').forEach(r=>{
+  screen.querySelectorAll('.px-do,.lv-banners,.lx-bans,.vbx-promos,.vbx-cats,.vbx-moods,.lv-rail,.lv-cmini').forEach(r=>{
     if(r.__d) return; r.__d=1;
     const f=()=>{ const rb=r.getBoundingClientRect(), c=rb.left+rb.width/2;
       [...r.children].forEach(ch=>{ const b=ch.getBoundingClientRect(); const d=Math.max(-1,Math.min(1,((b.left+b.width/2)-c)/rb.width)); ch.style.setProperty('--d',d.toFixed(3)); }); };
@@ -4318,7 +4373,7 @@ function cxDockInd(){
 (function(){
   document.addEventListener('pointerdown',e=>{
     if(state.view!=='customer') return;
-    const b=e.target.closest('.vbx-promo,.vbx-moods button,.vbx-cats button,.lx-ctile,.lx-scard,.lx-quick button,.lx-fchips button,.lx-acts > *,.lv-ctile,.lv-scard,.lv-srow,.lv-ban,.lv-menu > *,.lv-pay,.lv-chips button,.lv-btn,.lv-tabs button,.vtab,.qc-add,.lv-reo,.lv-ask,.lv-row,.lv-cmini button');
+    const b=e.target.closest('.px-ctile,.px-docard,.vbx-promo,.vbx-moods button,.vbx-cats button,.lx-ctile,.lx-scard,.lx-quick button,.lx-fchips button,.lx-acts > *,.lv-ctile,.lv-scard,.lv-srow,.lv-ban,.lv-menu > *,.lv-pay,.lv-chips button,.lv-btn,.lv-tabs button,.vtab,.qc-add,.lv-reo,.lv-ask,.lv-row,.lv-cmini button');
     if(!b) return; const r=b.getBoundingClientRect(); const s=document.createElement('span'); s.className='cx-rip';
     const d=Math.max(r.width,r.height)*1.2; s.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;
     if(getComputedStyle(b).position==='static') b.style.position='relative'; b.style.overflow='hidden'; b.appendChild(s); setTimeout(()=>s.remove(),600);

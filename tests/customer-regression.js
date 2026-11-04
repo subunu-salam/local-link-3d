@@ -15,7 +15,7 @@ const log=(t,m)=>{ out.push(`[${step}] ${t}: ${m}`); };
   const txt=async(sel)=>(await p.locator(sel).first().textContent({timeout:3000}).catch(()=>''))||'';
 
   await T('splash',async()=>{ await p.goto(B); await p.waitForTimeout(600); await S('splash'); await p.waitForTimeout(2000); await S('after_splash'); });
-  await T('intro',async()=>{ await vis('.lx-intro','onboarding'); await c('#nx'); await c('#nx'); await vis('.lw-lang','language picker'); await S('intro3'); await c('#nx',{w:1500}); await S('after_intro'); });
+  await T('intro',async()=>{ await vis('.px-wel','welcome'); await vis('.lw-lang','language picker'); await S('welcome'); await c('#go',{w:1500}); await S('after_intro'); });
   await T('location',async()=>{ await vis('.lw-loc','location screen'); await c('#man'); await p.fill('#af','kunna'); await p.waitForTimeout(400); await S('loc_search'); await c('#al [data-area]',{w:2500}); await S('home'); });
   await T('home',async()=>{ await vis('.vbx-hd','home header'); await vis('.vbx-promo','banners'); await vis('.lx-scard','near stores'); await vis('.lx-pcard','deals'); await c('.vbx-cats button',{w:1500}); await S('quick_cat'); await c('#__back',{w:1200});
     
@@ -29,8 +29,8 @@ const log=(t,m)=>{ out.push(`[${step}] ${t}: ${m}`); };
   await T('product',async()=>{ await c('#tabbody .lx-pcard .lx-pimg',{w:1800}); await S('product'); await vis('.lx-phero','product hero'); await vis('.lx-qty','quantity');
     await c('#qp',{w:300}); await c('#atc',{w:1200}); await S('product_added'); await c('#bk'); await c('#bk',{w:1500}); });
   await T('categories',async()=>{ await c('.bnav [data-tabnav="categories"]',{w:1500}); await S('categories'); 
-    await c('.lx-ctile',{w:2000}); await S('category'); await vis('#list .lv-srow','category store list'); await c('#vt [data-v="map"]'); await S('cat_map'); const pin=p.locator('.lw-mpin'); if(await pin.count()){ await pin.first().click(); await p.waitForTimeout(600); await S('cat_map_pin'); } await c('#vt [data-v="list"]'); await c('#__back'); });
-  await T('workers',async()=>{ const w=p.locator('.lx-ctile',{hasText:/Worker/i}); if(await w.count()){ await w.first().click(); await p.waitForTimeout(1800); await S('workers'); await vis('.lw-pro','worker cards'); await c('#__back'); } else log('MISSING','Workers tile'); });
+    await c('.px-ctile',{w:2000}); await S('category'); await vis('#list .lv-srow','category store list'); await c('#vt [data-v="map"]'); await S('cat_map'); const pin=p.locator('.lw-mpin'); if(await pin.count()){ await pin.first().click(); await p.waitForTimeout(600); await S('cat_map_pin'); } await c('#vt [data-v="list"]'); await c('#__back'); });
+  await T('workers',async()=>{ const w=p.locator('.px-ctile',{hasText:/Worker/i}); if(await w.count()){ await w.first().click(); await p.waitForTimeout(1800); await S('workers'); await vis('.lw-pro','worker cards'); await c('#__back'); } else log('MISSING','Workers tile'); });
   await T('cart_guest',async()=>{ await c('.bnav [data-tabnav="home"]',{w:2500}); const cb=p.locator('#qcGoCart'); if(await cb.count()){ await cb.click(); await p.waitForTimeout(1500); } else { log('MISSING','cart bar on home'); return; } await S('cart'); await vis('.lv-line','cart lines');
     await c('[data-inc]'); await c('[data-dec]'); await S('cart_qty'); await c('#checkout',{w:1500}); await S('checkout_gate'); });
   await T('login',async()=>{ const g=p.locator('button',{hasText:/^Continue$/}); if(await g.count()){ await g.last().click(); await p.waitForTimeout(1500);}  await S('login'); await vis('#lid','login form');
@@ -68,7 +68,7 @@ const log=(t,m)=>{ out.push(`[${step}] ${t}: ${m}`); };
   await T('dark',async()=>{ await c('.lv-tbar [data-ctheme]',{w:1200}).catch(()=>log('MISSING','theme toggle')); await S('dark_account'); await c('.bnav [data-tabnav="home"]',{w:2500}); await S('dark_home'); await c('.lv-tbar [data-ctheme], .lv-htop [data-ctheme]',{w:1200}).catch(()=>{}); });
   await T('logout_register',async()=>{ await c('.bnav [data-tabnav="account"]',{w:1500}); p.once('dialog',d=>d.accept()); await c('#out',{w:800}); const ok=p.locator('button',{hasText:/^Log out$/}); if(await ok.count()) await ok.last().click(); await p.waitForTimeout(1200); await S('logged_out');
     await c('#lg',{w:1200}); await c('#goreg',{w:1200}); await S('register'); await p.fill('#rn','New Person'); await p.fill('#rp','98765'+String(Date.now()).slice(-5)); await p.fill('#re','np'+Date.now()+'@x.com'); await p.fill('#rpw','secret123'); await c('#rsubmit',{w:2500}); await S('registered'); });
-  await T('swipe_back',async()=>{ await c('.bnav [data-tabnav="categories"]',{w:1200}); await c('.lx-ctile',{w:1500}); const vp=p.viewportSize(); await p.touchscreen.tap(5,vp.height/2).catch(()=>{});
+  await T('swipe_back',async()=>{ await c('.bnav [data-tabnav="categories"]',{w:1200}); await c('.px-ctile',{w:1500}); const vp=p.viewportSize(); await p.touchscreen.tap(5,vp.height/2).catch(()=>{});
     await p.evaluate(()=>{ const t=(type,x)=>{ const e=new TouchEvent(type,{touches:type==='touchend'?[]:[new Touch({identifier:1,target:document.body,clientX:x,clientY:400})],changedTouches:[new Touch({identifier:1,target:document.body,clientX:x,clientY:400})],bubbles:true}); document.body.dispatchEvent(e); }; t('touchstart',4); t('touchend',200); }); await p.waitForTimeout(1200); await S('after_swipe_back'); });
   require('fs').writeFileSync('report.txt',out.join('\n')); console.log(out.join('\n')||'NO ISSUES'); console.log('shots',shots.length); await br.close();
 })();
