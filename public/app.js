@@ -4407,6 +4407,14 @@ SCREENS.home=async(el)=>{ await _ctHome(el);
   const doSec=el.querySelector('.px-do'); if(doSec){ const s=doSec.closest('.vbx-sec'); s.classList.add('fd-do'); if(ask) ask.after(s); }
 };
 
+/* MOBILE FIRST FOLD: compact header (brand + bell, slim location line) */
+const _fdHome=SCREENS.home;
+SCREENS.home=async(el)=>{ await _fdHome(el);
+  const hd=el.querySelector('.vbx-hd'); if(!hd) return; hd.classList.add('mf');
+  const rows=hd.querySelectorAll('.vbx-row'); const tag=hd.querySelector('.vbx-tag'), bell=hd.querySelector('.vbx-lang[data-nav="notifications"]'), lng=hd.querySelector('#lng');
+  if(tag&&bell){ tag.replaceWith(bell); } if(lng) lng.remove();
+};
+
 /* ================= CUSTOMER MOTION LAYER ================= */
 const CX_TABS=['home','categories','orders','account'];
 let cxIndX=null;
