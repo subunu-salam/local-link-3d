@@ -1400,3 +1400,13 @@ body.cdark .lx-plus .qc-add{background:#2BC9AE !important}
 .vbx-nav .cx-ind::after,.lvdock .cx-ind::after,.lvdock .vtab::after,.lvdock .vtab.on::after,.lvdock .vtab.on::before{content:none !important; display:none !important}
 /* hide intermediate home layouts while the final one is assembled (no flash of old UI) */
 .screen.ll-hold > *{visibility:hidden !important; opacity:0 !important; animation:none !important}
+/* Account: calm, standard tap + navigation motion */
+.lv-menu > :is(a,button){animation:none !important; transform:none !important; transition:background .15s ease !important}
+.lv-menu > :is(a,button):active{background:var(--surface-2) !important; transform:none !important}
+.lv-menu .cx-rip{display:none !important}
+.lv-menu{animation:rise .35s var(--ease) both}
+.lv-me,.lv-menu{transform:none}
+/* page change: short fade instead of a sideways slide + per-element pop */
+.screen.cx-fwd,.screen.cx-back{animation:llFade .22s ease-out both !important}
+.screen.cx-fwd > *,.screen.cx-back > *{animation:none}
+@keyframes llFade{from{opacity:0}}
