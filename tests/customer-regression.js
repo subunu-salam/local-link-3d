@@ -17,7 +17,7 @@ const log=(t,m)=>{ out.push(`[${step}] ${t}: ${m}`); };
   await T('splash',async()=>{ await p.goto(B); await p.waitForTimeout(600); await S('splash'); await p.waitForTimeout(2000); await S('after_splash'); });
   await T('intro',async()=>{ await vis('.px-wel','welcome'); await vis('.lw-lang','language picker'); await S('welcome'); await c('#go',{w:1500}); await S('after_intro'); });
   await T('location',async()=>{ await vis('.lw-loc','location screen'); await c('#man'); await p.fill('#af','kunna'); await p.waitForTimeout(400); await S('loc_search'); await c('#al [data-area]',{w:2500}); await S('home'); });
-  await T('home',async()=>{ await vis('.vbx-hd','home header'); await vis('.vbx-promo','banners'); await vis('.lx-scard','near stores'); await vis('.lx-pcard','deals'); await c('.vbx-cats button',{w:1500}); await S('quick_cat'); await c('#__back',{w:1200});
+  await T('home',async()=>{ await vis('.vbx-hd','home header'); await vis('.vbx-promo','banners'); await vis('.lx-scard','near stores'); await vis('.lx-pcard','deals'); await c('[data-ct="2"]',{w:1800}); await S('cat_tab_food'); await c('[data-ct="0"]',{w:900});
     
     await p.locator('#screen').evaluate(e=>e.scrollTo(0,900)); await p.waitForTimeout(900); await S('home_scrolled'); await vis('.cx-mini.on','compact sticky bar');
     await p.locator('#screen').evaluate(e=>e.scrollTo(0,2400)); await p.waitForTimeout(900); await S('home_bottom'); await p.locator('#screen').evaluate(e=>e.scrollTo(0,0)); });
