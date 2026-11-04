@@ -1391,3 +1391,10 @@ body.cdark .lx-plus .qc-add{background:#2BC9AE !important}
 /* smaller carousel CTA, aligned with the chips */
 .vbx-cta{height:28px !important; min-height:28px !important; padding:0 11px !important; gap:5px !important; font-size:12px !important; font-weight:700; box-shadow:0 6px 12px -8px rgba(0,0,0,.45) !important}
 .vbx-cta b{font-size:12px}
+/* + glyph drawn on the button itself so it is always dead-centre */
+.lx-plus .qc-add{color:transparent !important; overflow:hidden; text-indent:-999px;
+  background:linear-gradient(#053F38,#053F38) center / 16px 3.2px no-repeat, linear-gradient(#053F38,#053F38) center / 3.2px 16px no-repeat, #2BC9AE !important}
+.lx-plus .qc-add:hover,.lx-plus .qc-add:active{background:linear-gradient(#053F38,#053F38) center / 16px 3.2px no-repeat, linear-gradient(#053F38,#053F38) center / 3.2px 16px no-repeat, #13A58F !important}
+.lx-plus .qc-add::before,.lx-plus .qc-add::after{content:none !important; display:none !important}
+/* no dot under the active nav tab */
+.vbx-nav .cx-ind::after,.lvdock .cx-ind::after,.lvdock .vtab::after,.lvdock .vtab.on::after,.lvdock .vtab.on::before{content:none !important; display:none !important}
