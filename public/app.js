@@ -3983,9 +3983,8 @@ lvStoreCard=function(b,i=0){ const cover=b.cover_url||pic(coverKw(b),b.id,600,40
   return `<button class="lx-scard" data-nav="${navr}" data-id="${b.id}" style="--n:${i}" aria-label="${esc(b.name)}"><span class="lx-sph">${photoLayer(cover)}${dIcon(b)}<span class="lv-heart ${isSaved('business',b.id)?'on':''}" data-fav data-ftype="business" data-fid="${b.id}" data-fname="${esc(b.name)}" data-fsub="${esc(b.subcategory||'')}" data-fimg="${esc(cover)}" role="button" aria-label="Save">${I.heart}</span></span>
     <span class="lx-sb"><b>${esc(b.name)}</b><span class="lx-sm">${lxRate(b)}${km?`<i>·</i><span>${km}</span>`:''}</span></span></button>`; };
 lvProd=function(p,biz,i=0){ const src=p.image_url||pic((p.name||'product').toLowerCase(),500+(p.id||0)); const disc=p.mrp&&p.mrp>p.price; const pct=disc?Math.round((1-p.price/p.mrp)*100):0; const oos=p.stock_status==='out_of_stock';
-  return `<div class="lx-pcard" data-nav="product" data-id="${p.id}" role="link" tabindex="0" style="--n:${i}"><span class="lx-pimg">${photoLayer(src)}${dIcon({name:p.name},'cart')}${disc?`<em class="lx-off">${pct}% OFF</em>`:''}</span>
-    <b>${esc(p.name)}</b><small>${esc(p.unit||'1 unit')}</small><span class="lx-pp"><b>${money(p.price)}</b>${disc?`<s>${money(p.mrp)}</s>`:''}</span>
-    <span class="lx-plus">${oos?'<span class="qc-oos">Out</span>':addCtl(p,src,biz)}</span></div>`; };
+  return `<div class="lx-pcard" data-nav="product" data-id="${p.id}" role="link" tabindex="0" style="--n:${i}"><span class="lx-pimg">${photoLayer(src)}${dIcon({name:p.name},'cart')}${disc?`<em class="lx-off">${pct}% OFF</em>`:''}<span class="lx-plus">${oos?'<span class="qc-oos">Out</span>':addCtl(p,src,biz)}</span></span>
+    <b>${esc(p.name)}</b><small>${esc(p.unit||'1 unit')}</small><span class="lx-pp"><b>${money(p.price)}</b>${disc?`<s>${money(p.mrp)}</s>`:''}</span></div>`; };
 
 /* ---------- 1. SPLASH: logo reveal + wave reveal + neighbourhood ---------- */
 function lxTown(){ return `<svg class="lx-town" viewBox="0 0 400 210" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
