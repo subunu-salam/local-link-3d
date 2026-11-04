@@ -4401,6 +4401,13 @@ SCREENS.home=async(el)=>{ await _rdHome(el);
     const sec=near.closest('.vbx-sec'); if(sec.getBoundingClientRect().top>innerHeight*.8) sec.scrollIntoView({behavior:'smooth',block:'center'}); };
 };
 
+/* HOME first-fold order: header + tabs, promos, Just-say-it, What you can do (compact) */
+const _ctHome=SCREENS.home;
+SCREENS.home=async(el)=>{ await _ctHome(el);
+  const ask=el.querySelector('.vbx-ask'), pr=el.querySelector('.vbx-promos'); if(ask&&pr){ pr.closest('.vbx-sec').after(ask); ask.classList.add('fd-ask'); }
+  const doSec=el.querySelector('.px-do'); if(doSec){ const s=doSec.closest('.vbx-sec'); s.classList.add('fd-do'); if(ask) ask.after(s); }
+};
+
 /* ================= CUSTOMER MOTION LAYER ================= */
 const CX_TABS=['home','categories','orders','account'];
 let cxIndX=null;
