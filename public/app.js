@@ -4329,6 +4329,43 @@ SCREENS.home=async(el)=>{ await _vbxHome(el);
   el.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{ const d=D[b.dataset.d]; buzz(); go(d[3],d[4]); });
 };
 
+/* ═══════════════════════════════════════════════════════════════════════
+   HOME WOW: "Around you, right now" — live neighbourhood radar
+   (replaces the greeting + mood chips). Real shops, offers and services.
+   ═══════════════════════════════════════════════════════════════════════ */
+const _pxHome=SCREENS.home;
+SCREENS.home=async(el)=>{ await _pxHome(el);
+  const g=el.querySelector('.vbx-greet'); if(!g) return;
+  const emo=b=>{ const s=((b.subcategory||'')+' '+(b.category_slug||'')+' '+(b.name||'')).toLowerCase();
+    return /restaurant|hotel|biriyani|food|cafe/.test(s)?'🍛':/bake|cake/.test(s)?'🎂':/super|grocery|mart|fresh/.test(s)?'🛒':/jewel|gold/.test(s)?'💍':/pharma|health|clinic/.test(s)?'💊':/ac|repair|electric|plumb|service/.test(s)?'🛠️':/fashion|cloth|textile|mall/.test(s)?'👗':/hardware/.test(s)?'🔩':/electronic|mobile/.test(s)?'📱':'🏪'; };
+  g.outerHTML=`<section class="rd" id="rd"><div class="rd-card">
+      <div class="rd-top"><span class="rd-live"><i></i>LIVE</span><span class="rd-area">${I.pin}${esc(state.areaName)}</span></div>
+      <h2 class="rd-h">Around you,<br><span>right now</span></h2>
+      <div class="rd-stage"><div class="rd-radar"><i class="r1"></i><i class="r2"></i><i class="r3"></i><span class="rd-sweep"></span><span class="rd-me">${logoMark(26)}</span><div id="rdPins"></div></div>
+        <div class="rd-stats"><div><b data-cnt="0" id="cOpen">0</b><small>shops open</small></div><div><b data-cnt="0" id="cOff">0</b><small>live offers</small></div><div><b data-cnt="0" id="cPro">0</b><small>pros to book</small></div></div></div>
+      <button class="rd-tick" id="rdTick"><span class="rd-te">✨</span><span class="rd-tt">Scanning your neighbourhood…</span>${I.chev}</button>
+    </div></section>`;
+  const [biz,offers,sv]=await Promise.all([api('/businesses').catch(()=>[]),api('/offers').catch(()=>[]),api('/services').catch(()=>[])]);
+  const open=biz.filter(b=>b.is_open); const pins=(open.length?open:biz).slice(0,9);
+  const box=$('#rdPins'); if(!box) return;
+  // place pins on rings, evenly by angle, distance by real area distance when known
+  box.innerHTML=pins.map((b,k)=>{ const a=k*2.39996 - Math.PI/2; const r=[24,34,42][k%3];
+    return `<button class="rd-pin ${b.is_open?'on':''}" style="left:${50+Math.cos(a)*r}%;top:${50+Math.sin(a)*r}%;--n:${k}" data-bid="${b.id}" aria-label="${esc(b.name)}"><span>${emo(b)}</span><em>${esc(b.name)}</em></button>`; }).join('');
+  box.querySelectorAll('[data-bid]').forEach(p=>p.onclick=e=>{ e.stopPropagation(); buzz(); go('business',{id:Number(p.dataset.bid)}); });
+  // count-up stats
+  const up=(id,n)=>{ const e=$('#'+id); if(!e) return; const t0=performance.now(); const f=t=>{ const k=Math.min(1,(t-t0)/1100); e.textContent=Math.round(n*(1-Math.pow(1-k,3))); if(k<1&&document.body.contains(e)) requestAnimationFrame(f); }; requestAnimationFrame(f); };
+  setTimeout(()=>{ up('cOpen',open.length); up('cOff',offers.length); up('cPro',sv.length); },500);
+  // live ticker cycling through real things happening nearby
+  const T=[]; open.slice(0,6).forEach(b=>T.push([emo(b),`${b.name} is open · ${String(b.hours_label||'').replace(/^Open /,'')}`,()=>go('business',{id:b.id}),b.id]));
+  offers.slice(0,5).forEach(o=>T.push(['🏷️',`${o.discount_label} at ${o.business} — ${o.title}`,()=>go('business',{id:o.business_id}),o.business_id]));
+  sv.slice(0,4).forEach(s=>T.push(['🛠️',`${s.name} from ${money(s.starting_price)} · ${s.business||'book now'}`,()=>go('business',{id:s.business_id}),s.business_id]));
+  for(let i=T.length-1;i>0;i--){ const j=(i*7)%(i+1); [T[i],T[j]]=[T[j],T[i]]; }
+  let ti=0; const tick=$('#rdTick'); const show=()=>{ if(!T.length||!document.body.contains(tick)) return; const [e,t]=T[ti%T.length]; tick.classList.remove('in'); void tick.offsetWidth; tick.querySelector('.rd-te').textContent=e; tick.querySelector('.rd-tt').textContent=t; tick.classList.add('in');
+    const bid=T[ti%T.length][3]; box.querySelectorAll('.rd-pin').forEach(x=>x.classList.toggle('hot',Number(x.dataset.bid)===Number(bid))); };
+  tick.onclick=()=>{ if(T.length){ buzz(); T[ti%T.length][2](); } };
+  show(); const tmr=setInterval(()=>{ if(!document.body.contains(tick)) return clearInterval(tmr); ti++; show(); },3000);
+};
+
 /* ================= CUSTOMER MOTION LAYER ================= */
 const CX_TABS=['home','categories','orders','account'];
 let cxIndX=null;
