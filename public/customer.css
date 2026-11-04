@@ -1410,3 +1410,13 @@ body.cdark .lx-plus .qc-add{background:#2BC9AE !important}
 .screen.cx-fwd,.screen.cx-back{animation:llFade .22s ease-out both !important}
 .screen.cx-fwd > *,.screen.cx-back > *{animation:none}
 @keyframes llFade{from{opacity:0}}
+/* background: soft flowing ribbons instead of floating emoji */
+.vbx-fl{display:none}
+.vbx-rib{position:absolute; left:-10%; top:22%; width:120%; height:46%; overflow:visible}
+.vbx-rib path{fill:none; stroke:rgba(12,143,130,.28); stroke-width:1.2; animation:ribFlow calc(14s + var(--k) * 3s) ease-in-out infinite alternate; animation-delay:calc(var(--k) * -2.5s); transform-origin:center}
+.vbx-rib path:nth-child(2n){stroke:rgba(242,107,58,.22)}
+@keyframes ribFlow{0%{transform:translateY(-14px) scaleY(.9)} 100%{transform:translateY(16px) scaleY(1.12)}}
+body.cdark .vbx-rib path{stroke:rgba(127,224,207,.18)}
+@media (prefers-reduced-motion:reduce){ .vbx-rib path{animation:none} }
+.vbx-atmo .vbx-rib{display:block !important; position:absolute !important; left:-10% !important; top:20% !important; width:120% !important; height:46% !important}
+html.lite .vbx-atmo{display:block !important} html.lite .vbx-atmo > i,html.lite .vbx-atmo::after{display:none}
