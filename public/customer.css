@@ -1388,3 +1388,6 @@ body[data-app="customer"] .phone .screen{padding-bottom:84px}
 .lx-plus .qc-add::before{width:16px; height:16px; background:linear-gradient(currentColor,currentColor) center/16px 3.2px no-repeat, linear-gradient(currentColor,currentColor) center/3.2px 16px no-repeat; border-radius:2px}
 .lx-plus .qc-add:hover,.lx-plus .qc-add:active{background:#13A58F !important; color:#053F38 !important}
 body.cdark .lx-plus .qc-add{background:#2BC9AE !important}
+/* smaller carousel CTA, aligned with the chips */
+.vbx-cta{height:28px !important; min-height:28px !important; padding:0 11px !important; gap:5px !important; font-size:12px !important; font-weight:700; box-shadow:0 6px 12px -8px rgba(0,0,0,.45) !important}
+.vbx-cta b{font-size:12px}
