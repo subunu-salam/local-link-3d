@@ -4253,11 +4253,11 @@ SCREENS.home=async(el)=>{
     p.innerHTML=`<button class="lv-pill" id="opGo"><span class="lv-pdot"></span><span><b>${esc(live.business)}</b><small>${MSG[live.status]||live.status.replace(/_/g,' ')}</small></span><em>Track ${I.chev}</em></button>`; $('#opGo').onclick=()=>setTab('orders'); }).catch(()=>{});
   const [offers,biz,deals,places,sv]=await Promise.all([api('/offers'),api('/businesses?featured=1'),api('/products?deal=1&limit=10'),api('/places?area_id='+state.areaId).catch(()=>[]),api('/services').catch(()=>[])]);
   const best=offers.reduce((m,o)=>Math.max(m,lwPct(o.discount_label)),0);
-  const P=[{k:'voice',tag:'Talk to order',h:'Just say<br>what you need',ch:['English','മലയാളം'],cta:'Start talking',emo:'🎙️',go:()=>openAsk('',{voice:true})},
-           {k:'deals',tag:'Local deals',h:`Up to ${best||20}% off<br>near you`,ch:[`${offers.length} live offers`],cta:'See offers',emo:'🛍️',go:()=>go('offers')}]
+  const P=[{k:'deals',tag:'Local deals',h:`Up to ${best||20}% off<br>near you`,ch:[`${offers.length} live offers`],cta:'See offers',emo:'🛍️',go:()=>go('offers')},
+           {k:'voice',tag:'Talk to order',h:'Just say<br>what you need',ch:['English','മലയാളം'],cta:'Start talking',emo:'🎙️',go:()=>openAsk('',{voice:true})}]
     .concat(offers.slice(0,3).map(o=>({k:'o',tag:o.business||'Offer',h:esc(o.title),ch:[o.discount_label,o.code?'Code '+o.code:'In store'].filter(Boolean),cta:'Order now',img:o.image_url||pic(coverKw({subcategory:o.business||''})+','+(o.title||''),700+(o.id||0),400,400),go:()=>go('business',{id:o.business_id})})))
     .concat([{k:'book',tag:'Home services',h:'Book a pro<br>in two taps',ch:['Electricians','Plumbers','Cleaning'],cta:'Book now',emo:'🛠️',go:()=>go('category',{slug:'services'})}]);
-  const pr=$('#pr'); pr.innerHTML=P.map((x,k)=>`<button class="vbx-promo t${k%4}" data-p="${k}"><span class="vbx-ptag">${esc(x.tag)}</span><h3>${x.h}</h3><span class="vbx-pch">${x.ch.map(c=>`<i>${esc(c)}</i>`).join('')}</span><span class="vbx-cta">${esc(x.cta)} <b>→</b></span>
+  const pr=$('#pr'); pr.innerHTML=P.map((x,k)=>`<button class="vbx-promo t${[1,0,2,3][k%4]}" data-p="${k}"><span class="vbx-ptag">${esc(x.tag)}</span><h3>${x.h}</h3><span class="vbx-pch">${x.ch.map(c=>`<i>${esc(c)}</i>`).join('')}</span><span class="vbx-cta">${esc(x.cta)} <b>→</b></span>
       <span class="vbx-deco">${x.img?photoLayer(x.img):''}${x.emo?`<em>${x.emo}</em>`:'<em>🏷️</em>'}</span>${x.k==='voice'?`<span class="vbx-pwave">${Array.from({length:9},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span>`:''}</button>`).join('');
   pr.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{ buzz(); P[b.dataset.p].go(); });
   $('#pd').innerHTML=P.map((_,k)=>`<i class="${k?'':'on'}"></i>`).join(''); lvCarousel(pr,$('#pd'),4000);

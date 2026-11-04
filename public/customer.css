@@ -1308,3 +1308,11 @@ body.cdark .ct-ind,body.cdark .ct-ind::before,body.cdark .ct-ind::after{--vbx-ca
 .lx-pcard:has(.qc-step) .lx-pp{padding-right:0 !important}
 .lx-pcard > b{margin-top:4px !important}
 body.cdark .lx-plus .qc-add{background:var(--surface) !important}
+/* promo cards — one fixed vertical rhythm so every card lines up */
+.vbx-promo{height:178px !important; padding:16px 128px 16px 16px !important; gap:0}
+.vbx-ptag{height:22px; display:inline-flex !important; align-items:center; padding:0 10px !important; line-height:1}
+.vbx-promo h3{margin-top:9px !important; font-size:22px !important; line-height:1.08 !important; max-height:calc(22px * 1.08 * 2 + 2px); padding-right:2px}
+.vbx-pch{margin-top:7px !important; height:22px; align-items:center} .vbx-pch i{height:22px; display:inline-flex; align-items:center; padding:0 9px !important}
+.vbx-cta{margin-top:auto !important; height:34px; min-height:34px}
+.vbx-promos{scroll-padding-inline:16px} .vbx-promo{scroll-snap-align:start; scroll-snap-stop:always}
+.vbx-ptag{display:block !important; line-height:22px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
