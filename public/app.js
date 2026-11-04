@@ -4465,7 +4465,7 @@ function cxDockInd(){
 (function(){
   document.addEventListener('pointerdown',e=>{
     if(state.view!=='customer') return;
-    const b=e.target.closest('.px-ctile,.px-docard,.vbx-promo,.vbx-moods button,.vbx-cats button,.lx-ctile,.lx-scard,.lx-quick button,.lx-fchips button,.lx-acts > *,.lv-ctile,.lv-scard,.lv-srow,.lv-ban,.lv-menu > *,.lv-pay,.lv-chips button,.lv-btn,.lv-tabs button,.vtab,.qc-add,.lv-reo,.lv-ask,.lv-row,.lv-cmini button');
+    if(e.target.closest('.lv-menu')) return; const b=e.target.closest('.px-ctile,.px-docard,.vbx-promo,.vbx-moods button,.vbx-cats button,.lx-ctile,.lx-scard,.lx-quick button,.lx-fchips button,.lx-acts > *,.lv-ctile,.lv-scard,.lv-srow,.lv-ban,.lv-menu > *,.lv-pay,.lv-chips button,.lv-btn,.lv-tabs button,.vtab,.qc-add,.lv-reo,.lv-ask,.lv-row,.lv-cmini button');
     if(!b) return; const r=b.getBoundingClientRect(); const s=document.createElement('span'); s.className='cx-rip';
     const d=Math.max(r.width,r.height)*1.2; s.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;
     if(getComputedStyle(b).position==='static') b.style.position='relative'; b.style.overflow='hidden'; b.appendChild(s); setTimeout(()=>s.remove(),600);
