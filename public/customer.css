@@ -1339,3 +1339,52 @@ body.cdark .lx-plus .qc-add{background:var(--surface) !important}
 @keyframes pxShine{0%,70%{transform:translateX(-120%)} 100%{transform:translateX(120%)}}
 .fd-do .px-dot b{transition:color .25s} .fd-do .px-docard:active .px-dot b{color:var(--vbx-brand)}
 @media (prefers-reduced-motion:reduce){ .fd-do .px-doimg img.ph.on,.fd-do .px-doimg::after{animation:none} }
+
+/* =====================================================================
+   MOBILE FIRST FOLD — everything to "What you can do" visible at a glance
+   ===================================================================== */
+.vbx-hd.mf{padding:calc(6px + var(--top)) 14px 8px !important; top:calc(-84px - var(--top)) !important}
+.vbx-hd.mf .vbx-row:first-child{height:40px}
+.vbx-hd.mf .vbx-brand{font-size:22px} .vbx-hd.mf .vbx-brand svg{width:24px; height:24px}
+.vbx-hd.mf .vbx-lang{width:38px; height:38px} .vbx-hd.mf .vbx-lang svg{width:18px; height:18px}
+.vbx-hd.mf .vbx-row + .vbx-row{margin-top:4px}
+.vbx-hd.mf .vbx-loc{min-height:0; padding:0; background:none; box-shadow:none; gap:6px}
+.vbx-hd.mf .vbx-lico{width:24px; height:24px; border-radius:8px} .vbx-hd.mf .vbx-lico svg{width:13px; height:13px}
+.vbx-hd.mf .vbx-loc > span:last-child{display:flex; align-items:baseline; gap:8px; min-width:0}
+.vbx-hd.mf .vbx-loc b{order:1; font-size:13.5px} .vbx-hd.mf .vbx-loc small{order:2; font-size:11.5px; white-space:nowrap}
+.vbx-hd.mf .vbx-loc small{font-size:0} .vbx-hd.mf .vbx-open{font-size:11.5px; margin-left:0}
+.vbx-hd.mf .vbx-srch{margin-top:8px; padding:3px 3px 3px 12px} .vbx-hd.mf .vbx-stxt{min-height:38px; font-size:14px} .vbx-hd.mf .vbx-mic{width:38px; height:38px} .vbx-hd.mf .vbx-mic svg{width:18px; height:18px}
+.vbx-hd.mf .ct-tabs{margin:6px -14px -8px} .vbx-hd.mf .ct-tabs button{height:50px; min-width:58px; gap:3px; font-size:11.5px; padding:4px 6px 6px} .vbx-hd.mf .ct-tabs button svg{width:19px; height:19px} .vbx-hd.mf .ct-ind{height:50px; border-radius:14px 14px 0 0}
+/* promo */
+.vbx-promos{padding:10px 14px 4px !important; gap:10px !important} .vbx-promo{width:calc(100% - 24px) !important; height:148px !important; padding:12px 120px 12px 14px !important; border-radius:20px !important}
+.vbx-ptag{height:20px; line-height:20px !important; font-size:10.5px !important}
+.vbx-promo h3{margin-top:7px !important; font-size:20px !important; max-height:calc(20px * 1.08 * 2 + 2px)}
+.vbx-pch{margin-top:6px !important; height:20px} .vbx-pch i{height:20px; font-size:11px !important}
+.vbx-cta{height:30px; min-height:30px; padding:0 12px; font-size:12.5px}
+.vbx-deco{width:134px !important; height:134px !important; margin-top:-67px !important; right:-20px !important}
+.vbx-badge{width:46px !important; height:46px !important; font-size:16px !important; top:10px !important; right:8px !important}
+.vbx-dots{margin-top:4px !important}
+/* Just say it — one slim line */
+.fd-ask{margin:8px 14px 0 !important; width:calc(100% - 28px) !important; min-height:0; padding:7px 10px !important; border-radius:16px !important; gap:10px !important}
+.fd-ask .lv-aorb{width:34px !important; height:34px !important; box-shadow:0 0 0 2px rgba(255,255,255,.2) !important} .fd-ask .lv-aorb svg{width:15px !important; height:15px !important}
+.fd-ask > span:nth-child(2){min-width:0; flex:1} .fd-ask b{font-size:14px !important; line-height:1.2} .fd-ask small{font-size:11.5px !important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:0 !important}
+.fd-ask .lv-wv{height:18px}
+/* What you can do */
+.fd-do .vbx-sh{padding:12px 14px 6px !important} .fd-do .vbx-sh h2{font-size:18px !important}
+.fd-do .lv-rail{padding:2px 14px 6px !important}
+.fd-do .px-docard{width:124px !important} .fd-do .px-doimg{height:62px !important}
+.fd-do .px-dot{padding:6px 8px 8px !important} .fd-do .px-dot b{font-size:12px !important} .fd-do .px-dot small{font-size:11px !important}
+/* compact floating nav */
+body[data-app="customer"] .lvdock.vbx-nav{height:58px !important; left:10px !important; right:10px !important; bottom:calc(6px + var(--bottom)) !important; border-radius:22px !important}
+.vbx-nav .vtab{height:50px !important; font-size:11px !important; gap:2px !important} .vbx-nav .vtab svg{width:20px !important; height:20px !important}
+.vbx-nav .cx-ind{top:6px !important; height:46px !important; width:54px !important; border-radius:16px !important}
+.vbx-nav .lv-askt{height:58px !important; font-size:11px !important}
+.vbx-nav .lv-askb{width:50px !important; height:50px !important; margin-top:-20px !important; box-shadow:0 0 0 4px #fff, 0 0 0 6px rgba(12,143,130,.22), var(--vbx-glow) !important} .vbx-nav .lv-askb svg{width:21px !important; height:21px !important}
+body[data-app="customer"] .qc-cartwrap{bottom:calc(72px + var(--bottom)) !important}
+body[data-app="customer"] .phone .screen{padding-bottom:84px}
+
+/* + button — filled, bold plus (teal theme) */
+.lx-plus .qc-add{background:#2BC9AE !important; color:#053F38 !important; box-shadow:0 6px 14px -6px rgba(7,89,79,.7) !important; width:34px !important; height:34px !important}
+.lx-plus .qc-add::before{width:16px; height:16px; background:linear-gradient(currentColor,currentColor) center/16px 3.2px no-repeat, linear-gradient(currentColor,currentColor) center/3.2px 16px no-repeat; border-radius:2px}
+.lx-plus .qc-add:hover,.lx-plus .qc-add:active{background:#13A58F !important; color:#053F38 !important}
+body.cdark .lx-plus .qc-add{background:#2BC9AE !important}
