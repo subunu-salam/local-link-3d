@@ -1290,3 +1290,21 @@ body.cdark .ct-ind,body.cdark .ct-ind::before,body.cdark .ct-ind::after{--vbx-ca
 .vbx-deco{width:108px !important; height:108px !important; margin-top:-54px !important}
 .fd-ask{margin-top:10px !important}
 .fd-do .vbx-sh{padding-top:14px}
+
+/* ADD button — clean round "+" sitting inside the image corner, everywhere */
+.lx-plus{position:absolute; right:14px !important; left:auto !important; bottom:auto !important; top:calc(8px + 112px - 42px) !important; z-index:3}
+.lx-plus .qc-add{all:unset; box-sizing:border-box; width:34px !important; height:34px !important; min-width:0 !important; min-height:0 !important; padding:0 !important; margin:0 !important;
+  display:grid !important; place-items:center; border-radius:50% !important; background:#fff !important; color:var(--vbx-brand,#0C8F82) !important; font-size:0 !important; cursor:pointer;
+  box-shadow:0 0 0 1px rgba(12,143,130,.18), 0 6px 14px -6px rgba(7,63,58,.55) !important; transform:none !important; transition:transform .25s var(--spring), background .2s, color .2s}
+.lx-plus .qc-add::before{content:""; width:14px; height:14px; background:linear-gradient(currentColor,currentColor) center/14px 2.2px no-repeat, linear-gradient(currentColor,currentColor) center/2.2px 14px no-repeat; border-radius:2px}
+.lx-plus .qc-add::after{content:none !important}
+.lx-plus .qc-add:hover{background:var(--vbx-brand,#0C8F82) !important; color:#fff !important}
+.lx-plus .qc-add:active{transform:scale(.86) !important; background:var(--vbx-brand,#0C8F82) !important; color:#fff !important}
+.lx-plus .qc-step{all:unset; box-sizing:border-box; display:flex !important; align-items:center; gap:2px; height:34px !important; min-height:0 !important; padding:0 3px !important; margin:0 !important; border-radius:999px !important;
+  background:var(--vbx-brand,#0C8F82) !important; color:#fff !important; box-shadow:0 6px 14px -6px rgba(7,63,58,.6) !important; transform:none !important; animation:lxGrowX .3s var(--spring)}
+.lx-plus .qc-step button{all:unset; width:28px; height:28px; display:grid; place-items:center; border-radius:50%; color:#fff; font-size:17px; font-weight:600; line-height:1; cursor:pointer}
+.lx-plus .qc-step button:active{background:rgba(255,255,255,.2)}
+.lx-plus .qc-step b{min-width:16px; text-align:center; font-size:13px; font-weight:700; color:#fff}
+.lx-pcard:has(.qc-step) .lx-pp{padding-right:0 !important}
+.lx-pcard > b{margin-top:4px !important}
+body.cdark .lx-plus .qc-add{background:var(--surface) !important}
