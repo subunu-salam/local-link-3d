@@ -4325,7 +4325,7 @@ SCREENS.home=async(el)=>{ await _vbxHome(el);
     ['workers','Hire local workers','Masons, painters, helpers by the day','category',{slug:'workers'}],['transport','Get a ride','Autos and taxis near you','category',{slug:'transport'}],['info','Local info & emergency','Police, hospitals, banks, offices','localinfo',{}]];
   sec.insertAdjacentHTML('afterend',`<section class="vbx-sec"><div class="vbx-sh"><h2>What you can do</h2></div><div class="px-do lv-rail">${D.map((d,k)=>`<button class="px-docard" data-d="${k}" style="--n:${k}"><span class="px-doimg">${pxImg(d[0],'',480,360)}</span><span class="px-dot"><b>${d[1]}</b><small>${d[2]}</small></span></button>`).join('')}</div></section>
     <section class="vbx-sec"><div class="vbx-sh"><h2>How it works</h2></div><div class="px-how">${[['🔎','Find','Search, browse or just ask by voice'],['🛒','Order or book','Add to cart or pick a time slot'],['🤝','Get it locally','Delivery, pickup or the pro comes over']].map((s,k)=>`<div style="--n:${k}"><i>${s[0]}</i><b>${k+1}. ${s[1]}</b><small>${s[2]}</small></div>`).join('')}</div>
-      <div class="px-trust"><span>✅ Verified local shops</span><span>💸 Pay the shop directly</span><span>💚 Supports your neighbourhood</span></div></section>`);
+      <div class="px-trust"><span>${GI.check} Verified local shops</span><span>${GI.card} Pay the shop directly</span><span>${I.heart} Supports your neighbourhood</span></div></section>`);
   el.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{ const d=D[b.dataset.d]; buzz(); go(d[3],d[4]); });
 };
 
@@ -4338,29 +4338,30 @@ SCREENS.home=async(el)=>{ await _pxHome(el);
   const g=el.querySelector('.vbx-greet'); if(!g) return;
   const emo=b=>{ const s=((b.subcategory||'')+' '+(b.category_slug||'')+' '+(b.name||'')).toLowerCase();
     return /restaurant|hotel|biriyani|food|cafe/.test(s)?'🍛':/bake|cake/.test(s)?'🎂':/super|grocery|mart|fresh/.test(s)?'🛒':/jewel|gold/.test(s)?'💍':/pharma|health|clinic/.test(s)?'💊':/ac|repair|electric|plumb|service/.test(s)?'🛠️':/fashion|cloth|textile|mall/.test(s)?'👗':/hardware/.test(s)?'🔩':/electronic|mobile/.test(s)?'📱':'🏪'; };
-  g.outerHTML=`<section class="rd" id="rd"><div class="rd-card">
+  g.remove(); const how=el.querySelector('.px-how'); const hsec=how&&how.closest('.vbx-sec'); if(how){ how.previousElementSibling&&how.previousElementSibling.remove(); how.remove(); }
+  (hsec||el.querySelector('#orderPill')).insertAdjacentHTML(hsec?'afterbegin':'afterend',`<section class="rd" id="rd"><div class="rd-card">
       <div class="rd-top"><span class="rd-live"><i></i>LIVE</span><span class="rd-area">${I.pin}${esc(state.areaName)}</span></div>
-      <h2 class="rd-h">Around you,<br><span>right now</span></h2>
+      <h2 class="rd-h">Around you <span>right now</span></h2>
       <div class="rd-stage"><div class="rd-radar"><i class="r1"></i><i class="r2"></i><i class="r3"></i><span class="rd-sweep"></span><span class="rd-me">${logoMark(26)}</span><div id="rdPins"></div></div>
-        <div class="rd-stats"><div><b data-cnt="0" id="cOpen">0</b><small>shops open</small></div><div><b data-cnt="0" id="cOff">0</b><small>live offers</small></div><div><b data-cnt="0" id="cPro">0</b><small>pros to book</small></div></div></div>
-      <button class="rd-tick" id="rdTick"><span class="rd-te">✨</span><span class="rd-tt">Scanning your neighbourhood…</span>${I.chev}</button>
-    </div></section>`;
+        <div class="rd-stats"><div><b id="cOpen">0</b><small>Open now</small></div><div><b id="cOff">0</b><small>Live offers</small></div><div><b id="cPro">0</b><small>Pros to book</small></div></div></div>
+      <button class="rd-tick" id="rdTick"><span class="rd-te">${I.store}</span><span class="rd-tt">Scanning your neighbourhood…</span>${I.chev}</button>
+    </div></section>`);
   const [biz,offers,sv]=await Promise.all([api('/businesses').catch(()=>[]),api('/offers').catch(()=>[]),api('/services').catch(()=>[])]);
-  const open=biz.filter(b=>b.is_open); const pins=(open.length?open:biz).slice(0,9);
+  const open=biz.filter(b=>b.is_open); const pins=(open.length?open:biz).slice(0,7);
   const box=$('#rdPins'); if(!box) return;
   // place pins on rings, evenly by angle, distance by real area distance when known
-  box.innerHTML=pins.map((b,k)=>{ const a=k*2.39996 - Math.PI/2; const r=[24,34,42][k%3];
-    return `<button class="rd-pin ${b.is_open?'on':''}" style="left:${50+Math.cos(a)*r}%;top:${50+Math.sin(a)*r}%;--n:${k}" data-bid="${b.id}" aria-label="${esc(b.name)}"><span>${emo(b)}</span><em>${esc(b.name)}</em></button>`; }).join('');
+  box.innerHTML=pins.map((b,k)=>{ const a=k*(Math.PI*2/7) - Math.PI/2; const r=k%2?30:41;
+    return `<button class="rd-pin ${b.is_open?'on':''}" style="left:${50+Math.cos(a)*r}%;top:${50+Math.sin(a)*r}%;--n:${k}" data-bid="${b.id}" aria-label="${esc(b.name)}"><span>${photoLayer(b.cover_url||pic(coverKw(b),b.id,96,96))}${dIcon(b)}</span><em>${esc(b.name)}</em></button>`; }).join('');
   box.querySelectorAll('[data-bid]').forEach(p=>p.onclick=e=>{ e.stopPropagation(); buzz(); go('business',{id:Number(p.dataset.bid)}); });
   // count-up stats
   const up=(id,n)=>{ const e=$('#'+id); if(!e) return; const t0=performance.now(); const f=t=>{ const k=Math.min(1,(t-t0)/1100); e.textContent=Math.round(n*(1-Math.pow(1-k,3))); if(k<1&&document.body.contains(e)) requestAnimationFrame(f); }; requestAnimationFrame(f); };
   setTimeout(()=>{ up('cOpen',open.length); up('cOff',offers.length); up('cPro',sv.length); },500);
   // live ticker cycling through real things happening nearby
-  const T=[]; open.slice(0,6).forEach(b=>T.push([emo(b),`${b.name} is open · ${String(b.hours_label||'').replace(/^Open /,'')}`,()=>go('business',{id:b.id}),b.id]));
-  offers.slice(0,5).forEach(o=>T.push(['🏷️',`${o.discount_label} at ${o.business} — ${o.title}`,()=>go('business',{id:o.business_id}),o.business_id]));
-  sv.slice(0,4).forEach(s=>T.push(['🛠️',`${s.name} from ${money(s.starting_price)} · ${s.business||'book now'}`,()=>go('business',{id:s.business_id}),s.business_id]));
+  const T=[]; open.slice(0,6).forEach(b=>T.push([I.store,`${b.name} is open · ${String(b.hours_label||'').replace(/^Open /,'')}`,()=>go('business',{id:b.id}),b.id]));
+  offers.slice(0,5).forEach(o=>T.push([GI.percent,`${o.discount_label} at ${o.business} — ${o.title}`,()=>go('business',{id:o.business_id}),o.business_id]));
+  sv.slice(0,4).forEach(s=>T.push([GI.wrench||I.cog,`${s.name} from ${money(s.starting_price)} · ${s.business||'book now'}`,()=>go('business',{id:s.business_id}),s.business_id]));
   for(let i=T.length-1;i>0;i--){ const j=(i*7)%(i+1); [T[i],T[j]]=[T[j],T[i]]; }
-  let ti=0; const tick=$('#rdTick'); const show=()=>{ if(!T.length||!document.body.contains(tick)) return; const [e,t]=T[ti%T.length]; tick.classList.remove('in'); void tick.offsetWidth; tick.querySelector('.rd-te').textContent=e; tick.querySelector('.rd-tt').textContent=t; tick.classList.add('in');
+  let ti=0; const tick=$('#rdTick'); const show=()=>{ if(!T.length||!document.body.contains(tick)) return; const [e,t]=T[ti%T.length]; tick.classList.remove('in'); void tick.offsetWidth; tick.querySelector('.rd-te').innerHTML=e; tick.querySelector('.rd-tt').textContent=t; tick.classList.add('in');
     const bid=T[ti%T.length][3]; box.querySelectorAll('.rd-pin').forEach(x=>x.classList.toggle('hot',Number(x.dataset.bid)===Number(bid))); };
   tick.onclick=()=>{ if(T.length){ buzz(); T[ti%T.length][2](); } };
   show(); const tmr=setInterval(()=>{ if(!document.body.contains(tick)) return clearInterval(tmr); ti++; show(); },3000);
