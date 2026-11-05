@@ -3661,13 +3661,13 @@ function lwConfirm(title,html){ showSheet('',`<div class="lw-ok"><div class="lw-
 
 /* ---------- AI ASSISTANT (full screen) ---------- */
 const _openAsk=openAsk;
-openAsk=function(prefill,opts={}){ if(state.view!=='customer') return _openAsk(prefill,opts); closeSheet(); go('assistant',{q:prefill||'',voice:!!opts.voice}); };
+openAsk=function(prefill,opts={}){ if(state.view!=='customer') return _openAsk(prefill,opts); try{ llVoice.unlock(); }catch(e){} closeSheet(); go('assistant',{q:prefill||'',voice:!!opts.voice}); };
 SCREENS.assistant=(el,{q,voice})=>{
   const nm=token&&me?me.name.split(' ')[0]:''; const ML=()=>aiVoiceLang!=='en-IN'; const L=(en,ml)=>ML()?ml:en;
   const S=ML()?[[I.store,'അടുത്തുള്ള റെസ്റ്റോറന്റ്','ബിരിയാണി കിട്ടുന്ന ഹോട്ടൽ'],[GI.cart,'പലചരക്ക് സാധനങ്ങൾ','പച്ചക്കറിയും പാലും'],[GI.wrench||I.cog,'വീട്ടിലെ സർവീസ് ബുക്ക് ചെയ്യാം','ഇലക്ട്രീഷ്യൻ'],[GI.package,'എന്റെ ഓർഡർ എവിടെ?','__track'],[GI.percent,'ഇന്നത്തെ ഓഫറുകൾ','__offers']]:[[I.store,'Find a nearby restaurant','biriyani restaurant'],[GI.cart,'Get groceries','vegetables and milk'],[GI.wrench||I.cog,'Book a home service','electrician'],[GI.package,'Track my order','__track'],[GI.percent,'Discover local offers','__offers']];
   el.innerHTML=`<div class="lw-ai"><header class="lw-aih"><button class="lv-ib" id="__back" aria-label="Back">${I.back}</button><span class="lw-aiw">${Array.from({length:9},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span><div class="lw-ailang" id="ail"><button data-vl="ml-IN">മ</button><button data-vl="en-IN">EN</button></div></header>
     <div class="lw-aititle"><h1>Ask Local Link</h1><p>${L("Your local shopping assistant","നിങ്ങളുടെ നാട്ടിലെ ഷോപ്പിങ് സഹായി")}</p></div>
-    <div class="lw-msgs" id="msgs"><div class="lw-b bot" id="greet">${L(`Hi${nm?" "+esc(nm):""}! 👋<br>How can I help you today? You can ask for several things at once — like “vegetables, chicken biryani and an electrician”.`,`നമസ്കാരം${nm?" "+esc(nm):""}! 👋<br>ഇന്ന് എന്താണ് വേണ്ടത്? ഒരുമിച്ച് പല കാര്യങ്ങളും ചോദിക്കാം — “പച്ചക്കറി, ചിക്കൻ ബിരിയാണി, ഒരു ഇലക്ട്രീഷ്യൻ” എന്നതുപോലെ.`)}</div>
+    <div class="lw-msgs" id="msgs"><div class="lw-b bot" id="greet">${L(`Hi${nm?" "+esc(nm):""}! 👋 Welcome to Local Link.<br>I can order from shops near you, find restaurants, book services like an electrician or plumber, track your order and show local offers.<br>Tap the mic and speak, or use the keyboard below to type.`,`നമസ്കാരം${nm?" "+esc(nm):""}! 👋 Local Link-ലേക്ക് സ്വാഗതം.<br>അടുത്തുള്ള കടകളിൽ നിന്ന് സാധനങ്ങൾ ഓർഡർ ചെയ്യാം, റെസ്റ്റോറന്റ് കണ്ടെത്താം, ഇലക്ട്രീഷ്യൻ പോലെയുള്ള സർവീസുകൾ ബുക്ക് ചെയ്യാം, ഓർഡർ എവിടെ എത്തി എന്ന് അറിയാം, ഓഫറുകൾ കാണാം.<br>മൈക്കിൽ ടാപ്പ് ചെയ്ത് സംസാരിക്കൂ, അല്ലെങ്കിൽ താഴെ കീബോർഡിൽ ടൈപ്പ് ചെയ്യൂ.`)}</div>
       <div class="lw-sugg" id="sugg">${S.map((s,i)=>`<button data-s="${esc(s[2])}" style="--n:${i}"><span>${s[0]}</span>${esc(s[1])}</button>`).join('')}</div></div>
     <div class="lw-orbz" id="orbz"><button class="lw-orb" id="orb" aria-label="Speak"><span class="h1"></span><span class="h2"></span><span class="c">${GI.mic}</span></button><small id="ost">${L("Tap to speak","സംസാരിക്കാൻ ടാപ്പ് ചെയ്യൂ")}</small></div>
     <div class="lw-in"><input id="aq" placeholder="${L("Type or speak…","ടൈപ്പ് ചെയ്യുക അല്ലെങ്കിൽ സംസാരിക്കുക…")}" autocomplete="off"/><button class="lw-mic" id="amic" aria-label="Voice">${GI.mic}</button><button class="lw-send" id="asend" aria-label="Send">${GI.send}</button></div></div>`;
@@ -3676,6 +3676,7 @@ SCREENS.assistant=(el,{q,voice})=>{
   $('#mute').onclick=()=>{ llVoice.setMuted(!llVoice.muted); $('#mute').textContent=llVoice.muted?'🔇':'🔊'; $('#mute').classList.toggle('off',llVoice.muted); toast(llVoice.muted?L('Voice replies off','ശബ്ദ മറുപടി ഓഫ്'):L('Voice replies on','ശബ്ദ മറുപടി ഓൺ')); };
   llVoice.onState(v=>{ el.classList.toggle('speaking',v==='speaking'); el.classList.toggle('voiceload',v==='loading'); const s=$('#ost'); if(s&&v==='speaking') s.textContent=L('Speaking…','പറയുന്നു…'); });
   const _bk=$('#__back'); if(_bk){ const o=_bk.onclick; _bk.onclick=e=>{ llVoice.stop(); o&&o(e); }; }
+  setTimeout(()=>{ const g=$('#greet'); if(g&&document.body.contains(g)&&!q) llVoice.speak(g.innerText.replace(/\n/g,' ')); },450);
   const msgs=$('#msgs'), inp=$('#aq'); const down=()=>msgs.scrollTo({top:msgs.scrollHeight,behavior:'smooth'});
   $('#ail').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.vl===aiVoiceLang); b.onclick=()=>{ if(aiVoiceLang===b.dataset.vl) return; aiVoiceLang=b.dataset.vl; localStorage.setItem('ll_voicelang2',aiVoiceLang); llVoice.stop(); buzz(); routeRender(); }; });
   const card=x=>{ const bizId=x.type==='business'?x.id:x.business_id; const ic={business:I.store,product:GI.cart,service:GI.wrench||I.cog,worker:GI.helmet||I.user,driver:GI.car||I.pin}[x.type]||I.pin;
@@ -4267,7 +4268,7 @@ SCREENS.orders=async(el,p)=>{ await _lwOrders(el,p);
 /* ---------- 11. AI ASSISTANT: orb with waveform, keyboard toggle ---------- */
 const _lwAsk=SCREENS.assistant;
 SCREENS.assistant=(el,p)=>{ _lwAsk(el,p); const z=$('#orbz'), inp=el.querySelector('.lw-in'); if(!z||!inp) return;
-  z.innerHTML=`<span class="lx-wl">${Array.from({length:9},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span>`+z.innerHTML+`<span class="lx-wl r">${Array.from({length:9},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span><button class="lx-kb" id="kb" aria-label="Type instead">⌨</button>`;
+  z.innerHTML=`<span class="lx-wl">${Array.from({length:9},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span>`+z.innerHTML+`<span class="lx-wl r">${Array.from({length:9},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span><button class="lx-kb" id="kb" aria-label="Type instead"><span>⌨</span><b>${aiVoiceLang==='en-IN'?'Type':'ടൈപ്പ്'}</b></button>`;
   $('#orb').onclick=()=>$('#amic').click(); inp.classList.add('lx-hide');
   $('#kb').onclick=()=>{ inp.classList.toggle('lx-hide'); if(!inp.classList.contains('lx-hide')) setTimeout(()=>$('#aq').focus(),50); };
   if(p&&p.q) inp.classList.remove('lx-hide'); };
