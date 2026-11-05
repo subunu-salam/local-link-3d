@@ -4268,10 +4268,23 @@ SCREENS.orders=async(el,p)=>{ await _lwOrders(el,p);
 /* ---------- 11. AI ASSISTANT: orb with waveform, keyboard toggle ---------- */
 const _lwAsk=SCREENS.assistant;
 SCREENS.assistant=(el,p)=>{ _lwAsk(el,p); const z=$('#orbz'), inp=el.querySelector('.lw-in'); if(!z||!inp) return;
-  z.innerHTML=`<span class="lx-wl">${Array.from({length:9},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span>`+z.innerHTML+`<span class="lx-wl r">${Array.from({length:9},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span><button class="lx-kb" id="kb" aria-label="Type instead"><span>⌨</span><b>${aiVoiceLang==='en-IN'?'Type':'ടൈപ്പ്'}</b></button>`;
-  $('#orb').onclick=()=>$('#amic').click(); inp.classList.add('lx-hide');
-  $('#kb').onclick=()=>{ inp.classList.toggle('lx-hide'); if(!inp.classList.contains('lx-hide')) setTimeout(()=>$('#aq').focus(),50); };
-  if(p&&p.q) inp.classList.remove('lx-hide'); };
+  const ML=aiVoiceLang!=='en-IN'; const sv='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+  const SPK_ON=sv+'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a3.5 3.5 0 0 1 0 6M18.5 6.5a7 7 0 0 1 0 11"/></svg>', SPK_OFF=sv+'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>';
+  const KB=sv+'<rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>';
+  const old=el.querySelector('#mute'); if(old) old.remove();
+  const orb=$('#orb'); const wv=(r)=>`<span class="ab-wv ${r}">${Array.from({length:6},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span>`;
+  z.className='ab-dock'; z.innerHTML='';
+  z.insertAdjacentHTML('beforeend',`<button class="ab-ic ${llVoice.muted?'off':''}" id="spk" aria-label="Voice replies"><span>${llVoice.muted?SPK_OFF:SPK_ON}</span><small>${llVoice.muted?(ML?'ഓഫ്':'Off'):(ML?'ശബ്ദം':'Voice')}</small></button>`);
+  const mid=document.createElement('div'); mid.className='ab-mid'; mid.innerHTML=wv('l'); mid.appendChild(orb); mid.insertAdjacentHTML('beforeend',wv('r')); z.appendChild(mid);
+  z.insertAdjacentHTML('beforeend',`<button class="ab-ic" id="kb" aria-label="Type instead"><span>${KB}</span><small>${ML?'ടൈപ്പ്':'Type'}</small></button>`);
+  orb.onclick=()=>$('#amic').click();
+  $('#spk').onclick=()=>{ llVoice.setMuted(!llVoice.muted); const b=$('#spk'); b.classList.toggle('off',llVoice.muted); b.querySelector('span').innerHTML=llVoice.muted?SPK_OFF:SPK_ON; b.querySelector('small').textContent=llVoice.muted?(ML?'ഓഫ്':'Off'):(ML?'ശബ്ദം':'Voice'); buzz(); };
+  inp.classList.add('lx-hide');
+  $('#kb').onclick=()=>{ const show=inp.classList.contains('lx-hide'); inp.classList.toggle('lx-hide',!show); $('#kb').classList.toggle('on',show); llVoice.unlock(); if(show) setTimeout(()=>$('#aq').focus(),50); };
+  if(p&&p.q){ inp.classList.remove('lx-hide'); $('#kb').classList.add('on'); }
+  // dock + input share one bottom area
+  const foot=document.createElement('div'); foot.className='ab-foot'; z.before(foot); foot.append(inp,z);
+};
 
 /* ---------- bottom nav: Home · Explore · Ask · Orders · Account ---------- */
 const _lxRBN=renderBottomNav;
