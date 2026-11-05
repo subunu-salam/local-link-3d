@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Local Link — Everything Local. One Place.</title>
+<meta name="description" content="Local Link: the hyperlocal marketplace for Kozhikode — local shops, services, workers and rides in one app, with a Malayalam voice assistant and AI demand forecasting for shopkeepers." />
+<meta name="theme-color" content="#0A5C55" />
+<link rel="icon" href="img/logo.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,700;1,800&family=Poppins:wght@400;500;600;700;800&family=Noto+Sans+Malayalam:wght@500;600;700&display=swap" />
+<style>
+:root{
+  --deep:#0A5C55; --deeper:#06302C; --teal:#0C8F82; --teal2:#14B8A6; --mint:#E3F5F1; --mint2:#C9EEE6;
+  --cream:#FFF3E2; --coral:#F26B3A; --coral2:#FF7A59; --ink:#0E2A27; --ink2:#4A615D; --bg:#F5F8F7; --line:rgba(10,92,85,.12);
+  --spring:cubic-bezier(.34,1.56,.64,1); --ease:cubic-bezier(.22,1,.36,1);
+  --head:'Barlow Condensed',sans-serif; --body:'Poppins',system-ui,sans-serif; --ml:'Noto Sans Malayalam','Poppins',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:var(--body);color:var(--ink);background:var(--bg);overflow-x:hidden;line-height:1.55}
+img{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+.ml{font-family:var(--ml)}
+.wrap{width:min(1180px,92vw);margin:0 auto}
+h1,h2,.h{font-family:var(--head);font-style:italic;font-weight:800;text-transform:uppercase;letter-spacing:.2px;line-height:.92}
+h2{font-size:clamp(40px,6.4vw,84px)}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--teal);background:var(--mint);padding:7px 12px;border-radius:999px}
+.eyebrow i{width:7px;height:7px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 0 rgba(242,107,58,.6);animation:ping 1.8s infinite}
+@keyframes ping{70%{box-shadow:0 0 0 9px rgba(242,107,58,0)}100%{box-shadow:0 0 0 0 rgba(242,107,58,0)}}
+.lead{font-size:clamp(16px,1.6vw,19px);color:var(--ink2);max-width:640px}
+.hl{color:var(--coral)}
+section{position:relative;padding:clamp(80px,12vw,150px) 0}
+.dark{background:radial-gradient(1200px 600px at 80% -10%,#0E7C71 0%,transparent 60%),linear-gradient(160deg,var(--deep),var(--deeper));color:#fff}
+.dark .lead{color:#BFE5DE} .dark .eyebrow{background:rgba(255,255,255,.08);color:#7FE0CF}
+
+/* reveal */
+.rv{opacity:0;transform:translateY(36px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
+.rv.in{opacity:1;transform:none}
+.rv.d1{transition-delay:.08s}.rv.d2{transition-delay:.16s}.rv.d3{transition-delay:.24s}.rv.d4{transition-delay:.32s}
+
+/* nav */
+.nav{position:fixed;inset:12px 0 auto;z-index:50;pointer-events:none}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;pointer-events:auto;background:rgba(255,255,255,.72);backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);border:1px solid rgba(255,255,255,.6);border-radius:18px;padding:9px 10px 9px 14px;box-shadow:0 12px 30px -18px rgba(6,48,44,.45);transition:background .3s}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--head);font-style:italic;font-weight:800;font-size:23px;color:var(--deep)}
+.brand img{width:30px;height:30px}
+.nav ul{display:none;list-style:none;gap:22px;font-size:14px;font-weight:600;color:var(--ink2)}
+.nav ul a:hover{color:var(--teal)}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:14px;border-radius:14px;padding:11px 16px;border:0;cursor:pointer;transition:transform .25s var(--spring),box-shadow .25s}
+.btn:active{transform:scale(.96)}
+.btn.p{background:linear-gradient(135deg,var(--coral2),var(--coral));color:#fff;box-shadow:0 12px 24px -12px rgba(242,107,58,.8)}
+.btn.g{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25)}
+.btn.t{background:var(--deep);color:#fff}
+.btn svg{width:17px;height:17px}
+@media(min-width:900px){.nav ul{display:flex}}
+.prog{position:fixed;left:0;top:0;height:3px;background:linear-gradient(90deg,var(--teal2),var(--coral));z-index:60;width:0}
+
+/* HERO */
+.hero{min-height:100svh;display:flex;align-items:center;padding:110px 0 60px;overflow:hidden}
+#net{position:absolute;inset:0;width:100%;height:100%}
+.hero .wrap{position:relative;display:grid;gap:30px;align-items:center}
+@media(min-width:980px){.hero .wrap{grid-template-columns:1.05fr .95fr}}
+.hero h1{font-size:clamp(56px,8.4vw,108px);margin:18px 0 16px}
+@media(min-width:980px){.hero h1{font-size:clamp(64px,6.6vw,104px)}}
+.hero h1 .o{display:block;-webkit-text-stroke:2px #7FE0CF;color:transparent}
+.hero .mlh{font-size:clamp(18px,2.2vw,24px);font-weight:600;color:#FFD2BF;margin-bottom:12px}
+.hero .cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.chips span{font-size:12.5px;font-weight:600;padding:7px 11px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#D9F3EE}
+
+/* 3D orbit of screens */
+.stage{position:relative;height:clamp(420px,62vw,600px);perspective:1400px;touch-action:pan-y;cursor:grab}
+.stage:active{cursor:grabbing}
+.ring{position:absolute;left:50%;top:50%;width:0;height:0;transform-style:preserve-3d}
+.card3{position:absolute;width:clamp(150px,19vw,210px);aspect-ratio:9/19.5;left:0;top:0;transform-style:preserve-3d;border-radius:26px;padding:6px;background:linear-gradient(160deg,#1C3B37,#0B1F1C);box-shadow:0 30px 60px -20px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.12)}
+.card3 img{width:100%;height:100%;object-fit:cover;object-position:top;border-radius:21px;backface-visibility:hidden}
+.card3::after{content:"";position:absolute;inset:6px;border-radius:21px;background:linear-gradient(115deg,rgba(255,255,255,.22),transparent 40%);pointer-events:none}
+.card3 b{position:absolute;left:50%;bottom:-34px;transform:translateX(-50%);white-space:nowrap;font-size:12px;font-weight:700;color:#BFE5DE;letter-spacing:.4px}
+.logo3d{position:absolute;z-index:50;left:50%;top:50%;width:120px;height:120px;transform:translate(-50%,-50%);filter:drop-shadow(0 20px 40px rgba(0,0,0,.45));animation:bob 5s ease-in-out infinite}
+@keyframes bob{50%{transform:translate(-50%,-58%) rotate(-4deg)}}
+.drag{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font-size:12px;color:#8FCFC4;display:flex;gap:6px;align-items:center;opacity:.8}
+
+/* problem → solution */
+.ps{display:grid;gap:18px;margin-top:46px}
+@media(min-width:860px){.ps{grid-template-columns:1fr 1fr}}
+.pcol{border-radius:28px;padding:28px;background:#fff;border:1px solid var(--line)}
+.pcol.with{background:linear-gradient(160deg,#fff,var(--mint));border-color:var(--mint2)}
+.pcol h3{font-family:var(--head);font-style:italic;font-size:30px;text-transform:uppercase;margin-bottom:14px}
+.pcol li{list-style:none;display:flex;gap:12px;padding:13px 0;border-top:1px dashed var(--line);font-weight:500}
+.pcol li:first-of-type{border-top:0}
+.pcol.before li span{position:relative;color:var(--ink2)}
+.pcol.before li span::after{content:"";position:absolute;left:0;top:55%;height:2px;width:0;background:var(--coral);transition:width .9s var(--ease)}
+.pcol.before.in li span::after{width:100%}
+.pcol.before li:nth-child(2) span::after{transition-delay:.15s}.pcol.before li:nth-child(3) span::after{transition-delay:.3s}.pcol.before li:nth-child(4) span::after{transition-delay:.45s}
+.ico{flex:none;width:28px;height:28px;border-radius:9px;display:grid;place-items:center;font-size:15px}
+.before .ico{background:#FFE6DC;color:var(--coral)} .with .ico{background:var(--deep);color:#fff}
+
+/* three apps */
+.apps{display:grid;gap:22px;margin-top:50px}
+@media(min-width:900px){.apps{grid-template-columns:repeat(3,1fr)}}
+.app{position:relative;border-radius:30px;padding:26px 24px 0;overflow:hidden;background:#fff;border:1px solid var(--line);transform-style:preserve-3d;transition:transform .4s var(--ease),box-shadow .4s}
+.app:hover{box-shadow:0 40px 60px -30px rgba(10,92,85,.45)}
+.app .tag{font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--coral)}
+.app h3{font-family:var(--head);font-style:italic;font-size:38px;text-transform:uppercase;margin:6px 0 8px;line-height:.95}
+.app p{color:var(--ink2);font-size:14.5px;min-height:66px}
+.phone{margin:22px auto 0;width:78%;border-radius:28px 28px 0 0;padding:7px 7px 0;background:#0B1F1C;transform:translateY(30px) rotateX(10deg);transition:transform .8s var(--ease)}
+.app.in .phone{transform:translateY(0) rotateX(0)}
+.phone img{border-radius:22px 22px 0 0;aspect-ratio:9/13;object-fit:cover;object-position:top;width:100%}
+.app.c1{background:linear-gradient(170deg,#fff 40%,var(--mint))}
+.app.c2{background:linear-gradient(170deg,#fff 40%,var(--cream))}
+.app.c3{background:linear-gradient(170deg,#fff 40%,#E7EEF6)}
+
+/* voice */
+.voice .wrap{display:grid;gap:40px;align-items:center}
+@media(min-width:960px){.voice .wrap{grid-template-columns:1fr 1fr}}
+.vphone{position:relative;width:min(360px,88vw);margin:0 auto;border-radius:40px;padding:12px;background:linear-gradient(160deg,#1C3B37,#0B1F1C);box-shadow:0 50px 90px -30px rgba(0,0,0,.7)}
+.vscr{border-radius:30px;background:linear-gradient(180deg,#F1FBF8,#fff);height:600px;overflow:hidden;display:flex;flex-direction:column;color:var(--ink)}
+.vtop{text-align:center;padding:22px 14px 8px}
+.vtop b{font-family:var(--head);font-style:italic;font-size:26px;text-transform:uppercase;color:var(--deep)}
+.vtop small{display:block;font-size:12px;color:var(--ink2)}
+.vmsgs{flex:1;padding:8px 14px;display:flex;flex-direction:column;gap:9px;overflow:hidden;justify-content:flex-end}
+.vb{max-width:84%;padding:10px 13px;border-radius:18px;font-size:13.5px;line-height:1.5;opacity:0;transform:translateY(12px) scale(.97);transition:all .5s var(--spring)}
+.vb.show{opacity:1;transform:none}
+.vb.me{align-self:flex-end;background:var(--deep);color:#fff;border-bottom-right-radius:6px}
+.vb.bot{align-self:flex-start;background:#fff;box-shadow:0 6px 18px -10px rgba(10,92,85,.45);border-bottom-left-radius:6px}
+.vcard{align-self:stretch;display:flex;gap:10px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:16px;padding:9px 11px;font-size:12.5px;opacity:0;transform:translateX(-14px);transition:all .5s var(--ease)}
+.vcard.show{opacity:1;transform:none}
+.vcard i{width:34px;height:34px;border-radius:11px;background:var(--mint);display:grid;place-items:center;font-style:normal;font-size:17px}
+.vcard b{display:block;font-size:13px} .vcard span{color:var(--ink2)}
+.vdock{display:flex;align-items:center;justify-content:center;gap:12px;padding:14px 0 22px}
+.wv{display:flex;gap:4px;align-items:center;height:34px}
+.wv i{width:4px;border-radius:3px;background:var(--teal2);height:8px;transition:height .12s}
+.orb{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;color:#fff;background:radial-gradient(circle at 35% 30%,#5FE3CF,var(--teal) 55%,var(--deep));box-shadow:0 0 0 6px #fff,0 0 0 7px var(--mint2),0 14px 30px -8px rgba(12,143,130,.8);position:relative}
+.orb::before{content:"";position:absolute;inset:-14px;border-radius:50%;border:2px solid var(--teal2);opacity:0;animation:orbp 2s infinite}
+.orb.live::before{opacity:1}
+@keyframes orbp{0%{transform:scale(.8);opacity:.7}100%{transform:scale(1.35);opacity:0}}
+.orb svg{width:26px;height:26px}
+.vpoints{display:grid;gap:12px;margin-top:28px}
+.vpoints>div{display:flex;gap:14px;align-items:flex-start;padding:16px;border-radius:20px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+.vpoints b{display:block;font-size:16px}
+.vpoints span{color:#BFE5DE;font-size:14px}
+.vpoints em{flex:none;font-style:normal;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,var(--coral2),var(--coral));font-weight:800}
+.langs{display:flex;gap:8px;margin-top:20px}
+.langs span{padding:8px 14px;border-radius:12px;font-weight:700;font-size:14px;background:#fff;color:var(--deep)}
+.langs span.alt{background:rgba(255,255,255,.1);color:#fff}
+
+/* forecast */
+.fc{display:grid;gap:30px;align-items:center;margin-top:10px}
+@media(min-width:960px){.fc{grid-template-columns:.9fr 1.1fr}}
+.fcard{background:#fff;border-radius:30px;padding:24px;border:1px solid var(--line);box-shadow:0 40px 80px -40px rgba(10,92,85,.45)}
+.fhead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}
+.fhead small{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--teal)}
+.fhead b{display:block;font-size:22px}
+.conf{padding:6px 11px;border-radius:999px;background:var(--mint);color:var(--deep);font-weight:700;font-size:13px;white-space:nowrap}
+#fchart{width:100%;height:260px;display:block}
+.fsel{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.fsel button{font:600 13px var(--body);border:1px solid var(--line);background:#fff;padding:8px 12px;border-radius:12px;cursor:pointer;color:var(--ink2);transition:all .2s}
+.fsel button.on{background:var(--deep);color:#fff;border-color:var(--deep)}
+.steps{display:grid;gap:12px;margin-top:26px}
+.steps div{display:flex;gap:14px;align-items:center;padding:14px 16px;background:#fff;border-radius:18px;border:1px solid var(--line)}
+.steps em{font-style:normal;font-family:var(--head);font-size:30px;color:var(--coral);width:34px}
+
+/* bento */
+.bento{display:grid;gap:14px;margin-top:46px;grid-template-columns:1fr}
+@media(min-width:720px){.bento{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1000px){.bento{grid-template-columns:repeat(4,1fr);grid-auto-rows:minmax(190px,auto)}.b-w2{grid-column:span 2}.b-h2{grid-row:span 2}}
+.bx{position:relative;border-radius:26px;padding:22px;background:#fff;border:1px solid var(--line);overflow:hidden;transform-style:preserve-3d;transition:transform .25s ease,box-shadow .3s}
+.bx::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;background:radial-gradient(400px circle at var(--mx,50%) var(--my,50%),rgba(20,184,166,.7),transparent 40%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:opacity .3s}
+.bx:hover::before{opacity:1}
+.bx:hover{box-shadow:0 30px 50px -30px rgba(10,92,85,.5)}
+.bx .bi{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;font-size:22px;background:var(--mint);margin-bottom:14px}
+.bx h4{font-size:18px;margin-bottom:4px}
+.bx p{font-size:14px;color:var(--ink2)}
+.bx.feat{background:linear-gradient(160deg,var(--deep),#0E7C71);color:#fff;border:0}
+.bx.feat p{color:#C7ECE5} .bx.feat .bi{background:rgba(255,255,255,.12)}
+.bx.warm{background:linear-gradient(160deg,#fff,var(--cream))}
+.bx .shot{margin-top:16px;border-radius:16px;overflow:hidden;box-shadow:0 18px 30px -18px rgba(0,0,0,.5)}
+.bx .shot img{aspect-ratio:16/11;object-fit:cover;object-position:top;width:100%}
+
+/* impact */
+.impact{display:grid;gap:14px;margin-top:44px;grid-template-columns:repeat(2,1fr)}
+@media(min-width:900px){.impact{grid-template-columns:repeat(4,1fr)}}
+.stat{border-radius:24px;padding:22px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+.stat b{display:block;font-family:var(--head);font-style:italic;font-size:clamp(46px,6vw,70px);line-height:1;color:#fff}
+.stat b small{font-size:.5em;color:#7FE0CF}
+.stat span{color:#BFE5DE;font-size:14px}
+.gains{display:grid;gap:14px;margin-top:22px}
+@media(min-width:900px){.gains{grid-template-columns:repeat(3,1fr)}}
+.gain{border-radius:24px;padding:24px;background:#fff;color:var(--ink)}
+.gain em{font-style:normal;font-size:28px}
+.gain h4{font-size:19px;margin:10px 0 6px}
+.gain p{color:var(--ink2);font-size:14.5px}
+.gain .mlt{display:block;margin-top:10px;font-family:var(--ml);color:var(--teal);font-weight:600;font-size:13.5px}
+.note{margin-top:14px;font-size:12.5px;color:#8FCFC4}
+
+/* journey (scroll pinned) */
+.journey{display:grid;gap:30px;margin-top:40px}
+@media(min-width:960px){.journey{grid-template-columns:1fr 1fr;align-items:start}}
+.jlist{display:grid;gap:10px}
+.jstep{padding:20px 22px;border-radius:22px;border:1px solid var(--line);background:#fff;opacity:.45;transition:all .5s var(--ease);cursor:pointer}
+.jstep.on{opacity:1;box-shadow:0 26px 40px -28px rgba(10,92,85,.55);border-color:var(--mint2);transform:translateX(6px)}
+.jstep small{font-weight:700;color:var(--coral);letter-spacing:1px}
+.jstep h4{font-size:19px;margin:4px 0}
+.jstep p{color:var(--ink2);font-size:14.5px}
+.jstep .jm{display:none;margin-top:14px;border-radius:18px;max-height:340px;object-fit:cover;object-position:top;width:100%}
+@media(max-width:959px){.jview{display:none!important}.jstep{opacity:1}.jstep .jm{display:block}}
+.jview{position:sticky;top:90px;display:grid;place-items:center}
+.jph{width:min(300px,80vw);border-radius:38px;padding:9px;background:#0B1F1C;box-shadow:0 40px 70px -30px rgba(0,0,0,.6);position:relative}
+.jph img{border-radius:30px;aspect-ratio:9/19.5;object-fit:cover;object-position:top;width:100%;transition:opacity .45s}
+
+/* roadmap */
+.road{position:relative;display:grid;gap:16px;margin-top:46px}
+@media(min-width:900px){.road{grid-template-columns:repeat(4,1fr)}}
+.road::before{content:"";position:absolute;left:22px;top:0;bottom:0;width:3px;background:linear-gradient(var(--teal2),var(--coral));border-radius:3px}
+@media(min-width:900px){.road::before{left:0;right:0;top:22px;bottom:auto;width:auto;height:3px;background:linear-gradient(90deg,var(--teal2),var(--coral))}}
+.ph{position:relative;padding-left:58px}
+@media(min-width:900px){.ph{padding:60px 0 0}}
+.ph .dot{position:absolute;left:10px;top:4px;width:27px;height:27px;border-radius:50%;background:#fff;border:3px solid var(--teal);display:grid;place-items:center;font-size:11px;font-weight:800;color:var(--deep)}
+@media(min-width:900px){.ph .dot{left:0;top:9px}}
+.ph.now .dot{background:var(--coral);border-color:#fff;color:#fff;box-shadow:0 0 0 6px rgba(242,107,58,.22)}
+.ph small{font-weight:700;color:var(--teal);letter-spacing:1px;text-transform:uppercase;font-size:12px}
+.ph h4{font-size:20px;margin:4px 0}
+.ph p{color:var(--ink2);font-size:14px}
+
+/* tech */
+.tech{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px}
+.tech span{display:inline-flex;align-items:center;gap:8px;padding:11px 15px;border-radius:14px;background:#fff;border:1px solid var(--line);font-weight:600;font-size:14px}
+.tech span i{width:9px;height:9px;border-radius:50%;background:var(--teal2)}
+.tech span.c i{background:var(--coral)}
+
+/* CTA */
+.cta-box{position:relative;border-radius:36px;padding:clamp(34px,6vw,70px);overflow:hidden;text-align:center;background:linear-gradient(150deg,var(--deep),#0E7C71 60%,#0C8F82)}
+.cta-box::before{content:"";position:absolute;inset:-40%;background:conic-gradient(from 0deg,transparent 0 70%,rgba(255,122,89,.55) 80%,transparent 90%);animation:spin 8s linear infinite}
+.cta-box::after{content:"";position:absolute;inset:2px;border-radius:34px;background:linear-gradient(150deg,var(--deep),#0B6A62)}
+.cta-box>*{position:relative;z-index:1}
+@keyframes spin{to{transform:rotate(1turn)}}
+.cta-box h2{color:#fff}
+.cta-box .lead{color:#BFE5DE;margin:14px auto 0}
+.cta-box .cta{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+.url{margin-top:18px;font-weight:600;color:#7FE0CF;font-size:15px;letter-spacing:.3px}
+.shimmer{position:relative;overflow:hidden}
+.shimmer::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:sh 3.2s infinite}
+@keyframes sh{60%,100%{left:130%}}
+footer{padding:40px 0 60px;text-align:center;color:var(--ink2);font-size:13px}
+
+/* pitch dots (presenter nav) */
+.dots{position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:40;display:none;flex-direction:column;gap:10px}
+@media(min-width:900px){.dots{display:flex}}
+.dots a{width:10px;height:10px;border-radius:50%;background:rgba(10,92,85,.25);transition:all .3s}
+.dots a.on{background:var(--coral);transform:scale(1.4)}
+.dots.ondark a{background:rgba(255,255,255,.3)} .dots.ondark a.on{background:var(--coral)}
+
+/* marquee */
+.mq{overflow:hidden;padding:18px 0;background:var(--deep);color:#fff}
+.mq .tr{display:flex;gap:40px;width:max-content;animation:mq 30s linear infinite;font-family:var(--head);font-style:italic;font-weight:800;font-size:28px;text-transform:uppercase}
+.mq .tr span{display:flex;align-items:center;gap:40px;white-space:nowrap}
+.mq .tr span::after{content:"";width:12px;height:12px;border-radius:50%;background:var(--coral)}
+@keyframes mq{to{transform:translateX(-50%)}}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="prog" id="prog"></div>
+
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="#top"><img src="img/logo.svg" alt="" />LOCAL LINK</a>
+  <ul><li><a href="#problem">Why</a></li><li><a href="#apps">Platform</a></li><li><a href="#voice">Malayalam AI</a></li><li><a href="#forecast">Forecast</a></li><li><a href="#impact">Impact</a></li><li><a href="#roadmap">Roadmap</a></li></ul>
+  <a class="btn p" href="https://local-link-3d.onrender.com" target="_blank" rel="noopener">Live app <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 17 17 7M9 7h8v8"/></svg></a>
+</div></nav>
+
+<div class="dots" id="dots"></div>
+
+<!-- HERO -->
+<section class="hero dark" id="top" data-dark>
+  <canvas id="net"></canvas>
+  <div class="wrap">
+    <div>
+      <span class="eyebrow rv"><i></i>Kozhikode · Hyperlocal platform</span>
+      <h1 class="rv d1">Everything local.<span class="o">One place.</span></h1>
+      <p class="mlh ml rv d2">നമ്മുടെ നാട്ടിലെ എല്ലാം, ഒരൊറ്റ ആപ്പിൽ.</p>
+      <p class="lead rv d2">Local Link puts every neighbourhood shop, home service, local worker and ride in one app — so people buy from their own town, and the money stays in it.</p>
+      <div class="cta rv d3">
+        <a class="btn p shimmer" href="https://local-link-3d.onrender.com" target="_blank" rel="noopener">Open the live app</a>
+        <a class="btn g" href="#problem">See the story ↓</a>
+      </div>
+      <div class="chips rv d4"><span>🛍️ Shops</span><span>🍛 Food</span><span>🔧 Services</span><span>👷 Workers</span><span>🛺 Rides</span><span>🎙️ Malayalam voice</span></div>
+    </div>
+    <div class="stage rv d2" id="stage">
+      <div class="ring" id="ring"></div>
+      <img class="logo3d" src="img/logo.svg" alt="Local Link logo" />
+      <div class="drag">⟵ drag to spin ⟶</div>
+    </div>
+  </div>
+</section>
+
+<div class="mq"><div class="tr"><span>Order from local shops</span><span>Book home services</span><span>Hire local workers</span><span>Book an auto</span><span>Local offers</span><span>Community &amp; events</span><span>Order from local shops</span><span>Book home services</span><span>Hire local workers</span><span>Book an auto</span><span>Local offers</span><span>Community &amp; events</span></div></div>
+
+<!-- PROBLEM -->
+<section id="problem">
+  <div class="wrap">
+    <span class="eyebrow rv"><i></i>The problem</span>
+    <h2 class="rv d1" style="margin-top:16px">Our town is online.<br><span class="hl">Our shops aren't.</span></h2>
+    <p class="lead rv d2" style="margin-top:16px">People already search on their phones. Today that search sends them to big outside platforms — while the shop down the road, the electrician next street and the auto driver at the junction stay invisible.</p>
+    <div class="ps">
+      <div class="pcol before rv" id="before"><h3>Before</h3><ul>
+        <li><span class="ico">✕</span><span>Local shops have no online presence</span></li>
+        <li><span class="ico">✕</span><span>Finding a plumber means asking around on WhatsApp</span></li>
+        <li><span class="ico">✕</span><span>Skilled workers wait for word-of-mouth jobs</span></li>
+        <li><span class="ico">✕</span><span>Apps only in English, built for big cities</span></li>
+      </ul></div>
+      <div class="pcol with rv d2"><h3>With Local Link</h3><ul>
+        <li><span class="ico">✓</span><span>Every shop gets a storefront, orders and chat in minutes</span></li>
+        <li><span class="ico">✓</span><span>Services booked with a price and a time slot</span></li>
+        <li><span class="ico">✓</span><span>Workers listed with skills, rates and ratings</span></li>
+        <li><span class="ico">✓</span><span>Speak in Malayalam — the app answers by voice</span></li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- THREE APPS -->
+<section id="apps" style="background:linear-gradient(180deg,var(--bg),#fff)">
+  <div class="wrap">
+    <span class="eyebrow rv"><i></i>One platform · three apps</span>
+    <h2 class="rv d1" style="margin-top:16px">Built for everyone<br>in the <span class="hl">local loop</span></h2>
+    <div class="apps">
+      <div class="app c1 rv tilt"><span class="tag">For residents</span><h3>Customer app</h3><p>Shop, order food, book services and rides, track orders and grab local deals — Zepto-fast, but local.</p><div class="phone"><img src="img/home.webp" alt="Customer app home" loading="lazy"/></div></div>
+      <div class="app c2 rv d1 tilt"><span class="tag">For shopkeepers</span><h3>Partner app</h3><p>Accept orders, manage products, chat with customers — with an AI forecast of what will sell next week.</p><div class="phone"><img src="img/partner.webp" alt="Partner app dashboard" loading="lazy"/></div></div>
+      <div class="app c3 rv d2 tilt"><span class="tag">For the network</span><h3>Admin console</h3><p>Approve businesses, watch orders and revenue across areas, and run offers and announcements.</p><div class="phone"><img src="img/admin.webp" alt="Admin dashboard" loading="lazy"/></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- VOICE -->
+<section class="voice dark" id="voice" data-dark>
+  <div class="wrap">
+    <div>
+      <span class="eyebrow rv"><i></i>Wow factor · AI voice</span>
+      <h2 class="rv d1" style="margin-top:16px">Just say it.<br><span class="hl">In Malayalam.</span></h2>
+      <p class="lead rv d2" style="margin-top:16px">Not everyone types. With Ask Local Link, anyone can simply speak — the assistant understands everyday Malayalam, finds the right local shop and answers back in a natural voice.</p>
+      <div class="langs rv d2"><span class="ml">മലയാളം · first</span><span class="alt">English · second</span></div>
+      <div class="vpoints">
+        <div class="rv d2"><em>1</em><div><b>Real-time voice</b><span>Streams like a phone call — the reply starts as you finish speaking.</span></div></div>
+        <div class="rv d3"><em>2</em><div><b>Only real local answers</b><span>Every answer comes from the live catalogue of shops, prices and services.</span></div></div>
+        <div class="rv d4"><em>3</em><div><b>Digital inclusion</b><span>Elders and first-time smartphone users can order without typing a word.</span></div></div>
+      </div>
+    </div>
+    <div class="rv d2">
+      <div class="vphone"><div class="vscr">
+        <div class="vtop"><b>Ask Local Link</b><small class="ml">നിങ്ങളുടെ നാട്ടിലെ ഷോപ്പിങ് സഹായി</small></div>
+        <div class="vmsgs" id="vmsgs"></div>
+        <div class="vdock"><div class="wv" id="wvl"></div><div class="orb" id="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div><div class="wv" id="wvr"></div></div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FORECAST -->
+<section id="forecast">
+  <div class="wrap">
+    <span class="eyebrow rv"><i></i>Wow factor · AI for shopkeepers</span>
+    <h2 class="rv d1" style="margin-top:16px">Know what will sell<br><span class="hl">before it sells</span></h2>
+    <div class="fc" style="margin-top:34px">
+      <div>
+        <p class="lead rv">Small shops lose money on over-stock and empty shelves. Local Link reads each shop's own orders and forecasts next week's demand per product — with a clear confidence level.</p>
+        <div class="steps">
+          <div class="rv d1"><em>1</em><span><b>Pick a product</b> — from the shop's own catalogue</span></div>
+          <div class="rv d2"><em>2</em><span><b>Automatic forecast</b> — units and revenue for the coming days</span></div>
+          <div class="rv d3"><em>3</em><span><b>Confidence level</b> — so the owner knows how much to trust it</span></div>
+        </div>
+      </div>
+      <div class="fcard rv d2">
+        <div class="fhead"><div><small>AI demand forecast · next 7 days</small><b id="fname">Chicken Biriyani</b></div><span class="conf" id="fconf">86% confidence</span></div>
+        <canvas id="fchart"></canvas>
+        <div class="fsel" id="fsel"><button class="on" data-i="0">Chicken Biriyani</button><button data-i="1">Fresh Milk 1L</button><button data-i="2">AC Service</button></div>
+        <p style="font-size:12px;color:var(--ink2);margin-top:10px">Illustrative sample — the live partner app computes this from each shop's real orders.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BENTO -->
+<section id="features" style="background:#fff">
+  <div class="wrap">
+    <span class="eyebrow rv"><i></i>Everything in the box</span>
+    <h2 class="rv d1" style="margin-top:16px">One app.<br><span class="hl">Every local need.</span></h2>
+    <div class="bento">
+      <div class="bx feat b-w2 b-h2 rv"><div class="bi">⚡</div><h4>Quick-commerce from local shops</h4><p>Groceries, food and essentials from nearby stores, with live order tracking — the Instamart experience, powered by our own shops.</p><div class="shot"><img src="img/store.webp" alt="Store page" loading="lazy"/></div></div>
+      <div class="bx rv d1"><div class="bi">🔧</div><h4>Home services</h4><p>AC repair, electricians, plumbers — clear prices and time slots.</p></div>
+      <div class="bx warm rv d2"><div class="bi">👷</div><h4>Local workers</h4><p>Masons, painters and helpers listed with skills and daily rates.</p></div>
+      <div class="bx rv d1"><div class="bi">🛺</div><h4>Autos &amp; taxis</h4><p>Book local drivers for drops and airport runs.</p></div>
+      <div class="bx rv d2"><div class="bi">🏷️</div><h4>Local offers</h4><p>Shops run deals and coupons that reach nearby buyers.</p></div>
+      <div class="bx warm b-w2 rv"><div class="bi">📍</div><h4>Around you, right now</h4><p>A live map of what's open, nearby offers and services in your area.</p><div class="shot"><img src="img/home2.webp" alt="Services and top stores" loading="lazy"/></div></div>
+      <div class="bx rv d1"><div class="bi">💬</div><h4>Chat &amp; WhatsApp</h4><p>Customers talk straight to the shop, no middleman.</p></div>
+      <div class="bx rv d2"><div class="bi">🤝</div><h4>Community &amp; events</h4><p>Local news, events and announcements in one feed.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- JOURNEY -->
+<section id="journey">
+  <div class="wrap">
+    <span class="eyebrow rv"><i></i>How it works</span>
+    <h2 class="rv d1" style="margin-top:16px">From “I need” to<br><span class="hl">“it's here”</span></h2>
+    <div class="journey">
+      <div class="jlist" id="jlist">
+        <div class="jstep on" data-img="img/home.webp"><small>STEP 01</small><h4>Open — your area is already set</h4><p>Kunnamangalam's shops, offers and services appear first.</p></div>
+        <div class="jstep" data-img="img/ask.webp"><small>STEP 02</small><h4>Search, tap or just speak</h4><p>“രണ്ട് ബിരിയാണിയും ഒരു പ്ലംബറും” — the assistant handles both.</p></div>
+        <div class="jstep" data-img="img/store.webp"><small>STEP 03</small><h4>Pick a local shop</h4><p>Ratings, distance, open hours, call, WhatsApp or chat.</p></div>
+        <div class="jstep" data-img="img/partner.webp"><small>STEP 04</small><h4>The shop accepts in one tap</h4><p>The owner sees the order instantly, with tomorrow's forecast alongside.</p></div>
+      </div>
+      <div class="jview"><div class="jph"><img id="jimg" src="img/home.webp" alt="App screen"/></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- IMPACT -->
+<section class="dark" id="impact" data-dark>
+  <div class="wrap">
+    <span class="eyebrow rv"><i></i>Impact for the constituency</span>
+    <h2 class="rv d1" style="margin-top:16px">Money spent here<br><span class="hl">stays here</span></h2>
+    <div class="impact">
+      <div class="stat rv"><b data-count="29">0</b><span>Local businesses live in the demo</span></div>
+      <div class="stat rv d1"><b data-count="6">0</b><span>Ways to serve: shops, food, services, workers, rides, offers</span></div>
+      <div class="stat rv d2"><b data-count="3">0</b><span>Apps: residents, shopkeepers, admin</span></div>
+      <div class="stat rv d3"><b data-count="2">0</b><span>Languages — Malayalam first, English second</span></div>
+    </div>
+    <div class="gains">
+      <div class="gain rv"><em>🏪</em><h4>Small shops compete online</h4><p>A free digital storefront and ordering for every local business — no big-platform commission eating their margin.</p><span class="mlt">കടകൾക്ക് ഓൺലൈൻ കച്ചവടം</span></div>
+      <div class="gain rv d1"><em>👷</em><h4>Jobs for local workers</h4><p>Electricians, masons, drivers and helpers get steady bookings from their own neighbourhood.</p><span class="mlt">നാട്ടുകാർക്ക് തൊഴിൽ</span></div>
+      <div class="gain rv d2"><em>📣</em><h4>A direct line to citizens</h4><p>Community feed for local events, announcements and offers — in Malayalam, reaching every phone.</p><span class="mlt">ജനങ്ങളുമായി നേരിട്ട്</span></div>
+    </div>
+    <p class="note rv">Counts reflect the current live demo for Kunnamangalam, Kozhikode.</p>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section id="roadmap">
+  <div class="wrap">
+    <span class="eyebrow rv"><i></i>Rollout</span>
+    <h2 class="rv d1" style="margin-top:16px">Start in one town.<br><span class="hl">Grow across Kerala.</span></h2>
+    <div class="road">
+      <div class="ph now rv"><span class="dot">1</span><small>Now</small><h4>Kunnamangalam pilot</h4><p>Live app, shops onboarded, Malayalam voice assistant.</p></div>
+      <div class="ph rv d1"><span class="dot">2</span><small>Next</small><h4>Kozhikode city</h4><p>More areas, shop onboarding drives, delivery partners.</p></div>
+      <div class="ph rv d2"><span class="dot">3</span><small>Then</small><h4>Whole district</h4><p>Panchayat-level community channels, local government notices.</p></div>
+      <div class="ph rv d3"><span class="dot">4</span><small>Vision</small><h4>Every Kerala town</h4><p>One local network, built and run locally.</p></div>
+    </div>
+    <h3 class="h rv" style="font-size:34px;margin-top:70px">Built on a modern stack</h3>
+    <div class="tech rv d1"><span><i></i>Progressive Web App · works offline</span><span><i></i>Node.js + Express API</span><span><i></i>SQLite / libSQL</span><span class="c"><i></i>Google Gemini Live voice</span><span class="c"><i></i>AI demand forecasting</span><span><i></i>Render cloud hosting</span><span><i></i>Secure JWT login</span></div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section style="padding-top:20px">
+  <div class="wrap">
+    <div class="cta-box rv">
+      <span class="eyebrow" style="background:rgba(255,255,255,.1);color:#7FE0CF"><i></i>It's live today</span>
+      <h2 style="margin-top:16px">Let's bring every<br>local shop <span class="hl">online</span></h2>
+      <p class="lead">Try it now on any phone — no download needed.</p>
+      <div class="cta"><a class="btn p shimmer" href="https://local-link-3d.onrender.com" target="_blank" rel="noopener">Open Local Link</a><a class="btn g" href="https://local-link-3d.onrender.com/partner" target="_blank" rel="noopener">Partner app</a></div>
+      <div class="url">local-link-3d.onrender.com</div>
+    </div>
+  </div>
+</section>
+<footer>© 2026 Local Link · Built by DevX Technologies</footer>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* reveal + counters */
+const io=new IntersectionObserver(es=>es.forEach(e=>{ if(!e.isIntersecting) return; e.target.classList.add('in'); io.unobserve(e.target);
+  e.target.querySelectorAll?.('[data-count]').forEach(count); if(e.target.dataset.count) count(e.target); }),{threshold:.18});
+$$('.rv').forEach(el=>io.observe(el));
+function count(el){ const n=+el.dataset.count; const t0=performance.now(); const f=t=>{ const k=Math.min(1,(t-t0)/1400); el.textContent=Math.round(n*(1-Math.pow(1-k,3))); if(k<1) requestAnimationFrame(f); }; requestAnimationFrame(f); }
+$$('.stat').forEach(s=>io.observe(s));
+
+/* progress bar + presenter dots + keyboard */
+const secs=$$('section[id]'); const dots=$('#dots');
+secs.forEach(s=>{ const a=document.createElement('a'); a.href='#'+s.id; a.title=s.id; dots.appendChild(a); });
+const so=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ const i=secs.indexOf(e.target); [...dots.children].forEach((d,j)=>d.classList.toggle('on',i===j)); dots.classList.toggle('ondark',e.target.hasAttribute('data-dark')); cur=i; } }),{threshold:.45});
+let cur=0; secs.forEach(s=>so.observe(s));
+addEventListener('keydown',e=>{ if(['ArrowDown','PageDown',' '].includes(e.key)){ e.preventDefault(); secs[Math.min(secs.length-1,cur+1)].scrollIntoView({behavior:'smooth'}); }
+  if(['ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); secs[Math.max(0,cur-1)].scrollIntoView({behavior:'smooth'}); } });
+addEventListener('scroll',()=>{ const h=document.documentElement; $('#prog').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%'; },{passive:true});
+
+/* HERO: local network canvas (3D-projected pins linked to the centre) */
+const cv=$('#net'), cx=cv.getContext('2d'); let W,H,DPR=Math.min(2,devicePixelRatio||1), pts=[];
+function size(){ W=cv.clientWidth; H=cv.clientHeight; cv.width=W*DPR; cv.height=H*DPR; cx.setTransform(DPR,0,0,DPR,0,0); }
+size(); addEventListener('resize',size);
+for(let i=0;i<90;i++){ const a=Math.random()*Math.PI*2, r=Math.pow(Math.random(),.7)*1; pts.push({x:Math.cos(a)*r,z:Math.sin(a)*r,h:Math.random(),c:Math.random()<.18}); }
+let rot=0, mx=0, my=0; addEventListener('pointermove',e=>{ mx=e.clientX/innerWidth-.5; my=e.clientY/innerHeight-.5; },{passive:true});
+function net(t){ cx.clearRect(0,0,W,H); rot+=reduce?0:.0016; const R=Math.max(W,H)*.62, cxx=W*.72, cyy=H*.62, tilt=.42+my*.1;
+  const P=p=>{ const x=p.x*Math.cos(rot+mx*.4)-p.z*Math.sin(rot+mx*.4), z=p.x*Math.sin(rot+mx*.4)+p.z*Math.cos(rot+mx*.4); const s=1/(1.6+z*.7); return {X:cxx+x*R*s, Y:cyy+z*R*s*tilt-p.h*40*s, s, z}; };
+  const c0={X:cxx,Y:cyy};
+  pts.forEach((p,i)=>{ const q=P(p); const pulse=(Math.sin(t/700+i)+1)/2;
+    if(p.c){ cx.strokeStyle=`rgba(255,122,89,${.10+pulse*.25})`; cx.lineWidth=1; cx.beginPath(); cx.moveTo(c0.X,c0.Y); cx.quadraticCurveTo((q.X+c0.X)/2,Math.min(q.Y,c0.Y)-60*q.s,q.X,q.Y); cx.stroke(); }
+    const j=pts[(i*7)%pts.length]; const r2=P(j); if(Math.hypot(q.X-r2.X,q.Y-r2.Y)<120){ cx.strokeStyle='rgba(127,224,207,.10)'; cx.beginPath(); cx.moveTo(q.X,q.Y); cx.lineTo(r2.X,r2.Y); cx.stroke(); }
+    cx.fillStyle=p.c?`rgba(255,122,89,${.6+pulse*.4})`:`rgba(127,224,207,${.25+q.s*.4})`; cx.beginPath(); cx.arc(q.X,q.Y,(p.c?3.2:1.8)*q.s*1.6,0,7); cx.fill(); });
+  requestAnimationFrame(net); }
+requestAnimationFrame(net);
+
+/* HERO: draggable 3D orbit of real app screens */
+const ring=$('#ring'), stage=$('#stage'); const shots=[['home','Customer home'],['ask','Malayalam AI'],['store','Shop page'],['partner','Partner + forecast'],['admin','Admin console'],['home2','Services']];
+const N=shots.length; const cards=shots.map(([f,l])=>{ const d=document.createElement('div'); d.className='card3'; d.innerHTML=`<img src="img/${f}.webp" alt="${l}" draggable="false"/><b>${l}</b>`; ring.appendChild(d); return d; });
+let ang=0, vel=.12, drag=false, lx=0, spinBoost=0;
+function radius(){ return Math.min(360,Math.max(210,stage.clientWidth*.42)); }
+function layout(){ const r=radius(), w=cards[0].offsetWidth, h=cards[0].offsetHeight;
+  cards.forEach((c,i)=>{ const a=ang+i*360/N; const rad=a*Math.PI/180; const z=Math.cos(rad); c.style.transform=`translate(${-w/2}px,${-h/2}px) rotateY(${a}deg) translateZ(${r}px)`; c.style.opacity=(.35+.65*(z+1)/2).toFixed(2); c.style.zIndex=Math.round((z+1)*50); }); }
+function spin(){ if(!drag) ang+=reduce?0:(vel+spinBoost); spinBoost*=.94; layout(); requestAnimationFrame(spin); }
+stage.addEventListener('pointerdown',e=>{ drag=true; lx=e.clientX; stage.setPointerCapture(e.pointerId); });
+stage.addEventListener('pointermove',e=>{ if(!drag) return; const dx=e.clientX-lx; lx=e.clientX; ang+=dx*.35; spinBoost=dx*.04; });
+stage.addEventListener('pointerup',()=>drag=false); stage.addEventListener('pointercancel',()=>drag=false);
+let lastY=scrollY; addEventListener('scroll',()=>{ const d=scrollY-lastY; lastY=scrollY; spinBoost=Math.max(-3,Math.min(3,spinBoost+d*.01)); },{passive:true});
+ring.style.transform='rotateX(-8deg)'; requestAnimationFrame(spin);
+
+/* tilt cards */
+$$('.tilt,.bx').forEach(el=>{ el.addEventListener('pointermove',e=>{ const r=el.getBoundingClientRect(); const x=(e.clientX-r.left)/r.width, y=(e.clientY-r.top)/r.height;
+  el.style.setProperty('--mx',x*100+'%'); el.style.setProperty('--my',y*100+'%'); if(e.pointerType==='mouse') el.style.transform=`perspective(900px) rotateX(${(.5-y)*6}deg) rotateY(${(x-.5)*8}deg)`; });
+  el.addEventListener('pointerleave',()=>el.style.transform=''); });
+
+/* VOICE: scripted Malayalam conversation that plays when visible */
+const vm=$('#vmsgs'), orb=$('#orb'); const wl=$('#wvl'), wr=$('#wvr');
+for(let i=0;i<6;i++){ wl.appendChild(document.createElement('i')); wr.appendChild(document.createElement('i')); }
+let talking=0; (function wave(t){ [...wl.children,...wr.children].forEach((b,i)=>{ b.style.height=(talking? 8+Math.abs(Math.sin(t/120+i*1.3))*24 : 8)+'px'; }); requestAnimationFrame(wave); })(0);
+const script=[
+  ['bot','<span class="ml">നമസ്കാരം! Local Link-ലേക്ക് സ്വാഗതം. എന്താണ് വേണ്ടത്?</span>',1600,'speak'],
+  ['me','<span class="ml">അടുത്ത് നല്ല ബിരിയാണി കിട്ടുന്ന ഹോട്ടൽ ഏതാ?</span>',1800,'listen'],
+  ['bot','<span class="ml">Paragon Restaurant നല്ല ഓപ്ഷനാണ് — 4.7 റേറ്റിംഗ്, Mananchira. ഓർഡർ ചെയ്യട്ടെ?</span>',2200,'speak'],
+  ['card','<i>🍛</i><div><b>Paragon Restaurant</b><span>Restaurant · Mananchira · ★ 4.7</span></div>',700],
+  ['card','<i>🍗</i><div><b>Chicken Biriyani</b><span>₹210 · Paragon Restaurant</span></div>',1200],
+  ['me','<span class="ml">ശരി, ഒരു പ്ലംബറെയും വേണം.</span>',1700,'listen'],
+  ['bot','<span class="ml">Anil Das എന്ന പ്ലംബർ അടുത്തുണ്ട് — ₹800, 4.6 റേറ്റിംഗ്. നാളെ രാവിലെ ബുക്ക് ചെയ്യട്ടെ?</span>',2400,'speak'],
+];
+let played=false;
+new IntersectionObserver(es=>{ if(es[0].isIntersecting&&!played){ played=true; play(); } },{threshold:.4}).observe(vm);
+async function play(){ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  while(true){ vm.innerHTML='';
+    for(const [k,h,ms,mode] of script){ orb.classList.toggle('live',mode==='listen'); talking=mode?1:0;
+      const d=document.createElement('div'); d.className=k==='card'?'vcard':'vb '+k; d.innerHTML=h; vm.appendChild(d); await sleep(60); d.classList.add('show'); await sleep(ms); talking=0; orb.classList.remove('live'); await sleep(300); }
+    await sleep(3500); } }
+
+/* FORECAST chart with confidence band, drawn on view */
+const fc=$('#fchart'), g=fc.getContext('2d'); const series=[
+  {n:'Chicken Biriyani',c:86,hist:[38,42,40,47,55,62,58,44,46,49,57,66,71,64],fut:[52,55,58,66,74,78,70]},
+  {n:'Fresh Milk 1L',c:92,hist:[120,118,125,122,119,128,131,124,126,127,123,133,135,130],fut:[129,131,128,134,137,139,136]},
+  {n:'AC Service',c:71,hist:[3,4,3,5,6,5,7,6,8,7,9,8,10,9],fut:[9,11,10,12,13,12,14]},
+]; let si=0, prog=0, seen=false;
+function draw(){ const w=fc.clientWidth, h=fc.clientHeight; fc.width=w*DPR; fc.height=h*DPR; g.setTransform(DPR,0,0,DPR,0,0); g.clearRect(0,0,w,h);
+  const s=series[si], all=[...s.hist,...s.fut], mx=Math.max(...all)*1.25, n=all.length, pad=28;
+  const X=i=>pad+i*(w-pad*1.5)/(n-1), Y=v=>h-pad-(v/mx)*(h-pad*1.8);
+  g.strokeStyle='rgba(10,92,85,.08)'; for(let k=0;k<4;k++){ const y=pad*.6+k*(h-pad*1.6)/3; g.beginPath(); g.moveTo(pad,y); g.lineTo(w-pad*.5,y); g.stroke(); }
+  const cut=s.hist.length-1, shown=Math.floor(prog*(n-1));
+  g.fillStyle='rgba(242,107,58,.06)'; g.fillRect(X(cut),0,w-X(cut),h-pad);
+  g.fillStyle='#4A615D'; g.font='600 11px Poppins'; g.fillText('past 2 weeks',pad,h-8); g.fillStyle='#F26B3A'; g.fillText('forecast',X(cut)+6,h-8);
+  // band
+  if(shown>cut){ const band=(1-s.c/100)*1.2+.06; g.beginPath(); for(let i=cut;i<=shown;i++) g.lineTo(X(i),Y(all[i]*(1+band*(i-cut)/6)));
+    for(let i=shown;i>=cut;i--) g.lineTo(X(i),Y(all[i]*(1-band*(i-cut)/6))); g.closePath(); g.fillStyle='rgba(242,107,58,.16)'; g.fill(); }
+  // area + line
+  const grad=g.createLinearGradient(0,0,0,h); grad.addColorStop(0,'rgba(20,184,166,.35)'); grad.addColorStop(1,'rgba(20,184,166,0)');
+  g.beginPath(); g.moveTo(X(0),Y(all[0])); for(let i=1;i<=Math.min(shown,cut);i++) g.lineTo(X(i),Y(all[i])); g.lineTo(X(Math.min(shown,cut)),h-pad); g.lineTo(X(0),h-pad); g.closePath(); g.fillStyle=grad; g.fill();
+  g.lineWidth=3; g.lineJoin='round'; g.strokeStyle='#0C8F82'; g.beginPath(); for(let i=0;i<=Math.min(shown,cut);i++) i?g.lineTo(X(i),Y(all[i])):g.moveTo(X(i),Y(all[i])); g.stroke();
+  if(shown>cut){ g.setLineDash([7,6]); g.strokeStyle='#F26B3A'; g.beginPath(); for(let i=cut;i<=shown;i++) i===cut?g.moveTo(X(i),Y(all[i])):g.lineTo(X(i),Y(all[i])); g.stroke(); g.setLineDash([]);
+    const e=shown; g.fillStyle='#F26B3A'; g.beginPath(); g.arc(X(e),Y(all[e]),5,0,7); g.fill(); }
+}
+function animate(){ prog=0; const t0=performance.now(); const f=t=>{ prog=Math.min(1,(t-t0)/1800); draw(); if(prog<1) requestAnimationFrame(f); }; requestAnimationFrame(f);
+  $('#fname').textContent=series[si].n; $('#fconf').textContent=series[si].c+'% confidence'; }
+new IntersectionObserver(es=>{ if(es[0].isIntersecting&&!seen){ seen=true; animate(); } },{threshold:.4}).observe(fc);
+$$('#fsel button').forEach(b=>b.onclick=()=>{ $$('#fsel button').forEach(x=>x.classList.toggle('on',x===b)); si=+b.dataset.i; animate(); });
+addEventListener('resize',()=>{ if(seen) draw(); });
+
+/* JOURNEY: steps follow scroll, phone swaps screen */
+const steps=$$('.jstep'), jimg=$('#jimg'); steps.forEach(s=>{ const m=document.createElement('img'); m.className='jm'; m.src=s.dataset.img; m.alt=''; m.loading='lazy'; s.appendChild(m); });
+const setStep=s=>{ steps.forEach(x=>x.classList.toggle('on',x===s)); if(!jimg.src.endsWith(s.dataset.img)){ jimg.style.opacity=0; setTimeout(()=>{ jimg.src=s.dataset.img; jimg.style.opacity=1; },220); } };
+const jo=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting) setStep(e.target); }),{rootMargin:'-45% 0px -45% 0px'});
+steps.forEach(s=>{ jo.observe(s); s.onclick=()=>setStep(s); });
+})();
+</script>
+</body>
+</html>
