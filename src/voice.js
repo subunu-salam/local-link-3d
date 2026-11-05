@@ -60,6 +60,14 @@ function wav(pcm, rate = 24000) {
   h.writeUInt32LE(rate * 2, 28); h.writeUInt16LE(2, 32); h.writeUInt16LE(16, 34); h.write('data', 36); h.writeUInt32LE(pcm.length, 40);
   return Buffer.concat([h, pcm]);
 }
+// drop the hiss/noise tail after speech ends and fade out, so nothing crackles after the voice stops
+function tidy(pcm, rate) {
+  let n = pcm.length >> 1; const s = new Int16Array(pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + n * 2));
+  const win = Math.round(rate * 0.02); let end = n;
+  for (let i = n - win; i > 0; i -= win) { let e = 0; for (let j = i; j < i + win; j++) e += Math.abs(s[j]); if (e / win > 300) { end = Math.min(n, i + win * 6); break; } }
+  const fade = Math.min(end, Math.round(rate * 0.06)); for (let k = 0; k < fade; k++) s[end - 1 - k] = Math.round(s[end - 1 - k] * (k / fade));
+  return Buffer.from(s.buffer, 0, end * 2);
+}
 export async function speak(text, lang) {
   text = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 600);
   if (!text) throw new Error('empty');
@@ -69,7 +77,7 @@ export async function speak(text, lang) {
     generationConfig: { temperature: 0, responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceFor(lang) } } } } }, 30000, d => partsOf(d).some(p => p.inlineData && p.inlineData.data));
   const part = partsOf(d).find(p => p.inlineData && p.inlineData.data);
   if (!part) throw new Error('no audio');
-  const m = /rate=(\d+)/.exec(part.inlineData.mimeType || ''); const out = wav(Buffer.from(part.inlineData.data, 'base64'), m ? Number(m[1]) : 24000);
+  const m = /rate=(\d+)/.exec(part.inlineData.mimeType || ''); const out = wav(tidy(Buffer.from(part.inlineData.data, 'base64'), m ? Number(m[1]) : 24000), m ? Number(m[1]) : 24000);
   if (cache.size > 200) cache.delete(cache.keys().next().value);
   cache.set(key, out); return out;
 }
