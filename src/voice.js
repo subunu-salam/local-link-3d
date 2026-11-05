@@ -1,15 +1,26 @@
 // Malayalam-first voice for Ask Local Link, using Google Gemini — the same key and voice
 // VoiceBite uses for its Malayalam attendant (GOOGLE_API_KEY or GEMINI_API_KEY, voice "Kore").
 //
-//   GEMINI_TEXT_MODEL   assistant replies + speech-to-text   default gemini-2.5-flash
-//   GEMINI_TTS_MODEL    spoken replies                        default gemini-2.5-flash-preview-tts
+//   GEMINI_TEXT_MODEL   assistant replies + speech-to-text   default gemini-3.8-flash (falls back automatically)
+//   GEMINI_TTS_MODEL    spoken replies                        default gemini-3.8-flash-preview-tts
 //   GEMINI_VOICE        default Kore (GEMINI_VOICE_ML / GEMINI_VOICE_EN per language)
 import crypto from 'node:crypto';
 
 const BASE = 'https://generativelanguage.googleapis.com/' + (process.env.GEMINI_API_VERSION || 'v1beta') + '/models/';
 export const geminiKey = () => process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || '';
-const TEXT_MODEL = () => process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash';
-const TTS_MODEL = () => process.env.GEMINI_TTS_MODEL || 'gemini-2.5-flash-preview-tts';
+// first model that works is remembered; env overrides go first
+const TEXT_MODELS = () => [process.env.GEMINI_TEXT_MODEL, 'gemini-3.8-flash', 'gemini-flash-latest', 'gemini-2.5-flash'].filter(Boolean);
+const TTS_MODELS = () => [process.env.GEMINI_TTS_MODEL, 'gemini-3.8-flash-preview-tts', 'gemini-3.8-flash-tts', 'gemini-2.5-flash-preview-tts', 'gemini-2.5-pro-preview-tts'].filter(Boolean);
+const good = {}; export const lastError = {};
+async function callAny(kind, list, body, ms) {
+  const order = good[kind] ? [good[kind], ...list.filter(m => m !== good[kind])] : list; let err;
+  const queue = [...new Set(order)], tried = new Set();
+  while (queue.length) { const m = queue.shift(); if (tried.has(m)) continue; tried.add(m);
+    try { const d = await call(m, body, ms); good[kind] = m; lastError[kind] = null; return d; }
+    catch (e) { err = e; lastError[kind] = m + ': ' + e.message.slice(0, 200); if (!/ 404| 400/.test(e.message)) break;
+      const hint = /models\/([\w.\-]+)/.exec(e.message.split(' ').slice(3).join(' ')); if (hint && !tried.has(hint[1])) queue.unshift(hint[1]); } }
+  throw err;
+}
 const voiceFor = (lang) => (lang === 'ml' ? process.env.GEMINI_VOICE_ML : process.env.GEMINI_VOICE_EN) || process.env.GEMINI_VOICE || 'Kore';
 
 async function call(model, body, ms = 25000) {
@@ -17,26 +28,26 @@ async function call(model, body, ms = 25000) {
   try {
     const r = await fetch(BASE + model + ':generateContent', { method: 'POST', signal: ctl.signal,
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey() }, body: JSON.stringify(body) });
-    if (!r.ok) throw new Error('Gemini ' + r.status + ' ' + (await r.text()).slice(0, 200));
+    if (!r.ok) throw new Error('Gemini ' + r.status + ' ' + model + ' ' + (await r.text()).slice(0, 400));
     return await r.json();
   } finally { clearTimeout(t); }
 }
 const partsOf = (d) => (d && d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts) || [];
 
 // JSON answer from the assistant prompt
-export async function geminiJSON(system, user) {
-  const d = await call(TEXT_MODEL(), { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: user }] }],
-    generationConfig: { temperature: 0.3, responseMimeType: 'application/json' } });
+export async function geminiJSON(system, user, ms = 9000) {
+  const d = await callAny('text', TEXT_MODELS(), { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: user }] }],
+    generationConfig: { temperature: 0.4, responseMimeType: 'application/json', maxOutputTokens: 400, thinkingConfig: { thinkingBudget: 0 } } }, ms);
   return JSON.parse(partsOf(d).map(p => p.text || '').join(''));
 }
 
 // speech -> text (Malayalam or English), audio sent from the phone as base64
 export async function transcribe(b64, mime, lang) {
-  const d = await call(TEXT_MODEL(), { contents: [{ role: 'user', parts: [
+  const d = await callAny('text', TEXT_MODELS(), { contents: [{ role: 'user', parts: [
     { inlineData: { mimeType: mime || 'audio/webm', data: b64 } },
     { text: `Transcribe this short voice request from a customer in Kerala. It is most likely ${lang === 'en' ? 'English' : 'Malayalam'}, possibly mixed with English words. ` +
             'Write Malayalam in Malayalam script and English words in English. Return ONLY the words spoken, nothing else. If there is no speech, return an empty string.' } ] }],
-    generationConfig: { temperature: 0 } });
+    generationConfig: { temperature: 0, maxOutputTokens: 200, thinkingConfig: { thinkingBudget: 0 } } }, 12000);
   return partsOf(d).map(p => p.text || '').join('').trim().replace(/^["“]|["”]$/g, '');
 }
 
@@ -55,7 +66,7 @@ export async function speak(text, lang) {
   const key = crypto.createHash('sha1').update(lang + '|' + text).digest('hex');
   if (cache.has(key)) return cache.get(key);
   const style = lang === 'ml' ? 'Say this warmly in natural, everyday spoken Malayalam, like a friendly Kerala shop assistant:' : 'Say this warmly and clearly, with a light Indian English accent:';
-  const d = await call(TTS_MODEL(), { contents: [{ parts: [{ text: `${style} ${text}` }] }],
+  const d = await callAny('tts', TTS_MODELS(), { contents: [{ parts: [{ text: `${style} ${text}` }] }],
     generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceFor(lang) } } } } }, 30000);
   const part = partsOf(d).find(p => p.inlineData && p.inlineData.data);
   if (!part) throw new Error('no audio');
@@ -63,3 +74,5 @@ export async function speak(text, lang) {
   if (cache.size > 200) cache.delete(cache.keys().next().value);
   cache.set(key, out); return out;
 }
+
+export const voiceModels = () => ({ text: good.text || TEXT_MODELS()[0], tts: good.tts || TTS_MODELS()[0], errors: lastError });
