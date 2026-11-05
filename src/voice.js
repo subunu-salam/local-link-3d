@@ -68,18 +68,23 @@ function tidy(pcm, rate) {
   const fade = Math.min(end, Math.round(rate * 0.06)); for (let k = 0; k < fade; k++) s[end - 1 - k] = Math.round(s[end - 1 - k] * (k / fade));
   return Buffer.from(s.buffer, 0, end * 2);
 }
-export async function speak(text, lang) {
+export function speak(text, lang) {
   text = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 600);
-  if (!text) throw new Error('empty');
+  if (!text) return Promise.reject(new Error('empty'));
   const key = crypto.createHash('sha1').update(lang + '|' + text).digest('hex');
   if (cache.has(key)) return cache.get(key);
+  const p = speakNow(text, lang); cache.set(key, p); p.catch(() => cache.delete(key));
+  if (cache.size > 200) cache.delete(cache.keys().next().value);
+  return p;
+}
+async function speakNow(text, lang) {
+  text = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 600);
   const d = await callAny('tts', TTS_MODELS(), { contents: [{ parts: [{ text }] }],
     generationConfig: { temperature: 0, responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceFor(lang) } } } } }, 30000, d => partsOf(d).some(p => p.inlineData && p.inlineData.data));
   const part = partsOf(d).find(p => p.inlineData && p.inlineData.data);
   if (!part) throw new Error('no audio');
   const m = /rate=(\d+)/.exec(part.inlineData.mimeType || ''); const out = wav(tidy(Buffer.from(part.inlineData.data, 'base64'), m ? Number(m[1]) : 24000), m ? Number(m[1]) : 24000);
-  if (cache.size > 200) cache.delete(cache.keys().next().value);
-  cache.set(key, out); return out;
+  return out;
 }
 
 export const voiceModels = () => ({ text: good.text || TEXT_MODELS()[0], tts: good.tts || TTS_MODELS()[0], errors: lastError });

@@ -238,7 +238,8 @@ app.get('/api/search', (req, res) => {
 
 /* ---------------- Ask Local Link (AI) ---------------- */
 app.post('/api/ask', async (req, res) => {
-  try { res.json(await ask((req.body && req.body.query) || '', req.body && req.body.lang, req.body && req.body.fast)); }
+  try { const lang = req.body && req.body.lang === 'en' ? 'en' : 'ml'; const out = await ask((req.body && req.body.query) || '', lang, req.body && req.body.fast);
+    res.json(out); if (geminiKey() && out.answer && !(req.body && req.body.fast)) speakText(out.answer, lang).catch(() => {}); }  // start the voice now so /api/tts is ready
   catch (e) { res.status(500).json({ error: 'Assistant unavailable', detail: e.message }); }
 });
 app.get('/api/ai-status', (_req, res) => res.json({ openai: !!process.env.OPENAI_API_KEY || !!geminiKey(), gemini: !!geminiKey(), voice: !!geminiKey(), model: geminiKey() ? 'gemini' : (process.env.OPENAI_MODEL || 'gpt-4o-mini') }));
