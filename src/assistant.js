@@ -1,4 +1,5 @@
 import { db } from './db.js';
+import { geminiKey, geminiJSON } from './voice.js';
 
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
@@ -23,7 +24,7 @@ const STOP = new Set(['i','need','a','an','the','me','my','for','to','near','fin
 
 function tokens(q){return q.toLowerCase().replace(/[^a-z0-9ഀ-ൿ\s]/g,' ').split(/\s+/).filter(w=>w&&!STOP.has(w));}
 
-function localSearch(query) {
+function localSearch(query, lang) {
   const cat = catalogue();
   const ks = tokens(query);
   const priceMatch = query.match(/(?:under|below|less than)\s*₹?\s*(\d+)/i);
@@ -73,11 +74,12 @@ function localSearch(query) {
     const kinds = [...new Set(top.map(r=>r.type))];
     answer = `Here ${top.length===1?'is':'are'} ${top.length} local ${kinds.join(' & ')} match${top.length>1?'es':''} for “${query}”${maxPrice?` under ₹${maxPrice}`:''}. Tap any result to view details, call, or message on WhatsApp.`;
   }
+  if (lang === 'ml') answer = top.length ? `“${query}” — നിങ്ങളുടെ അടുത്ത് ${top.length} ഓപ്ഷനുകൾ കണ്ടെത്തി. വിവരങ്ങൾ കാണാനോ വിളിക്കാനോ ഏതെങ്കിലും ഒന്നിൽ ടാപ്പ് ചെയ്യൂ.` : `“${query}” എന്നതിന് കൃത്യമായ ഒന്നും അടുത്ത് കണ്ടില്ല. “പ്ലംബർ”, “ബിരിയാണി”, “ഓട്ടോ” പോലെ ചോദിച്ചു നോക്കൂ.`;
   return { answer, results: top, source: 'local' };
 }
 
 // ---- OpenAI-powered assistant (used when OPENAI_API_KEY is set) ----
-async function openaiSearch(query, lang) {
+function promptFor(query, lang) {
   const cat = catalogue();
   const compact = {
     businesses: cat.businesses.map(b=>({id:b.id,name:b.name,type:b.subcategory,category:b.category,area:b.area,rating:b.rating})),
@@ -91,11 +93,30 @@ async function openaiSearch(query, lang) {
     `The user may write in English OR Malayalam; understand both. Write the "answer" in ${lang==='ml'?'Malayalam':'English'}. ` +
     `Reply with STRICT JSON: {"answer": string (<=45 words, warm, helpful), "results": [{"type":"business|service|product|worker|driver","id":number}]} ` +
     `Pick up to 6 most relevant results, best first. If nothing fits, return an empty results array and suggest a category.`;
+  return { cat, sys, user: `Catalogue:\n${JSON.stringify(compact)}\n\nUser query: "${query}"` };
+}
+function hydrate(cat, parsed, source) {
+  const byId = {
+    business: Object.fromEntries(cat.businesses.map(b=>[b.id,{type:'business',...b}])),
+    service: Object.fromEntries(cat.services.map(s=>[s.id,{type:'service',...s}])),
+    product: Object.fromEntries(cat.products.map(p=>[p.id,{type:'product',...p}])),
+    worker: Object.fromEntries(cat.workers.map(w=>[w.id,{type:'worker',...w}])),
+    driver: Object.fromEntries(cat.drivers.map(d=>[d.id,{type:'driver',...d}])),
+  };
+  const results = (parsed.results||[]).map(r => byId[r.type]?.[r.id]).filter(Boolean).slice(0,6);
+  return { answer: parsed.answer || 'Here are some local matches.', results, source };
+}
+async function geminiSearch(query, lang) {
+  const { cat, sys, user } = promptFor(query, lang);
+  return hydrate(cat, await geminiJSON(sys, user), 'gemini');
+}
+async function openaiSearch(query, lang) {
+  const { cat, sys, user } = promptFor(query, lang);
   const body = {
     model: MODEL,
     messages: [
       { role: 'system', content: sys },
-      { role: 'user', content: `Catalogue:\n${JSON.stringify(compact)}\n\nUser query: "${query}"` },
+      { role: 'user', content: user },
     ],
     temperature: 0.3,
     response_format: { type: 'json_object' },
@@ -107,24 +128,13 @@ async function openaiSearch(query, lang) {
   });
   if (!resp.ok) throw new Error('OpenAI request failed: ' + resp.status);
   const data = await resp.json();
-  const parsed = JSON.parse(data.choices[0].message.content);
-  // hydrate ids -> full records
-  const byId = {
-    business: Object.fromEntries(cat.businesses.map(b=>[b.id,{type:'business',...b}])),
-    service: Object.fromEntries(cat.services.map(s=>[s.id,{type:'service',...s}])),
-    product: Object.fromEntries(cat.products.map(p=>[p.id,{type:'product',...p}])),
-    worker: Object.fromEntries(cat.workers.map(w=>[w.id,{type:'worker',...w}])),
-    driver: Object.fromEntries(cat.drivers.map(d=>[d.id,{type:'driver',...d}])),
-  };
-  const results = (parsed.results||[]).map(r => byId[r.type]?.[r.id]).filter(Boolean).slice(0,6);
-  return { answer: parsed.answer || 'Here are some local matches.', results, source: 'openai' };
+  return hydrate(cat, JSON.parse(data.choices[0].message.content), 'openai');
 }
 
 export async function ask(query, lang) {
-  if (!query || !query.trim()) return { answer: 'Ask me anything — “find a plumber”, “biriyani under ₹250”, “auto to the station”.', results: [], source: 'local' };
-  if (process.env.OPENAI_API_KEY) {
-    try { return await openaiSearch(query, lang); }
-    catch (e) { console.warn('OpenAI fallback →', e.message); return localSearch(query); }
-  }
-  return localSearch(query);
+  lang = lang === 'en' ? 'en' : 'ml';
+  if (!query || !query.trim()) return { answer: lang==='ml' ? 'എന്തും ചോദിക്കാം — “ഒരു പ്ലംബറെ വേണം”, “250 രൂപയിൽ താഴെ ബിരിയാണി”.' : 'Ask me anything — “find a plumber”, “biriyani under ₹250”.', results: [], source: 'local' };
+  if (geminiKey()) { try { return await geminiSearch(query, lang); } catch (e) { console.warn('Gemini fallback →', e.message); } }
+  if (process.env.OPENAI_API_KEY) { try { return await openaiSearch(query, lang); } catch (e) { console.warn('OpenAI fallback →', e.message); } }
+  return localSearch(query, lang);
 }

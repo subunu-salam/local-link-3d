@@ -1420,3 +1420,10 @@ body.cdark .vbx-rib path{stroke:rgba(127,224,207,.18)}
 @media (prefers-reduced-motion:reduce){ .vbx-rib path{animation:none} }
 .vbx-atmo .vbx-rib{display:block !important; position:absolute !important; left:-10% !important; top:20% !important; width:120% !important; height:46% !important}
 html.lite .vbx-atmo{display:block !important} html.lite .vbx-atmo > i,html.lite .vbx-atmo::after{display:none}
+/* Ask: speaking state + mute */
+.lw-aih{gap:8px} .lw-aih .lw-aiw{flex:1; justify-content:center} .lw-mute{width:40px; height:40px; font-size:18px; box-shadow:var(--shadow)} .lw-mute.off{opacity:.55}
+.lw-ai.speaking .lw-orb .c{animation:lwBreath .6s ease-in-out infinite alternate; background:radial-gradient(circle at 35% 30%,#FFD86B,#13A58F 45%,#07594F)}
+.lw-ai.speaking .lx-wl i,.lw-ai.speaking .lw-aiw i{opacity:1; animation-duration:.45s}
+.lw-ai.voiceload .lw-orb .c{animation:spin 1.2s linear infinite}
+body.ml .lw-b,body .lw-ai .lw-b{line-height:1.55}
+.lw-b.bot:lang(ml),.lw-ai{font-family:"Noto Sans Malayalam","Poppins",sans-serif}

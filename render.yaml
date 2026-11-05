@@ -21,6 +21,8 @@ services:
         sync: false                  # set your own key in the dashboard (optional)
       - key: OPENAI_MODEL
         value: gpt-4o-mini
+      - key: GOOGLE_API_KEY
+        sync: false                  # Gemini key (same as VoiceBite) — Malayalam voice replies, voice input and AI answers
       - key: GOOGLE_PLACES_API_KEY
         sync: false                  # set your own key to enable live "Import from Google"
       - key: TURSO_DATABASE_URL

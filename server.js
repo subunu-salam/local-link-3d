@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { db, seed } from './src/db.js';
+import { geminiKey, speak as speakText, transcribe } from './src/voice.js';
 import { login, signToken, publicUser, attachUser, requireAuth, requireRole } from './src/auth.js';
 import { ask } from './src/assistant.js';
 import { demandBoard, productReport } from './src/forecast.js';
@@ -11,7 +12,7 @@ import bcrypt from 'bcryptjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '6mb' }));
 app.use(attachUser);
 
 // Ensure DB has data (self-seeds on first boot / after an ephemeral reset)
@@ -240,7 +241,22 @@ app.post('/api/ask', async (req, res) => {
   try { res.json(await ask((req.body && req.body.query) || '', req.body && req.body.lang)); }
   catch (e) { res.status(500).json({ error: 'Assistant unavailable', detail: e.message }); }
 });
-app.get('/api/ai-status', (_req, res) => res.json({ openai: !!process.env.OPENAI_API_KEY, model: process.env.OPENAI_MODEL || 'gpt-4o-mini' }));
+app.get('/api/ai-status', (_req, res) => res.json({ openai: !!process.env.OPENAI_API_KEY || !!geminiKey(), gemini: !!geminiKey(), voice: !!geminiKey(), model: geminiKey() ? 'gemini' : (process.env.OPENAI_MODEL || 'gpt-4o-mini') }));
+// spoken replies (Malayalam first) — Gemini TTS, same voice as VoiceBite
+app.post('/api/tts', async (req, res) => {
+  if (!geminiKey()) return res.status(503).json({ error: 'Voice replies need GOOGLE_API_KEY on the server' });
+  const { text, lang } = req.body || {};
+  try { const wav = await speakText(text, lang === 'en' ? 'en' : 'ml'); res.set('Content-Type', 'audio/wav'); res.set('Cache-Control', 'private, max-age=3600'); res.end(wav); }
+  catch (e) { console.warn('TTS failed →', e.message); res.status(502).json({ error: 'Could not generate voice' }); }
+});
+// speech -> text for phones whose browser can't recognise Malayalam
+app.post('/api/stt', async (req, res) => {
+  if (!geminiKey()) return res.status(503).json({ error: 'Voice input needs GOOGLE_API_KEY on the server' });
+  const { audio, mime, lang } = req.body || {};
+  if (!audio || audio.length > 6_000_000) return res.status(400).json({ error: 'Audio missing or too long' });
+  try { res.json({ text: await transcribe(audio, mime, lang === 'en' ? 'en' : 'ml') }); }
+  catch (e) { console.warn('STT failed →', e.message); res.status(502).json({ error: 'Could not understand the audio' }); }
+});
 
 /* ---------------- customer actions ---------------- */
 app.get('/api/notifications', requireAuth, (req, res) =>
