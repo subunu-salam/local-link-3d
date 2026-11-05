@@ -22,7 +22,10 @@ function catalogue() {
 // ---- Local fallback: keyword + intent matching (works with no API key) ----
 const STOP = new Set(['i','need','a','an','the','me','my','for','to','near','find','want','looking','get','some','can','you','is','are','where','how','of','in','on','and','today','please','with','best','good','cheap','under','below','₹','rs']);
 
-function tokens(q){return q.toLowerCase().replace(/[^a-z0-9ഀ-ൿ\s]/g,' ').split(/\s+/).filter(w=>w&&!STOP.has(w));}
+const ML_WORDS={'പ്ലംബർ':'plumber','പ്ലംബിംഗ്':'plumber','ഇലക്ട്രീഷ്യൻ':'electrician','ബിരിയാണി':'biriyani','ഭക്ഷണം':'food','ഹോട്ടൽ':'restaurant','റെസ്റ്റോറന്റ്':'restaurant',
+  'പച്ചക്കറി':'vegetable','പലചരക്ക്':'grocery','ഗ്രോസറി':'grocery','പാൽ':'milk','മീൻ':'fish','ചിക്കൻ':'chicken','കേക്ക്':'cake','ബേക്കറി':'bakery','മരുന്ന്':'medicine','ഫാർമസി':'pharmacy',
+  'ഡോക്ടർ':'doctor','ഓട്ടോ':'auto','ടാക്സി':'taxi','സ്വർണം':'gold','ആഭരണം':'jewellery','തുണി':'clothes','ഡ്രസ്സ്':'clothes','മൊബൈൽ':'mobile','എസി':'ac','ആശാരി':'carpenter','പെയിന്റർ':'painter','ക്ലീനിംഗ്':'cleaning','സലൂൺ':'salon','മേസ്തിരി':'mason'};
+function tokens(q){ for(const [m,e] of Object.entries(ML_WORDS)) if(q.includes(m)) q+=' '+e;return q.toLowerCase().replace(/[^a-z0-9ഀ-ൿ\s]/g,' ').split(/\s+/).filter(w=>w&&!STOP.has(w));}
 
 function localSearch(query, lang) {
   const cat = catalogue();
@@ -69,12 +72,20 @@ function localSearch(query, lang) {
   results.sort((a,b)=>b.score-a.score);
   const top = results.filter(r=>r.score>0).slice(0,6);
   let answer;
-  if (!top.length) answer = `I couldn't find an exact match for "${query}" nearby yet. Try a category like "plumber", "biriyani", "grocery" or "auto".`;
-  else {
-    const kinds = [...new Set(top.map(r=>r.type))];
-    answer = `Here ${top.length===1?'is':'are'} ${top.length} local ${kinds.join(' & ')} match${top.length>1?'es':''} for “${query}”${maxPrice?` under ₹${maxPrice}`:''}. Tap any result to view details, call, or message on WhatsApp.`;
+  const best = top[0];
+  const detail = (r, ml) => r.type==='product' ? `₹${r.price}${r.business?(ml?`, ${r.business}-ൽ`:` at ${r.business}`):''}`
+    : r.type==='service' ? `${ml?'':'from '}₹${r.starting_price}${ml?' മുതൽ':''}${r.business?(ml?`, ${r.business}`:` by ${r.business}`):''}`
+    : r.type==='business' ? [r.subcategory, r.area, r.rating?(ml?`${r.rating} റേറ്റിംഗ്`:`rated ${r.rating}`):''].filter(Boolean).join(', ')
+    : r.type==='worker' ? [r.skills, r.rate].filter(Boolean).join(', ') : (r.fare_note || r.service_type || '');
+  if (lang === 'ml') {
+    answer = !top.length
+      ? `ക്ഷമിക്കണം, “${query}” അടുത്ത് കണ്ടെത്താനായില്ല. “പ്ലംബർ”, “ബിരിയാണി”, “ഗ്രോസറി” അല്ലെങ്കിൽ “ഓട്ടോ” എന്ന് ചോദിച്ചു നോക്കൂ.`
+      : `${best.name} നല്ല ഓപ്ഷനാണ് — ${detail(best, true)}.${top.length>1?` വേറെ ${top.length-1} ഓപ്ഷനുകളും താഴെ ഉണ്ട്.`:''} ${best.type==='product'?'കാർട്ടിൽ ചേർക്കട്ടെ?':best.type==='service'?'ഒരു സമയം ബുക്ക് ചെയ്യട്ടെ?':'വിളിക്കാനോ കൂടുതൽ അറിയാനോ ടാപ്പ് ചെയ്യൂ.'}`;
+  } else {
+    answer = !top.length
+      ? `Sorry, I couldn't find “${query}” nearby. Try asking for a plumber, biriyani, groceries or an auto.`
+      : `${best.name} looks like a good pick — ${detail(best, false)}.${top.length>1?` I've listed ${top.length-1} more option${top.length>2?'s':''} below.`:''} ${best.type==='product'?'Shall I add it to your cart?':best.type==='service'?'Want me to book a time?':'Tap to call or see more.'}`;
   }
-  if (lang === 'ml') answer = top.length ? `“${query}” — നിങ്ങളുടെ അടുത്ത് ${top.length} ഓപ്ഷനുകൾ കണ്ടെത്തി. വിവരങ്ങൾ കാണാനോ വിളിക്കാനോ ഏതെങ്കിലും ഒന്നിൽ ടാപ്പ് ചെയ്യൂ.` : `“${query}” എന്നതിന് കൃത്യമായ ഒന്നും അടുത്ത് കണ്ടില്ല. “പ്ലംബർ”, “ബിരിയാണി”, “ഓട്ടോ” പോലെ ചോദിച്ചു നോക്കൂ.`;
   return { answer, results: top, source: 'local' };
 }
 
@@ -88,11 +99,21 @@ function promptFor(query, lang) {
     workers: cat.workers.map(w=>({id:w.id,name:w.name,skills:w.skills,rate:w.rate})),
     drivers: cat.drivers.map(d=>({id:d.id,name:d.name,type:d.service_type,fare:d.fare_note})),
   };
-  const sys = `You are "Ask Local Link", a friendly local assistant for Kunnamangalam, Kozhikode (Kerala). ` +
-    `You ONLY recommend from the provided local catalogue. Understand intent (category, budget, urgency). ` +
-    `The user may write in English OR Malayalam; understand both. Write the "answer" in ${lang==='ml'?'Malayalam':'English'}. ` +
-    `Reply with STRICT JSON: {"answer": string (<=45 words, warm, helpful), "results": [{"type":"business|service|product|worker|driver","id":number}]} ` +
-    `Pick up to 6 most relevant results, best first. If nothing fits, return an empty results array and suggest a category.`;
+  const ML = lang === 'ml';
+  const style = ML
+    ? `Write the "answer" in natural, everyday spoken Malayalam (Malayalam script), the way a friendly shopkeeper in Kozhikode talks — warm, simple and polite ("ഉണ്ട്", "കിട്ടും", "നോക്കാം"), never stiff textbook Malayalam. ` +
+      `Keep shop names, dish names and common English words (biriyani, AC, auto, plumber, offer) as people in Kerala say them, written in English letters. Say prices as "₹250" and ratings as "4.7 റേറ്റിംഗ്". `
+    : `Write the "answer" in clear, friendly Indian English — short sentences, no jargon, the way a helpful local shop assistant would speak. `;
+  const sys = `You are "Ask Local Link", the voice assistant of Local Link — a local marketplace for Kunnamangalam and nearby areas in Kozhikode, Kerala. ` +
+    `You help people find shops, food, groceries, home services, local workers and rides, ONLY from the catalogue provided. Never invent shops, prices, timings or delivery times. ` +
+    `The user may write or speak in Malayalam, English or a mix (Manglish); understand all of them, including spelling mistakes and transcription errors. ` +
+    style +
+    `The answer is read aloud, so: 1–3 short sentences, at most 40 words; no lists, bullet points, emoji, markdown or URLs. ` +
+    `Lead with the best match by name and one useful detail (price, rating, area or "from ₹…"), mention a second option only if it helps, and end with a short next step or question ` +
+    `(for example "Shall I add it to your cart?" / "കാർട്ടിൽ ചേർക്കട്ടെ?" or "Want me to book a time?" / "ഒരു സമയം ബുക്ക് ചെയ്യട്ടെ?"). ` +
+    `If the request is vague, pick sensible matches and ask one short clarifying question. If nothing fits, say so honestly and suggest the closest category. ` +
+    `For greetings or thanks, reply briefly and say what you can help with. ` +
+    `Reply with STRICT JSON only: {"answer": string, "results": [{"type":"business|service|product|worker|driver","id":number}]}. Choose up to 6 results, best first, and make sure the answer talks about the first result.`;
   return { cat, sys, user: `Catalogue:\n${JSON.stringify(compact)}\n\nUser query: "${query}"` };
 }
 function hydrate(cat, parsed, source) {
