@@ -65,9 +65,8 @@ export async function speak(text, lang) {
   if (!text) throw new Error('empty');
   const key = crypto.createHash('sha1').update(lang + '|' + text).digest('hex');
   if (cache.has(key)) return cache.get(key);
-  const style = lang === 'ml' ? 'Say this warmly in natural, everyday spoken Malayalam, like a friendly Kerala shop assistant:' : 'Say this warmly and clearly, with a light Indian English accent:';
-  const d = await callAny('tts', TTS_MODELS(), { contents: [{ parts: [{ text: `${style} ${text}` }] }],
-    generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceFor(lang) } } } } }, 30000, d => partsOf(d).some(p => p.inlineData && p.inlineData.data));
+  const d = await callAny('tts', TTS_MODELS(), { contents: [{ parts: [{ text }] }],
+    generationConfig: { temperature: 0, responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceFor(lang) } } } } }, 30000, d => partsOf(d).some(p => p.inlineData && p.inlineData.data));
   const part = partsOf(d).find(p => p.inlineData && p.inlineData.data);
   if (!part) throw new Error('no audio');
   const m = /rate=(\d+)/.exec(part.inlineData.mimeType || ''); const out = wav(Buffer.from(part.inlineData.data, 'base64'), m ? Number(m[1]) : 24000);
