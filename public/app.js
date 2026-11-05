@@ -1606,6 +1606,9 @@ let _recog=null;
 
 /* ---------- Ask voice engine: Malayalam-first speech in and out ----------
    Server voice (Gemini, same as VoiceBite) when GOOGLE_API_KEY is set; browser speech otherwise. */
+function llGreet(lg){ const nm=(typeof token!=='undefined'&&token&&typeof me!=='undefined'&&me&&me.name)?' '+me.name.split(' ')[0]:'';
+  return lg==='ml'?`നമസ്കാരം${nm}! Local Link-ലേക്ക് സ്വാഗതം. അടുത്തുള്ള കടകളിൽ നിന്ന് ഓർഡർ ചെയ്യാനും, റെസ്റ്റോറന്റുകളും സർവീസുകളും കണ്ടെത്താനും, ഓർഡർ ട്രാക്ക് ചെയ്യാനും ഞാൻ സഹായിക്കാം. എന്താണ് വേണ്ടത്?`
+    :`Hi${nm}! Welcome to Local Link. I can help you order from nearby shops, find restaurants and services, and track your order. What would you like?`; }
 const llVoice=(()=>{
   const A=new Audio(); A.preload='auto'; let url=null, muted=localStorage.getItem('ll_mute')==='1', onState=()=>{}, seq=0;
   const SILENT='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
@@ -1618,15 +1621,21 @@ const llVoice=(()=>{
     if(want==='ml'&&!v){ set('idle'); if(!sessionStorage.getItem('ll_mlv')){ sessionStorage.setItem('ll_mlv','1'); toast('This phone has no Malayalam voice — replies are shown as text'); } return; }
     const u=new SpeechSynthesisUtterance(text); if(v){ u.voice=v; u.lang=v.lang; } else u.lang='en-IN'; u.rate=1; u.onend=u.onerror=()=>{ if(my===seq) set('idle'); };
     set('speaking'); speechSynthesis.cancel(); speechSynthesis.speak(u); }
-  async function speak(text){ text=String(text||'').replace(/[\u{1F300}-\u{1FAFF}☀-➿]/gu,'').replace(/\s+/g,' ').trim(); if(!text||muted) return; stop(); const my=++seq;
+  const clean=t=>String(t||'').replace(/[\u{1F300}-\u{1FAFF}☀-➿]/gu,'').replace(/\s+/g,' ').trim();
+  const blobs=new Map(); // lang|text -> Promise<Blob>
+  function fetchTTS(text,lg,ms){ const k=lg+'|'+text; if(blobs.has(k)) return blobs.get(k);
+    const ac=new AbortController(); const tt=setTimeout(()=>ac.abort(),ms||8000);
+    const p=fetch('/api/tts',{method:'POST',signal:ac.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang:lg})}).then(r=>{ clearTimeout(tt); if(!r.ok) throw new Error(r.status); return r.blob(); });
+    p.catch(()=>blobs.delete(k)); blobs.set(k,p); if(blobs.size>40) blobs.delete(blobs.keys().next().value); return p; }
+  function prefetch(text,lg){ text=clean(text); if(text&&state.aiStatus&&state.aiStatus.voice) fetchTTS(text,lg||lang(),15000).catch(()=>{}); }
+  async function speak(text){ text=clean(text); if(!text||muted) return; stop(); const my=++seq;
     if(state.aiStatus&&state.aiStatus.voice){ set('loading');
-      try{ const ac=new AbortController(); const tt=setTimeout(()=>ac.abort(),6000); const r=await fetch('/api/tts',{method:'POST',signal:ac.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang:lang()})}); clearTimeout(tt); if(!r.ok) throw new Error(r.status);
-        const b=await r.blob(); if(my!==seq) return; if(url) URL.revokeObjectURL(url); url=URL.createObjectURL(b); A.src=url; A.onended=A.onerror=()=>{ if(my===seq) set('idle'); };
+      try{ const b=await fetchTTS(text,lang(),8000); if(my!==seq) return; if(url) URL.revokeObjectURL(url); url=URL.createObjectURL(b); A.src=url; A.onended=A.onerror=()=>{ if(my===seq) set('idle'); };
         set('speaking'); try{ await A.play(); }catch(pe){ set('idle'); llPlayChip(()=>{ A.play().then(()=>set('speaking')).catch(()=>{}); }); } return; }
       catch(e){ console.warn('Voice reply failed, using phone voice:',e); if(my!==seq) return; } }
     browserSpeak(text,my); }
   async function speakSeq(list){ for(const [t,l] of list){ if(muted) return; const keep=aiVoiceLang; aiVoiceLang=l==='ml'?'ml-IN':'en-IN'; const p=speak(t); aiVoiceLang=keep; await p; await new Promise(r=>{ if(A.paused&&!('speechSynthesis' in window&&speechSynthesis.speaking)) return r(); const f=()=>{ A.removeEventListener('ended',f); r(); }; A.addEventListener('ended',f); setTimeout(r,20000); }); } }
-  return { speak, speakSeq, stop, unlock, lang, get muted(){ return muted; }, setMuted(v){ muted=!!v; localStorage.setItem('ll_mute',muted?'1':'0'); if(muted) stop(); }, onState(f){ onState=f||(()=>{}); } };
+  return { speak, speakSeq, prefetch, stop, unlock, lang, get muted(){ return muted; }, setMuted(v){ muted=!!v; localStorage.setItem('ll_mute',muted?'1':'0'); if(muted) stop(); }, onState(f){ onState=f||(()=>{}); } };
 })();
 function llPlayChip(play){ const ai=document.querySelector('.lw-ai'); if(!ai||ai.querySelector('.ll-play')) return; const b=document.createElement('button'); b.className='ll-play'; b.innerHTML=(aiVoiceLang==='en-IN'?'▶ Play reply':'▶ മറുപടി കേൾക്കൂ'); b.onclick=()=>{ b.remove(); play(); }; const f=ai.querySelector('.ab-foot'); (f||ai).prepend(b); }
 /* record and let the server transcribe (works for Malayalam on every phone) */
@@ -2894,7 +2903,7 @@ window.addEventListener('popstate', (e) => {
 async function boot(){
   try{
     const [_, ai] = await Promise.all([loadRef(), api('/ai-status').catch(()=>({openai:false}))]);
-    state.aiStatus = ai;
+    state.aiStatus = ai; setTimeout(()=>{ llVoice.prefetch(llGreet('ml'),'ml'); llVoice.prefetch(llGreet('en'),'en'); },300);
     state.view = viewFromPath();
     renderShell();
   }catch(e){
@@ -3680,7 +3689,7 @@ SCREENS.assistant=(el,{q,voice})=>{
   const S=ML()?[[I.store,'അടുത്തുള്ള റെസ്റ്റോറന്റ്','ബിരിയാണി കിട്ടുന്ന ഹോട്ടൽ'],[GI.cart,'പലചരക്ക് സാധനങ്ങൾ','പച്ചക്കറിയും പാലും'],[GI.wrench||I.cog,'വീട്ടിലെ സർവീസ് ബുക്ക് ചെയ്യാം','ഇലക്ട്രീഷ്യൻ'],[GI.package,'എന്റെ ഓർഡർ എവിടെ?','__track'],[GI.percent,'ഇന്നത്തെ ഓഫറുകൾ','__offers']]:[[I.store,'Find a nearby restaurant','biriyani restaurant'],[GI.cart,'Get groceries','vegetables and milk'],[GI.wrench||I.cog,'Book a home service','electrician'],[GI.package,'Track my order','__track'],[GI.percent,'Discover local offers','__offers']];
   el.innerHTML=`<div class="lw-ai"><header class="lw-aih"><button class="lv-ib" id="__back" aria-label="Back">${I.back}</button><span class="lw-aiw">${Array.from({length:9},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span><div class="lw-ailang" id="ail"><button data-vl="ml-IN">മ</button><button data-vl="en-IN">EN</button></div></header>
     <div class="lw-aititle"><h1>Ask Local Link</h1><p>${L("Your local shopping assistant","നിങ്ങളുടെ നാട്ടിലെ ഷോപ്പിങ് സഹായി")}</p></div>
-    <div class="lw-msgs" id="msgs"><div class="lw-b bot" id="greet"><span class="gml">നമസ്കാരം${nm?" "+esc(nm):""}! 👋 Local Link-ലേക്ക് സ്വാഗതം. അടുത്തുള്ള കടകളിൽ നിന്ന് ഓർഡർ ചെയ്യാം, റെസ്റ്റോറന്റുകൾ കണ്ടെത്താം, സർവീസുകൾ ബുക്ക് ചെയ്യാം, ഓർഡർ ട്രാക്ക് ചെയ്യാം. മൈക്കിൽ ടാപ്പ് ചെയ്ത് സംസാരിക്കൂ, അല്ലെങ്കിൽ ടൈപ്പ് ചെയ്യൂ.</span><span class="gen">Hi${nm?" "+esc(nm):""}! Welcome to Local Link. I can order from nearby shops, find restaurants, book services and track your order. Tap the mic to speak, or type below.</span></div>
+    <div class="lw-msgs" id="msgs"><div class="lw-b bot" id="greet">${esc(llGreet(ML()?"ml":"en"))}</div>
       <div class="lw-sugg" id="sugg">${S.map((s,i)=>`<button data-s="${esc(s[2])}" style="--n:${i}"><span>${s[0]}</span>${esc(s[1])}</button>`).join('')}</div></div>
     <div class="lw-orbz" id="orbz"><button class="lw-orb" id="orb" aria-label="Speak"><span class="h1"></span><span class="h2"></span><span class="c">${GI.mic}</span></button><small id="ost">${L("Tap to speak","സംസാരിക്കാൻ ടാപ്പ് ചെയ്യൂ")}</small></div>
     <div class="lw-in"><input id="aq" placeholder="${L("Type or speak…","ടൈപ്പ് ചെയ്യുക അല്ലെങ്കിൽ സംസാരിക്കുക…")}" autocomplete="off"/><button class="lw-mic" id="amic" aria-label="Voice">${GI.mic}</button><button class="lw-send" id="asend" aria-label="Send">${GI.send}</button></div></div>`;
@@ -3689,7 +3698,7 @@ SCREENS.assistant=(el,{q,voice})=>{
   $('#mute').onclick=()=>{ llVoice.setMuted(!llVoice.muted); $('#mute').textContent=llVoice.muted?'🔇':'🔊'; $('#mute').classList.toggle('off',llVoice.muted); toast(llVoice.muted?L('Voice replies off','ശബ്ദ മറുപടി ഓഫ്'):L('Voice replies on','ശബ്ദ മറുപടി ഓൺ')); };
   llVoice.onState(v=>{ el.classList.toggle('speaking',v==='speaking'); el.classList.toggle('voiceload',v==='loading'); const s=$('#ost'); if(s&&v==='speaking') s.textContent=L('Speaking…','പറയുന്നു…'); });
   const _bk=$('#__back'); if(_bk){ const o=_bk.onclick; _bk.onclick=e=>{ llVoice.stop(); o&&o(e); }; }
-  setTimeout(()=>{ const g=$('#greet'); if(!g||!document.body.contains(g)||q) return; const a=g.querySelector(ML()?'.gml':'.gen').textContent, b=g.querySelector(ML()?'.gen':'.gml').textContent; llVoice.speakSeq([[a,ML()?'ml':'en'],[b,ML()?'en':'ml']]); },300);
+  if(!q) llVoice.speak(llGreet(ML()?'ml':'en'));
   const msgs=$('#msgs'), inp=$('#aq'); const down=()=>msgs.scrollTo({top:msgs.scrollHeight,behavior:'smooth'});
   $('#ail').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.vl===aiVoiceLang); b.onclick=()=>{ if(aiVoiceLang===b.dataset.vl) return; aiVoiceLang=b.dataset.vl; localStorage.setItem('ll_voicelang2',aiVoiceLang); llVoice.stop(); buzz(); routeRender(); }; });
   const card=x=>{ const bizId=x.type==='business'?x.id:x.business_id; const ic={business:I.store,product:GI.cart,service:GI.wrench||I.cog,worker:GI.helmet||I.user,driver:GI.car||I.pin}[x.type]||I.pin;
