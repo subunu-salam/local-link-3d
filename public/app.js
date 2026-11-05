@@ -1653,8 +1653,10 @@ function llRecorder(micBtn,input,run){
     // create/resume the audio context inside the tap (browsers keep it suspended otherwise)
     try{ ctx=ctx||new (window.AudioContext||window.webkitAudioContext)(); ctx.resume&&ctx.resume(); }catch(e){ ctx=null; }
     ui(true);
-    try{ stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}); }
-    catch(e){ ui(false); toast(ML()?'മൈക്ക് അനുവദിക്കൂ, അല്ലെങ്കിൽ ടൈപ്പ് ചെയ്യൂ':'Please allow the microphone, or type instead'); document.querySelector('#kb')?.click(); return; }
+    try{ try{ stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}); }
+         catch(e1){ if(e1&&/Overconstrained|NotReadable|Abort/i.test(e1.name)) stream=await navigator.mediaDevices.getUserMedia({audio:true}); else throw e1; } }
+    catch(e){ ui(false); console.warn('Mic failed:',e&&e.name); const denied=e&&/NotAllowed|Security|Permission/i.test(e.name);
+      toast(denied?(ML()?'ഈ സൈറ്റിന് മൈക്ക് ബ്ലോക്ക് ആണ് — ബ്രൗസർ സെറ്റിംഗ്സിൽ അനുവദിക്കൂ':'Microphone is blocked for this site — allow it in your browser settings'):(ML()?'മൈക്ക് തുടങ്ങാനായില്ല — വീണ്ടും ശ്രമിക്കൂ':'Could not start the microphone — please try again')); return; }
     const types=['audio/webm;codecs=opus','audio/mp4','audio/webm','audio/ogg']; const mt=types.find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
     rec=new MediaRecorder(stream,mt?{mimeType:mt}:undefined); chunks=[]; heard=false; quietSince=0; started=Date.now();
     rec.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
@@ -4640,14 +4642,19 @@ const llLive=(()=>{
       ws.onmessage=async e=>{ try{ const t=typeof e.data==='string'?e.data:await e.data.text(); onMsg(JSON.parse(t)); }catch(err){} };
       ws.onclose=ws.onerror=(e)=>{ if(open||!done) console.warn('Live voice closed',e&&e.code,e&&e.reason); open=false; fin(false); stopMic(); h.closed&&h.closed(); };
     }).then(ok=>{ open=ok; if(!ok){ try{ ws.close(); }catch(e){} } return ok; }); }
+  let wkOK=null;
   async function startMic(){ const c=audioCtx(); if(mic) return;
-    mic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}});
-    if(!c.audioWorklet) throw new Error('no worklet');
-    await c.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET],{type:'application/javascript'})));
-    src=c.createMediaStreamSource(mic); node=new AudioWorkletNode(c,'ll-pcm'); const an=c.createAnalyser(); an.fftSize=256; src.connect(an);
-    const d=new Uint8Array(an.fftSize); node.port.onmessage=e=>{ send({realtimeInput:{audio:{data:b64(e.data),mimeType:'audio/pcm;rate=16000'}}});
-      an.getByteTimeDomainData(d); let s=0; for(const v of d){ const x=v-128; s+=x*x; } h.level&&h.level(Math.min(1,Math.sqrt(s/d.length)/20)); };
-    src.connect(node); h.state&&h.state('listening'); }
+    try{ mic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}); }
+    catch(e){ if(e&&/Overconstrained|NotReadable|Abort/i.test(e.name)) mic=await navigator.mediaDevices.getUserMedia({audio:true}); else throw e; }
+    src=c.createMediaStreamSource(mic); const an=c.createAnalyser(); an.fftSize=256; src.connect(an); const d=new Uint8Array(an.fftSize);
+    const out=(buf)=>{ send({realtimeInput:{audio:{data:b64(buf),mimeType:'audio/pcm;rate=16000'}}}); an.getByteTimeDomainData(d); let s=0; for(const v of d){ const x=v-128; s+=x*x; } h.level&&h.level(Math.min(1,Math.sqrt(s/d.length)/20)); };
+    if(wkOK!==false&&c.audioWorklet){ try{ if(!wkOK) await c.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET],{type:'application/javascript'}))); wkOK=true;
+        node=new AudioWorkletNode(c,'ll-pcm'); node.port.onmessage=e=>out(e.data); src.connect(node); } catch(e){ wkOK=false; } }
+    if(!node){ // older phones: ScriptProcessor, resampled to 16 kHz
+      const sp=c.createScriptProcessor(4096,1,1), r=c.sampleRate/16000; sp.onaudioprocess=ev=>{ const ch=ev.inputBuffer.getChannelData(0); const n=Math.floor(ch.length/r); const o=new Int16Array(n);
+        for(let i=0;i<n;i++) o[i]=Math.max(-1,Math.min(1,ch[Math.floor(i*r)]))*32767; out(o.buffer); };
+      const mute=c.createGain(); mute.gain.value=0; src.connect(sp); sp.connect(mute); mute.connect(c.destination); node=sp; }
+    h.state&&h.state('listening'); }
   function stopMic(){ try{ node&&node.disconnect(); src&&src.disconnect(); mic&&mic.getTracks().forEach(t=>t.stop()); }catch(e){} mic=null; node=null; src=null; }
   function text(t){ flush(); send({clientContent:{turns:[{role:'user',parts:[{text:t}]}],turnComplete:true}}); }
   function close(){ stopMic(); flush(); open=false; try{ ws&&ws.close(); }catch(e){} ws=null; }
@@ -4657,15 +4664,15 @@ const llLive=(()=>{
 { const _lwLive=SCREENS.assistant;
 SCREENS.assistant=(el,p)=>{ _lwLive(el,p); const orb=el.querySelector('#orb'), ai=el.querySelector('.lw-ai'), msgs=el.querySelector('#msgs'), inp=el.querySelector('#aq'), sendB=el.querySelector('#asend');
   if(!orb||!ai||!msgs||!(state.aiStatus&&state.aiStatus.voice)||!window.WebSocket) return;
-  const ML=aiVoiceLang!=='en-IN'; const L=(en,ml)=>ML?ml:en; let me_b=null, bot_b=null, failed=false;
+  const ML=aiVoiceLang!=='en-IN'; const L=(en,ml)=>ML?ml:en; let me_b=null, bot_b=null, failed=false, greeted=false;
   const down=()=>msgs.scrollTo({top:msgs.scrollHeight,behavior:'smooth'});
   const bubble=(cls)=>{ const d=document.createElement('div'); d.className='lw-b '+cls; msgs.appendChild(d); el.querySelector('#sugg')?.remove(); el.querySelector('#orbz')?.classList.add('mini'); return d; };
   const set=(v)=>{ ai.classList.toggle('recording',v==='listening'); ai.classList.toggle('speaking',v==='speaking'); el.classList.toggle('speaking',v==='speaking'); ai.classList.remove('thinking'); };
   const ic={business:I.store,product:GI.cart,service:GI.wrench||I.cog,worker:GI.helmet||I.user,driver:GI.car||I.pin};
   const handlers={ state:v=>set(v==='idle'&&llLive.micOn?'listening':v), level:v=>ai.style.setProperty('--lvl',v.toFixed(2)),
-    heard:t=>{ llVoice.stop(); if(!me_b){ me_b=bubble('me'); bot_b=null; } me_b.textContent+=t; down(); },
-    said:t=>{ if(!bot_b){ bot_b=bubble('bot'); me_b=null; } bot_b.textContent+=t; down(); },
-    done:()=>{ me_b=null; bot_b=null; if(llLive.micOn) set('listening'); },
+    heard:t=>{ greeted=true; llVoice.stop(); if(!me_b){ me_b=bubble('me'); bot_b=null; } me_b.textContent+=t; down(); },
+    said:t=>{ if(!greeted) return; if(!bot_b){ bot_b=bubble('bot'); me_b=null; } bot_b.textContent+=t; down(); },
+    done:()=>{ greeted=true; me_b=null; bot_b=null; if(llLive.micOn) set('listening'); },
     cards:rs=>{ if(!rs.length) return; const box=document.createElement('div'); box.className='lw-turn';
       box.innerHTML=rs.slice(0,6).map(x=>{ const biz=x.type==='business'?x.id:x.business_id; const sub=x.type==='product'?`₹${x.price}${x.business?' · '+esc(x.business):''}`:x.type==='service'?`${L('from','')} ₹${x.starting_price}${x.business?' · '+esc(x.business):''}`:[x.subcategory,x.area,x.rating?('★ '+x.rating):'',x.skills,x.fare_note].filter(Boolean).map(esc).join(' · ');
         return `<div class="lw-rc t-${x.type}" ${biz?`data-biz="${biz}"`:''} style="cursor:${biz?'pointer':'default'}"><span class="lw-ri">${ic[x.type]||I.pin}</span><div><small>${esc(x.type)}</small><b>${esc(x.name)}</b><p>${sub}</p></div></div>`; }).join('');
@@ -4678,16 +4685,23 @@ SCREENS.assistant=(el,p)=>{ _lwLive(el,p); const orb=el.querySelector('#orb'), a
   const oldOrb=orb.onclick;
   orb.onclick=async(e)=>{ llVoice.stop(); buzz();
     if(llLive.micOn){ llLive.stopMic(); set('idle'); return; }
-    if(!(await ensure())) return oldOrb&&oldOrb(e);
-    try{ await llLive.startMic(); }catch(err){ toast(L('Please allow the microphone, or type instead','മൈക്ക് അനുവദിക്കൂ, അല്ലെങ്കിൽ ടൈപ്പ് ചെയ്യൂ')); } };
+    // start the mic inside the tap (phones require it), connect at the same time
+    const micP=llLive.startMic(); const okP=ensure();
+    try{ await micP; }catch(err){ console.warn('Mic failed:',err&&err.name,err&&err.message);
+      const denied=err&&/NotAllowed|Security|Permission/i.test(err.name);
+      toast(denied?L('Microphone is blocked for this site — allow it in your browser settings','ഈ സൈറ്റിന് മൈക്ക് ബ്ലോക്ക് ആണ് — ബ്രൗസർ സെറ്റിംഗ്സിൽ അനുവദിക്കൂ'):L('Could not start the microphone — close other apps using it and try again','മൈക്ക് തുടങ്ങാനായില്ല — മൈക്ക് ഉപയോഗിക്കുന്ന മറ്റ് ആപ്പുകൾ അടച്ച് വീണ്ടും ശ്രമിക്കൂ')); return; }
+    if(!(await okP)){ llLive.stopMic(); set('idle'); return oldOrb&&oldOrb(e); } };
   // typed questions go to the same live session and are answered aloud
   const oldSend=sendB&&sendB.onclick, oldKey=inp&&inp.onkeydown;
   const typed=async()=>{ const t=(inp.value||'').trim(); if(!t) return; if(!(await ensure())) return oldSend&&oldSend();
-    llVoice.stop(); inp.value=''; const b=bubble('me'); b.textContent=t; me_b=null; bot_b=null; down(); ai.classList.add('thinking'); llLive.text(t); };
+    greeted=true; llVoice.stop(); inp.value=''; const b=bubble('me'); b.textContent=t; me_b=null; bot_b=null; down(); ai.classList.add('thinking'); llLive.text(t); };
   if(sendB) sendB.onclick=typed; if(inp) inp.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); typed(); } };
   el.querySelectorAll('[data-s]').forEach(b=>{ const s=b.dataset.s; if(s.startsWith('__')) return; b.onclick=async(ev)=>{ ev.stopImmediatePropagation(); inp.value=b.textContent.trim(); typed(); }; });
   // connect in the background while the greeting plays, so the first answer is instant
-  setTimeout(()=>{ ensure(); },200);
+  // Gemini Live speaks the greeting itself (natural Malayalam, same voice); the old voice is only a fallback
+  const greetLive=!(p&&p.q); if(greetLive) setTimeout(()=>llVoice.stop(),0);
+  ensure().then(ok=>{ if(ok&&greetLive){ ai.classList.add('thinking'); llLive.text('(The user just opened Ask. Greet them now, in one breath, with exactly: "'+llGreet(ML?'ml':'en')+'")'); }
+    else if(!ok&&greetLive) llVoice.speak(llGreet(ML?'ml':'en')); });
   const back=el.querySelector('#__back'); if(back){ const o=back.onclick; back.onclick=e=>{ llLive.close(); o&&o(e); }; }
   const gone=setInterval(()=>{ if(!document.body.contains(el)||!el.querySelector('.lw-ai')){ clearInterval(gone); llLive.close(); } },800);
 };
