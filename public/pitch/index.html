@@ -155,7 +155,7 @@ section{position:relative;padding:clamp(90px,12vw,160px) 0}
 .go{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 .go small{font-size:13px;color:var(--faint)}
 .duo{position:relative;height:clamp(520px,60vw,680px);perspective:1600px;display:grid;place-items:center}
-.duo .pa,.duo .pb2{position:absolute;transition:transform .2s linear}
+.duo .pa,.duo .pb2{position:absolute;will-change:transform;transition:transform .25s ease-out}
 .duo .pa{--w:clamp(210px,21vw,270px);z-index:2}
 .duo .pb2{--w:clamp(190px,19vw,240px);z-index:1;filter:saturate(.9)}
 .tagf{position:absolute;z-index:4;padding:12px 15px;display:flex;gap:11px;align-items:center;font-size:13px;font-weight:700;font-family:var(--display);letter-spacing:-.01em}
@@ -233,7 +233,7 @@ section{position:relative;padding:clamp(90px,12vw,160px) 0}
 .ringstage{position:relative;height:clamp(380px,44vw,480px);perspective:1500px;margin-top:40px;cursor:grab;touch-action:pan-y;user-select:none}
 .ringstage:active{cursor:grabbing}
 .ring{position:absolute;left:50%;top:50%;transform-style:preserve-3d}
-.cc{position:absolute;width:clamp(200px,20vw,240px);height:clamp(250px,25vw,290px);left:0;top:0;padding:24px;display:flex;flex-direction:column;justify-content:space-between;border-radius:24px;background:var(--glass);border:1px solid var(--line2);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:var(--shadow)}
+.cc{position:absolute;will-change:transform;width:clamp(200px,20vw,240px);height:clamp(250px,25vw,290px);left:0;top:0;padding:24px;display:flex;flex-direction:column;justify-content:space-between;border-radius:24px;background:var(--glass);border:1px solid var(--line2);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:var(--shadow)}
 .cc .ico{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(145deg,var(--teal2),var(--deep));color:#fff;box-shadow:0 12px 24px -12px rgba(12,143,130,.9)}
 .cc .ico .ic{width:24px;height:24px}
 .cc.later .ico{background:transparent;border:1px dashed var(--line2);color:var(--muted);box-shadow:none}
@@ -309,6 +309,22 @@ footer{padding:50px 0 60px;text-align:center;color:var(--faint);font-size:13px}
 @media(min-width:1040px){.dots{display:flex}}
 .dots a{width:6px;height:6px;border-radius:50%;background:var(--line2);transition:all .35s var(--ease)}
 .dots a.on{height:22px;border-radius:4px;background:var(--coral)}
+@media(max-width:760px){
+  #bg i{animation:none;filter:blur(60px);opacity:.4} .grain{display:none} #grid{background-size:48px 48px}
+  .card,.nav .wrap,.cc,.btn.o,.applinks a{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+  .card,.cc{background:var(--surface)} .nav .wrap{background:var(--surface)}
+  .rv{filter:none;transform:translateY(24px)}
+  section{padding:76px 0} .hero{padding:110px 0 70px;min-height:auto} .hero h1{font-size:clamp(40px,11vw,56px)}
+  h2{font-size:clamp(32px,9vw,44px)} .lead{font-size:15.5px}
+  .vision{height:260vh} .eras{min-height:250px;margin-top:22px} .era h3{font-size:32px} .era p{font-size:15px}
+  .duo{height:470px} .duo .pa{--w:200px} .duo .pb2{--w:170px}
+  .app .phone{--w:190px} .apps{margin-top:36px}
+  .vph{--w:270px} .pgrid,.plans,.probs{margin-top:34px} .fcard{padding:18px} #fchart{height:200px}
+  .ringstage{height:360px} .cc{width:190px;height:240px;padding:20px;box-shadow:0 10px 24px -16px rgba(0,0,0,.35)} .on3{box-shadow:none}
+  .plan .pr{font-size:46px} .final{border-radius:26px} .road{margin-top:36px}
+  .scrollhint{display:none} .nav .r .btn{padding:10px 13px;font-size:13px}
+  .fi:hover{padding-left:4px}
+}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.rv{opacity:1;transform:none;filter:none}.split .w>span{transform:none}}
 </style>
 </head>
@@ -629,8 +645,8 @@ secs.forEach(s=>{ const a=document.createElement('a'); a.href='#'+s.id; a.title=
 addEventListener('keydown',e=>{ if(['ArrowDown','PageDown'].includes(e.key)){ e.preventDefault(); secs[Math.min(secs.length-1,cur+1)].scrollIntoView({behavior:'smooth'}); } if(['ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); secs[Math.max(0,cur-1)].scrollIntoView({behavior:'smooth'}); } });
 
 /* ====== HOLOGRAM: 3D particle cloud that morphs between shapes ====== */
-const cv=$('#holo'), g2=cv.getContext('2d'); let W=0,H=0; const mob=innerWidth<760; const N=mob?1300:2400;
-const resize=()=>{ W=innerWidth; H=innerHeight; cv.width=W*DPR; cv.height=H*DPR; g2.setTransform(DPR,0,0,DPR,0,0); }; resize(); addEventListener('resize',resize);
+const cv=$('#holo'), g2=cv.getContext('2d',{alpha:true}); let W=0,H=0; const mob=innerWidth<760; const N=mob?750:(navigator.hardwareConcurrency<=4?1600:2400); const HDPR=mob?1.25:Math.min(1.75,DPR);
+let lw=0; const resize=()=>{ if(mob&&Math.abs(innerWidth-lw)<2&&W) return; lw=innerWidth; W=innerWidth; H=innerHeight; cv.width=W*HDPR; cv.height=H*HDPR; g2.setTransform(HDPR,0,0,HDPR,0,0); }; resize(); addEventListener('resize',resize);
 const R=Math.random, rnd=(a,b)=>a+R()*(b-a);
 function pinShape(){ const o=[]; // map-pin teardrop (as in the logo) with two interlocking rings
   const cy=.3, r=.66, ty=-1.15, d=cy-ty, ta=Math.asin(r/d); const tx=r*Math.cos(ta), tyy=cy-r*Math.sin(ta);
@@ -666,8 +682,9 @@ let shape='pin', want={cx:.73,cy:.5,sc:1,al:1}, now={cx:.73,cy:.5,sc:1,al:1}, ro
 addEventListener('pointermove',e=>{ tmx=e.clientX/innerWidth-.5; tmy=e.clientY/innerHeight-.5; },{passive:true});
 function setShape(s){ if(s==='none'){ want.al=0; return; } want.al=1; if(s===shape) return; shape=s; const t=SH[s]; pts.forEach((p,i)=>{ p.t=t[i]; }); spd=3; }
 pts.forEach((p,i)=>p.t=SH.pin[i]);
-function frame(t){ g2.clearRect(0,0,W,H);
-  for(const k of ['cx','cy','sc','al']) now[k]+=(want[k]-now[k])*.06; mx+=(tmx-mx)*.05; my+=(tmy-my)*.05; spd+=(1-spd)*.03; rotY+=(reduce?0:.0035*spd);
+let hid=false; document.addEventListener('visibilitychange',()=>hid=document.hidden);
+function frame(t){ requestAnimationFrame(frame); if(hid) return; if(now.al<.01&&want.al<.01){ if(!frame.cl){ g2.clearRect(0,0,W,H); frame.cl=1; } return; } frame.cl=0; g2.clearRect(0,0,W,H);
+  for(const k of ['cx','cy','sc']) now[k]+=(want[k]-now[k])*.06; now.al+=(want.al-now.al)*(want.al<now.al?.14:.06); mx+=(tmx-mx)*.05; my+=(tmy-my)*.05; spd+=(1-spd)*.03; rotY+=(reduce?0:.0035*spd);
   if(now.al>.01){ const D=dark(); const scale=Math.min(W,H)*.3*now.sc, X0=W*now.cx, Y0=H*now.cy;
     const ay=rotY+mx*.8, ax=-.12+my*.5, cy_=Math.cos(ay), sy=Math.sin(ay), cx_=Math.cos(ax), sx=Math.sin(ax);
     g2.globalCompositeOperation=D?'lighter':'source-over';
@@ -676,8 +693,7 @@ function frame(t){ g2.clearRect(0,0,W,H);
       const f=2.6/(2.6+z); const X=X0+(x+wob)*scale*f, Y=Y0+(y+wob)*scale*f; const depth=(1-z)/2;
       const a=Math.min(1,(.35+depth*.75)*now.al*(D?1:.9)); const sz=(p.s<.08?2.6:1.7)*f*(mob?1.15:1);
       const warm=p.s<.12; g2.fillStyle=warm?`rgba(255,122,89,${a})`:(D?`rgba(127,224,207,${a})`:`rgba(10,110,100,${a})`); g2.fillRect(X,Y,sz,sz); }
-    g2.globalCompositeOperation='source-over'; }
-  requestAnimationFrame(frame); }
+    g2.globalCompositeOperation='source-over'; } }
 requestAnimationFrame(frame);
 
 /* which shape where */
@@ -685,14 +701,14 @@ const zones=$$('section[data-shape]');
 function layoutFor(id){ const wide=innerWidth>=1040;
   if(id==='top') return wide?{cx:.74,cy:.52,sc:1.05,al:1}:{cx:.5,cy:.6,sc:.8,al:.16};
   if(id==='vision') return wide?{cx:.75,cy:.52,sc:1.05,al:1}:{cx:.5,cy:.86,sc:.45,al:.55};
-  return {cx:.5,cy:.5,sc:wide?1.25:.9,al:.22}; }
+  return {cx:.5,cy:.5,sc:wide?1.25:.9,al:mob?0:.22}; }
 function onScroll(){ const h=document.documentElement; $('#prog').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';
   const mid=innerHeight*.5; let z=zones[0]; for(const s of zones){ const r=s.getBoundingClientRect(); if(r.top<mid&&r.bottom>mid){ z=s; break; } }
   cur=secs.indexOf(z); [...dots.children].forEach((d,j)=>d.classList.toggle('on',j===cur));
   let s=z.dataset.shape; if(z.id==='vision') s=visionTick(); Object.assign(want,layoutFor(z.id)); setShape(s);
   if(s==='none') want.al=0;
   duoTick(); }
-addEventListener('scroll',onScroll,{passive:true}); addEventListener('resize',onScroll);
+let tick=false; const sched=()=>{ if(tick) return; tick=true; requestAnimationFrame(()=>{ tick=false; onScroll(); }); }; addEventListener('scroll',sched,{passive:true}); addEventListener('resize',sched);
 
 /* VISION sticky eras */
 const vis=$('#vision'), eras=$$('.era'), st=$$('#steps3 i');
@@ -707,10 +723,11 @@ function duoTick(){ duos.forEach(d=>{ const r=d.getBoundingClientRect(); const p
   b.style.transform=`translateX(${off}px) translateY(${-p*60+30}px) translateZ(-120px) rotateY(${-16-p*14}deg) rotateZ(4deg)`; }); }
 onScroll();
 
+const vis_=new Map(); const watch=el=>{ vis_.set(el,false); new IntersectionObserver(es=>es.forEach(e=>vis_.set(el,e.isIntersecting)),{rootMargin:'120px'}).observe(el); return ()=>vis_.get(el); };
 /* VOICE scripted chat (no emoji) */
 const vm=$('#vmsgs'), orb=$('#orb'), wl=$('#wvl'), wr=$('#wvr');
 for(let i=0;i<6;i++){ wl.appendChild(document.createElement('i')); wr.appendChild(document.createElement('i')); }
-let talking=0; (function wave(t){ [...wl.children,...wr.children].forEach((b,i)=>b.style.height=(talking?6+Math.abs(Math.sin(t/120+i*1.3))*22:6)+'px'); requestAnimationFrame(wave); })(0);
+const vOn=watch(vm); let talking=0; (function wave(t){ if(!vOn()){ requestAnimationFrame(wave); return; } [...wl.children,...wr.children].forEach((b,i)=>b.style.height=(talking?6+Math.abs(Math.sin(t/120+i*1.3))*22:6)+'px'); requestAnimationFrame(wave); })(0);
 const script=[['bot','നമസ്കാരം! Local Link-ലേക്ക് സ്വാഗതം. എന്താണ് വേണ്ടത്?',1600,'s'],['me','അടുത്ത് നല്ല ബിരിയാണി കിട്ടുന്ന ഹോട്ടൽ ഏതാ?',1800,'l'],['bot','Paragon Restaurant നല്ല ഓപ്ഷനാണ് — 4.7 റേറ്റിംഗ്, Mananchira. ഓർഡർ ചെയ്യട്ടെ?',2200,'s'],
  ['card',`<span class="ico">${ic('store')}</span><div><b>Paragon Restaurant</b><span>Restaurant · Mananchira · 4.7</span></div>`,700],['card',`<span class="ico">${ic('food')}</span><div><b>Chicken Biriyani</b><span>₹210 · Paragon Restaurant</span></div>`,1200],
  ['me','ശരി, ഒരു പ്ലംബറെയും വേണം.',1700,'l'],['bot','Anil Das എന്ന പ്ലംബർ അടുത്തുണ്ട് — ₹800, 4.6 റേറ്റിംഗ്. നാളെ രാവിലെ ബുക്ക് ചെയ്യട്ടെ?',2400,'s']];
@@ -745,20 +762,21 @@ setInterval(()=>{ post.animate([{transform:'rotateY(0)'},{transform:'rotateY(90d
 const cats=[['food','Food & Groceries','Restaurants, grocery, bakeries, vegetables, meat & seafood, dairy, homemade'],['bag','Shopping','Clothing, electronics, furniture, books, gifts, jewellery, pharmacy, footwear'],['wrench','Services','Home, personal, healthcare, automotive and local services'],['hard','Workers','Construction, agricultural, domestic, retail, event and hospitality'],['car','Transportation','Taxis, auto rickshaws and delivery services'],['info','Local Information','Government offices, emergency, schools, banks, worship, tourism'],['list','Classifieds','Jobs, real estate and for sale — coming later']];
 const ring=$('#ring'), rs=$('#rstage'); const cc=cats.map((c,i)=>{ const d=document.createElement('div'); d.className='cc'+(i===6?' later':''); d.innerHTML=`<span class="ico">${ic(c[0])}</span><div><span class="n">${String(i+1).padStart(2,'0')}</span><h4>${c[1]}</h4><p>${c[2]}</p></div>`; ring.appendChild(d); return d; });
 let ang=0, vel=.12, drag=false, lx=0, boost=0; const rad=()=>Math.min(400,Math.max(230,innerWidth*.26));
-function lay(){ const r=rad(), w=cc[0].offsetWidth, h=cc[0].offsetHeight; cc.forEach((c,i)=>{ const a=ang+i*360/cc.length, z=Math.cos(a*Math.PI/180); c.style.transform=`translate(${-w/2}px,${-h/2}px) rotateY(${a}deg) translateZ(${r}px)`; c.style.opacity=(.12+.88*Math.pow((z+1)/2,1.6)).toFixed(2); c.style.zIndex=Math.round((z+1)*50); }); }
-(function spin(){ if(!drag) ang+=reduce?0:(vel+boost); boost*=.94; lay(); requestAnimationFrame(spin); })();
+let cw=0,chh=0; const msr=()=>{ cw=cc[0].offsetWidth; chh=cc[0].offsetHeight; }; msr(); addEventListener('resize',msr);
+function lay(){ const r=rad(), w=cw, h=chh; cc.forEach((c,i)=>{ const a=ang+i*360/cc.length, z=Math.cos(a*Math.PI/180); c.style.transform=`translate(${-w/2}px,${-h/2}px) rotateY(${a}deg) translateZ(${r}px)`; c.style.opacity=(.12+.88*Math.pow((z+1)/2,1.6)).toFixed(2); c.style.zIndex=Math.round((z+1)*50); }); }
+const ringOn=watch(rs); (function spin(){ requestAnimationFrame(spin); if(!ringOn()) return; if(!drag) ang+=reduce?0:(vel+boost); boost*=.94; lay(); })();
 ring.style.transform='rotateX(-6deg)';
-rs.addEventListener('pointerdown',e=>{ drag=true; lx=e.clientX; rs.setPointerCapture(e.pointerId); });
+rs.addEventListener('pointerdown',e=>{ drag=true; lx=e.clientX; if(e.pointerType==='mouse') rs.setPointerCapture(e.pointerId); });
 rs.addEventListener('pointermove',e=>{ if(!drag) return; const dx=e.clientX-lx; lx=e.clientX; ang+=dx*.3; boost=dx*.03; });
 ['pointerup','pointercancel'].forEach(k=>rs.addEventListener(k,()=>drag=false));
 let lastY=scrollY; addEventListener('scroll',()=>{ const d=scrollY-lastY; lastY=scrollY; boost=Math.max(-2.5,Math.min(2.5,boost+d*.008)); },{passive:true});
 
 /* ECOSYSTEM: tilted 3D orbit */
 const orbit=$('#orbit'), osvg=$('#osvg'); const nodes=[['users','Customers','Discover, order, review'],['store','Businesses','Catalogue, offers, orders'],['wrench','Service providers','Profiles and enquiries'],['calendar','Event organisers','Events and bookings'],['truck','Delivery partners','Local delivery'],['hand','Vyapari · KVVES','Trust and onboarding'],['landmark','Local institutions','Information and support'],['mega','Local creators','Awareness']];
-const ns=nodes.map(n=>{ const d=document.createElement('div'); d.className='on3 card'; d.innerHTML=`<span class="ico">${ic(n[0])}</span><div style="text-align:left"><b>${n[1]}</b><small>${n[2]}</small></div>`; orbit.appendChild(d); return d; });
-let oa=0; (function ospin(){ oa+=reduce?0:.0025; if(innerWidth<=700){ requestAnimationFrame(ospin); return; } const w=orbit.clientWidth, h=orbit.clientHeight, rx=Math.min(w*.42,460), ry=h*.34, tilt=.32; let lines='';
-  ns.forEach((d,i)=>{ const a=oa+i/ns.length*6.283, x=Math.cos(a)*rx, z=Math.sin(a), y=z*ry*.9; const sc=.78+(z+1)*.16; const X=w/2+x, Y=h/2+y;
-    d.style.transform=`translate(${X-d.offsetWidth/2}px,${Y-d.offsetHeight/2}px) scale(${sc})`; d.style.zIndex=z>0?60:10; d.style.opacity=(.45+(z+1)*.28).toFixed(2);
+let nsz=[]; const ns=nodes.map(n=>{ const d=document.createElement('div'); d.className='on3 card'; d.innerHTML=`<span class="ico">${ic(n[0])}</span><div style="text-align:left"><b>${n[1]}</b><small>${n[2]}</small></div>`; orbit.appendChild(d); return d; });
+const orbOn=watch(orbit); let oa=0; (function ospin(){ if(innerWidth<=700||!orbOn()){ requestAnimationFrame(ospin); return; } oa+=reduce?0:.0025; const w=orbit.clientWidth, h=orbit.clientHeight, rx=Math.min(w*.42,460), ry=h*.34, tilt=.32; let lines='';
+  if(!nsz.length||!nsz[0][0]) nsz=ns.map(d=>[d.offsetWidth,d.offsetHeight]); ns.forEach((d,i)=>{ const a=oa+i/ns.length*6.283, x=Math.cos(a)*rx, z=Math.sin(a), y=z*ry*.9; const sc=.78+(z+1)*.16; const X=w/2+x, Y=h/2+y;
+    d.style.transform=`translate3d(${X-nsz[i][0]/2}px,${Y-nsz[i][1]/2}px,0) scale(${sc})`; d.style.zIndex=z>0?60:10; d.style.opacity=(.45+(z+1)*.28).toFixed(2);
     lines+=`<line x1="${w/2}" y1="${h/2}" x2="${X}" y2="${Y}" stroke="${dark()?'rgba(127,224,207,.18)':'rgba(10,92,85,.16)'}" stroke-width="1"/><circle r="2.5" fill="#F26B3A" cx="${w/2+(X-w/2)*((oa*3+i*.37)%1)}" cy="${h/2+(Y-h/2)*((oa*3+i*.37)%1)}"/>`; });
   osvg.innerHTML=`<ellipse cx="${w/2}" cy="${h/2}" rx="${rx}" ry="${ry*.9}" fill="none" stroke="${dark()?'rgba(255,255,255,.1)':'rgba(11,36,33,.1)'}" stroke-dasharray="3 6"/>`+lines; requestAnimationFrame(ospin); })();
 
@@ -766,7 +784,7 @@ let oa=0; (function ospin(){ oa+=reduce?0:.0025; if(innerWidth<=700){ requestAni
 const loop=$('#loop'); const ls=[['store','Partner joins'],['spark','Branded post'],['share','Partner shares'],['eye','Customers see it'],['trend','More traffic'],['hand','More shops join']];
 const lsE=ls.map((l,i)=>{ const a=-Math.PI/2+i*2*Math.PI/ls.length; const d=document.createElement('div'); d.className='ls'; d.style.left=(50+Math.cos(a)*36)+'%'; d.style.top=(50+Math.sin(a)*36)+'%'; d.innerHTML=`<span class="ico">${ic(l[0])}</span>${l[1]}`; loop.appendChild(d); return d; });
 const lp=$('#lprog'), ld=$('#ldot'); let lt=0;
-(function lspin(){ lt=(lt+(reduce?0:.0022))%1; lp.setAttribute('stroke-dashoffset',226.2*(1-lt)); const a=-Math.PI/2+lt*6.283; ld.setAttribute('cx',50+Math.cos(a)*36); ld.setAttribute('cy',50+Math.sin(a)*36); const k=Math.floor(lt*6+.5)%6; lsE.forEach((e,i)=>e.classList.toggle('on',i===k)); requestAnimationFrame(lspin); })();
+const loopOn=watch(loop); (function lspin(){ if(!loopOn()){ requestAnimationFrame(lspin); return; } lt=(lt+(reduce?0:.0022))%1; lp.setAttribute('stroke-dashoffset',226.2*(1-lt)); const a=-Math.PI/2+lt*6.283; ld.setAttribute('cx',50+Math.cos(a)*36); ld.setAttribute('cy',50+Math.sin(a)*36); const k=Math.floor(lt*6+.5)%6; lsE.forEach((e,i)=>e.classList.toggle('on',i===k)); requestAnimationFrame(lspin); })();
 })();
 </script>
 </body>
