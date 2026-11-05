@@ -11,13 +11,14 @@ export const geminiKey = () => process.env.GOOGLE_API_KEY || process.env.GEMINI_
 // first model that works is remembered; env overrides go first
 const TEXT_MODELS = () => ['gemini-3.8-flash', process.env.GEMINI_TEXT_MODEL, 'gemini-flash-latest', 'gemini-2.5-flash'].filter(Boolean);
 const TTS_MODELS = () => ['gemini-3.8-flash-preview-tts', process.env.GEMINI_TTS_MODEL, 'gemini-3.8-flash-tts', 'gemini-2.5-flash-preview-tts', 'gemini-2.5-pro-preview-tts'].filter(Boolean);
-const good = {}; export const lastError = {};
+const good = {}; const coolUntil = {}; export const lastError = {};
 async function callAny(kind, list, body, ms, check) {
   const order = good[kind] ? [good[kind], ...list.filter(m => m !== good[kind])] : list; let err;
+  if ((coolUntil[kind] || 0) > Date.now()) throw new Error('Gemini 429 quota exceeded (cooling down)');
   const queue = [...new Set(order)], tried = new Set(); lastError[kind] = null;
   while (queue.length) { const m = queue.shift(); if (tried.has(m)) continue; tried.add(m);
     try { const d = await call(m, body, ms); if (check && !check(d)) throw new Error('Gemini 404 ' + m + ' gave no usable output: ' + JSON.stringify(d).slice(0, 200)); good[kind] = m; lastError[kind] = null; return d; }
-    catch (e) { err = e; lastError[kind] = (lastError[kind] ? lastError[kind] + ' || ' : '') + m + ': ' + e.message.slice(0, 160); if (!/ 40[0-9]| 50[0-9]| 429|abort/i.test(e.message)) break;
+    catch (e) { err = e; lastError[kind] = (lastError[kind] ? lastError[kind] + ' || ' : '') + m + ': ' + e.message.slice(0, 160); if (/ 429/.test(e.message)) { coolUntil[kind] = Date.now() + 60e3; break; } if (!/ 40[0-9]| 50[0-9]|abort/i.test(e.message)) break;
       const hint = /models\/([\w.\-]+)/.exec(e.message.split(' ').slice(3).join(' ')); if (hint && !tried.has(hint[1])) queue.unshift(hint[1]); } }
   throw err;
 }

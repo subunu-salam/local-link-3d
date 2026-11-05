@@ -1653,8 +1653,10 @@ function llRecorder(micBtn,input,run){
     // create/resume the audio context inside the tap (browsers keep it suspended otherwise)
     try{ ctx=ctx||new (window.AudioContext||window.webkitAudioContext)(); ctx.resume&&ctx.resume(); }catch(e){ ctx=null; }
     ui(true);
-    try{ stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}); }
-    catch(e){ ui(false); toast(ML()?'മൈക്ക് അനുവദിക്കൂ, അല്ലെങ്കിൽ ടൈപ്പ് ചെയ്യൂ':'Please allow the microphone, or type instead'); document.querySelector('#kb')?.click(); return; }
+    try{ try{ stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}); }
+         catch(e1){ if(e1&&/Overconstrained|NotReadable|Abort/i.test(e1.name)) stream=await navigator.mediaDevices.getUserMedia({audio:true}); else throw e1; } }
+    catch(e){ ui(false); console.warn('Mic failed:',e&&e.name); const denied=e&&/NotAllowed|Security|Permission/i.test(e.name);
+      toast(denied?(ML()?'ഈ സൈറ്റിന് മൈക്ക് ബ്ലോക്ക് ആണ് — ബ്രൗസർ സെറ്റിംഗ്സിൽ അനുവദിക്കൂ':'Microphone is blocked for this site — allow it in your browser settings'):(ML()?'മൈക്ക് തുടങ്ങാനായില്ല — വീണ്ടും ശ്രമിക്കൂ':'Could not start the microphone — please try again')); return; }
     const types=['audio/webm;codecs=opus','audio/mp4','audio/webm','audio/ogg']; const mt=types.find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
     rec=new MediaRecorder(stream,mt?{mimeType:mt}:undefined); chunks=[]; heard=false; quietSince=0; started=Date.now();
     rec.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
@@ -4299,7 +4301,7 @@ SCREENS.assistant=(el,p)=>{ _lwAsk(el,p); const z=$('#orbz'), inp=el.querySelect
   const orb=$('#orb'); const wv=(r)=>`<span class="ab-wv ${r}">${Array.from({length:6},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span>`;
   z.className='ab-dock'; z.innerHTML='';
   z.insertAdjacentHTML('beforeend',`<button class="ab-ic ${llVoice.muted?'off':''}" id="spk" aria-label="Voice replies"><span>${llVoice.muted?SPK_OFF:SPK_ON}</span><small>${llVoice.muted?(ML?'ഓഫ്':'Off'):(ML?'ശബ്ദം':'Voice')}</small></button>`);
-  const mid=document.createElement('div'); mid.className='ab-mid'; mid.dataset.hint=ML?'സംസാരിക്കാൻ ടാപ്പ് ചെയ്യൂ':'Tap to speak'; new MutationObserver(()=>{ const ai=el.querySelector('.lw-ai'); if(!ai) return; mid.dataset.hint=ai.classList.contains('recording')?(ML?'അയക്കാൻ ടാപ്പ് ചെയ്യൂ':'Tap to send'):ai.classList.contains('thinking')?(ML?'നോക്കുന്നു…':'Thinking…'):ai.classList.contains('speaking')?(ML?'പറയുന്നു…':'Speaking…'):(ML?'സംസാരിക്കാൻ ടാപ്പ് ചെയ്യൂ':'Tap to speak'); }).observe(el.querySelector('.lw-ai'),{attributes:true,attributeFilter:['class']}); mid.innerHTML=wv('l'); mid.appendChild(orb); mid.insertAdjacentHTML('beforeend',wv('r')); z.appendChild(mid);
+  const mid=document.createElement('div'); mid.className='ab-mid'; mid.dataset.hint=ML?'സംസാരിക്കാൻ ടാപ്പ് ചെയ്യൂ':'Tap to speak'; new MutationObserver(()=>{ const ai=el.querySelector('.lw-ai'); if(!ai) return; mid.dataset.hint=ai.classList.contains('recording')?(ML?'കേൾക്കുന്നു… നിർത്താൻ ടാപ്പ്':'Listening… tap to stop'):ai.classList.contains('thinking')?(ML?'നോക്കുന്നു…':'Thinking…'):ai.classList.contains('speaking')?(ML?'പറയുന്നു…':'Speaking…'):(ML?'സംസാരിക്കാൻ ടാപ്പ് ചെയ്യൂ':'Tap to speak'); }).observe(el.querySelector('.lw-ai'),{attributes:true,attributeFilter:['class']}); mid.innerHTML=wv('l'); mid.appendChild(orb); mid.insertAdjacentHTML('beforeend',wv('r')); z.appendChild(mid);
   z.insertAdjacentHTML('beforeend',`<button class="ab-ic" id="kb" aria-label="Type instead"><span>${KB}</span><small>${ML?'ടൈപ്പ്':'Type'}</small></button>`);
   orb.onclick=()=>$('#amic').click();
   $('#spk').onclick=()=>{ llVoice.setMuted(!llVoice.muted); const b=$('#spk'); b.classList.toggle('off',llVoice.muted); b.querySelector('span').innerHTML=llVoice.muted?SPK_OFF:SPK_ON; b.querySelector('small').textContent=llVoice.muted?(ML?'ഓഫ്':'Off'):(ML?'ശബ്ദം':'Voice'); buzz(); };
@@ -4596,5 +4598,115 @@ function cxDockInd(){
   },{passive:true});
 })();
 
+/* ---------- Ask Local Link: real-time voice over Gemini Live (as in VoiceBite) ----------
+   Mic audio streams to Gemini while you talk; the reply streams back as audio, so it starts
+   speaking about a second after you stop. Tools run against our own catalogue (/api/ask fast). */
+const llLive=(()=>{
+  let ws=null, ctx=null, mic=null, node=null, src=null, playAt=0, playing=[], open=false, ready=null, h={};
+  const WORKLET=`class P extends AudioWorkletProcessor{constructor(){super();this.b=[];this.r=sampleRate/16000;this.p=0}
+    process(i){const c=i[0]&&i[0][0];if(!c)return true;for(let k=this.p;k<c.length;k+=this.r){this.b.push(Math.max(-1,Math.min(1,c[Math.floor(k)])))}this.p=(this.p+Math.ceil((c.length-this.p)/this.r)*this.r)-c.length;
+    if(this.b.length>=1600){const o=new Int16Array(this.b.length);for(let j=0;j<o.length;j++)o[j]=this.b[j]*32767;this.port.postMessage(o.buffer,[o.buffer]);this.b=[]}return true}}registerProcessor('ll-pcm',P)`;
+  const b64=(buf)=>{ let s=''; const u=new Uint8Array(buf); for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000)); return btoa(s); };
+  const send=(o)=>{ if(ws&&ws.readyState===1) ws.send(JSON.stringify(o)); };
+  function audioCtx(){ if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)(); if(ctx.state==='suspended') ctx.resume(); return ctx; }
+  function flush(){ playing.forEach(s=>{ try{ s.stop(); }catch(e){} }); playing=[]; playAt=0; }
+  function play(data){ const c=audioCtx(); const bin=atob(data); const n=bin.length>>1; const buf=c.createBuffer(1,n,24000); const ch=buf.getChannelData(0);
+    for(let i=0;i<n;i++){ let v=bin.charCodeAt(2*i)|(bin.charCodeAt(2*i+1)<<8); if(v>32767) v-=65536; ch[i]=v/32768; }
+    const s=c.createBufferSource(); s.buffer=buf; s.connect(c.destination); playAt=Math.max(playAt,c.currentTime+0.05); s.start(playAt); playAt+=buf.duration;
+    playing.push(s); s.onended=()=>{ playing=playing.filter(x=>x!==s); if(!playing.length) h.state&&h.state('idle'); }; h.state&&h.state('speaking'); }
+  async function tool(fc){ const a=fc.args||{}; let result;
+    try{
+      if(fc.name==='search_local'){ const r=await api('/ask',{method:'POST',body:{query:a.query||'',lang:aiVoiceLang==='en-IN'?'en':'ml',fast:1}}); h.cards&&h.cards(r.results||[]);
+        result={ matches:(r.results||[]).slice(0,5).map(x=>({type:x.type,name:x.name,price:x.price,from:x.starting_price,area:x.area,rating:x.rating,business:x.business,kind:x.subcategory||x.skills||x.service_type})) }; }
+      else if(fc.name==='track_orders'){ if(!token) result={ note:'User is not logged in; ask them to log in to see orders.' }; else { const os=await api('/orders'); result={ orders:os.slice(0,5).map(o=>({id:o.id,status:o.status,shop:o.business_name||o.business,total:o.total})) }; } }
+      else if(fc.name==='show_offers'){ const of=await api('/offers'); h.offers&&h.offers(of.slice(0,5)); result={ offers:of.slice(0,5).map(o=>({title:o.title,shop:o.business,code:o.code})) }; }
+      else result={ error:'unknown tool' };
+    }catch(e){ result={ error:'lookup failed' }; }
+    send({ toolResponse:{ functionResponses:[{ id:fc.id, name:fc.name, response:{ result } }] } }); }
+  function onMsg(m){
+    if(m.setupComplete){ ready&&ready(true); ready=null; return; }
+    if(m.toolCall) (m.toolCall.functionCalls||[]).forEach(tool);
+    const sc=m.serverContent; if(!sc) return;
+    if(sc.interrupted){ flush(); h.state&&h.state('listening'); }
+    if(sc.inputTranscription&&sc.inputTranscription.text) h.heard&&h.heard(sc.inputTranscription.text);
+    if(sc.outputTranscription&&sc.outputTranscription.text) h.said&&h.said(sc.outputTranscription.text);
+    (sc.modelTurn&&sc.modelTurn.parts||[]).forEach(p=>{ if(p.inlineData&&p.inlineData.data) play(p.inlineData.data); });
+    if(sc.turnComplete) h.done&&h.done();
+  }
+  async function connect(handlers){ h=handlers||{}; if(open) return true; audioCtx();
+    const s=await api('/live',{method:'POST',body:{lang:aiVoiceLang==='en-IN'?'en':'ml',name:(token&&me&&me.name)?me.name.split(' ')[0]:''}});
+    return new Promise(res=>{ let done=false; const fin=v=>{ if(done) return; done=true; res(v); };
+      ready=fin; setTimeout(()=>fin(false),6000);
+      ws=new WebSocket(s.url+'?access_token='+encodeURIComponent(s.token));
+      ws.onopen=()=>ws.send(JSON.stringify({setup:s.setup}));
+      ws.onmessage=async e=>{ try{ const t=typeof e.data==='string'?e.data:await e.data.text(); onMsg(JSON.parse(t)); }catch(err){} };
+      ws.onclose=ws.onerror=(e)=>{ if(open||!done) console.warn('Live voice closed',e&&e.code,e&&e.reason); open=false; fin(false); stopMic(); h.closed&&h.closed(); };
+    }).then(ok=>{ open=ok; if(!ok){ try{ ws.close(); }catch(e){} } return ok; }); }
+  let wkOK=null;
+  async function startMic(){ const c=audioCtx(); if(mic) return;
+    try{ mic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}); }
+    catch(e){ if(e&&/Overconstrained|NotReadable|Abort/i.test(e.name)) mic=await navigator.mediaDevices.getUserMedia({audio:true}); else throw e; }
+    src=c.createMediaStreamSource(mic); const an=c.createAnalyser(); an.fftSize=256; src.connect(an); const d=new Uint8Array(an.fftSize);
+    const out=(buf)=>{ send({realtimeInput:{audio:{data:b64(buf),mimeType:'audio/pcm;rate=16000'}}}); an.getByteTimeDomainData(d); let s=0; for(const v of d){ const x=v-128; s+=x*x; } h.level&&h.level(Math.min(1,Math.sqrt(s/d.length)/20)); };
+    if(wkOK!==false&&c.audioWorklet){ try{ if(!wkOK) await c.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET],{type:'application/javascript'}))); wkOK=true;
+        node=new AudioWorkletNode(c,'ll-pcm'); node.port.onmessage=e=>out(e.data); src.connect(node); } catch(e){ wkOK=false; } }
+    if(!node){ // older phones: ScriptProcessor, resampled to 16 kHz
+      const sp=c.createScriptProcessor(4096,1,1), r=c.sampleRate/16000; sp.onaudioprocess=ev=>{ const ch=ev.inputBuffer.getChannelData(0); const n=Math.floor(ch.length/r); const o=new Int16Array(n);
+        for(let i=0;i<n;i++) o[i]=Math.max(-1,Math.min(1,ch[Math.floor(i*r)]))*32767; out(o.buffer); };
+      const mute=c.createGain(); mute.gain.value=0; src.connect(sp); sp.connect(mute); mute.connect(c.destination); node=sp; }
+    h.state&&h.state('listening'); }
+  function stopMic(){ try{ node&&node.disconnect(); src&&src.disconnect(); mic&&mic.getTracks().forEach(t=>t.stop()); }catch(e){} mic=null; node=null; src=null; }
+  function text(t){ flush(); send({clientContent:{turns:[{role:'user',parts:[{text:t}]}],turnComplete:true}}); }
+  function close(){ stopMic(); flush(); open=false; try{ ws&&ws.close(); }catch(e){} ws=null; }
+  return { connect, startMic, stopMic, text, close, flush, get open(){ return open; }, get micOn(){ return !!mic; } };
+})();
+
+{ const _lwLive=SCREENS.assistant;
+SCREENS.assistant=(el,p)=>{ _lwLive(el,p); const orb=el.querySelector('#orb'), ai=el.querySelector('.lw-ai'), msgs=el.querySelector('#msgs'), inp=el.querySelector('#aq'), sendB=el.querySelector('#asend');
+  if(!orb||!ai||!msgs||!(state.aiStatus&&state.aiStatus.voice)||!window.WebSocket) return;
+  const ML=aiVoiceLang!=='en-IN'; const L=(en,ml)=>ML?ml:en; let me_b=null, bot_b=null, failed=false, greeted=false;
+  const down=()=>msgs.scrollTo({top:msgs.scrollHeight,behavior:'smooth'});
+  const bubble=(cls)=>{ const d=document.createElement('div'); d.className='lw-b '+cls; msgs.appendChild(d); el.querySelector('#sugg')?.remove(); el.querySelector('#orbz')?.classList.add('mini'); return d; };
+  const set=(v)=>{ ai.classList.toggle('recording',v==='listening'); ai.classList.toggle('speaking',v==='speaking'); el.classList.toggle('speaking',v==='speaking'); ai.classList.remove('thinking'); };
+  const ic={business:I.store,product:GI.cart,service:GI.wrench||I.cog,worker:GI.helmet||I.user,driver:GI.car||I.pin};
+  const handlers={ state:v=>set(v==='idle'&&llLive.micOn?'listening':v), level:v=>ai.style.setProperty('--lvl',v.toFixed(2)),
+    heard:t=>{ greeted=true; llVoice.stop(); if(!me_b){ me_b=bubble('me'); bot_b=null; } me_b.textContent+=t; down(); },
+    said:t=>{ if(!greeted) return; if(!bot_b){ bot_b=bubble('bot'); me_b=null; } bot_b.textContent+=t; down(); },
+    done:()=>{ greeted=true; me_b=null; bot_b=null; if(llLive.micOn) set('listening'); },
+    cards:rs=>{ if(!rs.length) return; const box=document.createElement('div'); box.className='lw-turn';
+      box.innerHTML=rs.slice(0,6).map(x=>{ const biz=x.type==='business'?x.id:x.business_id; const sub=x.type==='product'?`₹${x.price}${x.business?' · '+esc(x.business):''}`:x.type==='service'?`${L('from','')} ₹${x.starting_price}${x.business?' · '+esc(x.business):''}`:[x.subcategory,x.area,x.rating?('★ '+x.rating):'',x.skills,x.fare_note].filter(Boolean).map(esc).join(' · ');
+        return `<div class="lw-rc t-${x.type}" ${biz?`data-biz="${biz}"`:''} style="cursor:${biz?'pointer':'default'}"><span class="lw-ri">${ic[x.type]||I.pin}</span><div><small>${esc(x.type)}</small><b>${esc(x.name)}</b><p>${sub}</p></div></div>`; }).join('');
+      box.querySelectorAll('[data-biz]').forEach(c=>c.onclick=()=>{ llLive.close(); go('business',{id:+c.dataset.biz}); }); msgs.appendChild(box); bot_b=null; down(); },
+    offers:of=>handlers.cards([]),
+    closed:()=>set('idle') };
+  async function ensure(){ if(llLive.open) return true; if(failed) return false; ai.classList.add('thinking');
+    try{ const ok=await llLive.connect(handlers); if(!ok) failed=true; return ok; }catch(e){ failed=true; return false; } finally{ ai.classList.remove('thinking'); } }
+  // mic: one tap starts a hands-free conversation, another tap ends it
+  const oldOrb=orb.onclick;
+  orb.onclick=async(e)=>{ llVoice.stop(); buzz();
+    if(llLive.micOn){ llLive.stopMic(); set('idle'); return; }
+    // start the mic inside the tap (phones require it), connect at the same time
+    const micP=llLive.startMic(); const okP=ensure();
+    try{ await micP; }catch(err){ console.warn('Mic failed:',err&&err.name,err&&err.message);
+      const denied=err&&/NotAllowed|Security|Permission/i.test(err.name);
+      toast(denied?L('Microphone is blocked for this site — allow it in your browser settings','ഈ സൈറ്റിന് മൈക്ക് ബ്ലോക്ക് ആണ് — ബ്രൗസർ സെറ്റിംഗ്സിൽ അനുവദിക്കൂ'):L('Could not start the microphone — close other apps using it and try again','മൈക്ക് തുടങ്ങാനായില്ല — മൈക്ക് ഉപയോഗിക്കുന്ന മറ്റ് ആപ്പുകൾ അടച്ച് വീണ്ടും ശ്രമിക്കൂ')); return; }
+    if(!(await okP)){ llLive.stopMic(); set('idle'); return oldOrb&&oldOrb(e); } };
+  // typed questions go to the same live session and are answered aloud
+  const oldSend=sendB&&sendB.onclick, oldKey=inp&&inp.onkeydown;
+  const typed=async()=>{ const t=(inp.value||'').trim(); if(!t) return; if(!(await ensure())) return oldSend&&oldSend();
+    greeted=true; llVoice.stop(); inp.value=''; const b=bubble('me'); b.textContent=t; me_b=null; bot_b=null; down(); ai.classList.add('thinking'); llLive.text(t); };
+  if(sendB) sendB.onclick=typed; if(inp) inp.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); typed(); } };
+  el.querySelectorAll('[data-s]').forEach(b=>{ const s=b.dataset.s; if(s.startsWith('__')) return; b.onclick=async(ev)=>{ ev.stopImmediatePropagation(); inp.value=b.textContent.trim(); typed(); }; });
+  // connect in the background while the greeting plays, so the first answer is instant
+  // Gemini Live speaks the greeting itself (natural Malayalam, same voice); the old voice is only a fallback
+  const greetLive=!(p&&p.q); if(greetLive) setTimeout(()=>llVoice.stop(),0);
+  ensure().then(ok=>{ if(ok&&greetLive){ ai.classList.add('thinking'); llLive.text('(The user just opened Ask. Greet them now, in one breath, with exactly: "'+llGreet(ML?'ml':'en')+'")'); }
+    else if(!ok&&greetLive) llVoice.speak(llGreet(ML?'ml':'en')); });
+  const back=el.querySelector('#__back'); if(back){ const o=back.onclick; back.onclick=e=>{ llLive.close(); o&&o(e); }; }
+  const gone=setInterval(()=>{ if(!document.body.contains(el)||!el.querySelector('.lw-ai')){ clearInterval(gone); llLive.close(); } },800);
+};
+}
+
 boot();
 })();
+

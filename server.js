@@ -7,6 +7,7 @@ import { db, seed } from './src/db.js';
 import { geminiKey, speak as speakText, transcribe, voiceModels } from './src/voice.js';
 import { login, signToken, publicUser, attachUser, requireAuth, requireRole } from './src/auth.js';
 import { ask } from './src/assistant.js';
+import { liveSession } from './src/live.js';
 import { demandBoard, productReport } from './src/forecast.js';
 import bcrypt from 'bcryptjs';
 
@@ -249,6 +250,12 @@ app.get('/api/voice-check', async (_req, res) => {
   if (!geminiKey()) return res.json({ key: false, ok: false, hint: 'Set GOOGLE_API_KEY on Render' });
   let tts = 'ok'; try { await speakText('ശരി', 'ml'); } catch (e) { tts = e.message.slice(0, 200); }
   res.json({ key: true, ok: tts === 'ok', tts, models: voiceModels() });
+});
+// real-time voice (Gemini Live): a one-use token + session setup for the phone
+app.post('/api/live', async (req, res) => {
+  if (!geminiKey()) return res.status(503).json({ error: 'Live voice needs GOOGLE_API_KEY' });
+  try { res.json(await liveSession(req.body && req.body.lang, req.body && req.body.name)); }
+  catch (e) { console.warn('Live session failed →', e.message.slice(0, 300)); res.status(502).json({ error: 'Live voice unavailable' }); }
 });
 app.post('/api/tts', async (req, res) => {
   if (!geminiKey()) return res.status(503).json({ error: 'Voice replies need GOOGLE_API_KEY on the server' });
