@@ -1453,3 +1453,13 @@ body.cdark .ab-ic > span{background:var(--surface); color:#7FE0CF}
 .lw-ai.listening .ab-wv i,.lw-ai.speaking .ab-wv i{opacity:1; animation-duration:.5s}
 .lw-ai .lw-msgs{padding-bottom:12px}
 .lx-kb{display:none !important}
+/* recording: orb becomes a stop/send button, level-reactive */
+.lw-ai.recording .lw-orb .c{background:radial-gradient(circle at 35% 30%,#FF9A7A,#F26B3A 50%,#C9431F) !important; transform:scale(calc(1 + var(--lvl,0) * .12)); transition:transform .08s linear}
+.lw-ai.recording .lw-orb .c svg{display:none}
+.lw-ai.recording .lw-orb .c::after{content:""; width:22px; height:22px; border-radius:6px; background:#fff}
+.lw-ai.recording .ab-wv i{opacity:1; animation-duration:.4s; background:#F26B3A}
+.lw-ai.thinking .lw-orb .c{animation:spin 1.2s linear infinite}
+.ab-mid{position:relative} .ab-mid::after{content:attr(data-hint); position:absolute; left:50%; bottom:-16px; transform:translateX(-50%); white-space:nowrap; font-size:11px; font-weight:700; color:#07594F}
+.ll-play{display:block; margin:0 auto 10px; padding:8px 16px; border-radius:999px; background:#07594F; color:#fff; font-weight:700; font-size:13px; box-shadow:0 8px 16px -8px rgba(7,89,79,.8); animation:pop .4s var(--spring)}
+.ab-foot{padding-bottom:calc(24px + var(--bottom)) !important}
+#greet .gml,#greet .gen{display:block} #greet .gen{margin-top:8px; padding-top:8px; border-top:1px dashed rgba(7,89,79,.15); color:var(--ink2)}

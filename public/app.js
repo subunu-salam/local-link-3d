@@ -1622,40 +1622,53 @@ const llVoice=(()=>{
     if(state.aiStatus&&state.aiStatus.voice){ set('loading');
       try{ const r=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang:lang()})}); if(!r.ok) throw new Error(r.status);
         const b=await r.blob(); if(my!==seq) return; if(url) URL.revokeObjectURL(url); url=URL.createObjectURL(b); A.src=url; A.onended=A.onerror=()=>{ if(my===seq) set('idle'); };
-        set('speaking'); await A.play(); return; }
-      catch(e){ if(my!==seq) return; } }
+        set('speaking'); try{ await A.play(); }catch(pe){ set('idle'); llPlayChip(()=>{ A.play().then(()=>set('speaking')).catch(()=>{}); }); } return; }
+      catch(e){ console.warn('Voice reply failed, using phone voice:',e); if(my!==seq) return; } }
     browserSpeak(text,my); }
-  return { speak, stop, unlock, lang, get muted(){ return muted; }, setMuted(v){ muted=!!v; localStorage.setItem('ll_mute',muted?'1':'0'); if(muted) stop(); }, onState(f){ onState=f||(()=>{}); } };
+  async function speakSeq(list){ for(const [t,l] of list){ if(muted) return; const keep=aiVoiceLang; aiVoiceLang=l==='ml'?'ml-IN':'en-IN'; const p=speak(t); aiVoiceLang=keep; await p; await new Promise(r=>{ if(A.paused&&!('speechSynthesis' in window&&speechSynthesis.speaking)) return r(); const f=()=>{ A.removeEventListener('ended',f); r(); }; A.addEventListener('ended',f); setTimeout(r,20000); }); } }
+  return { speak, speakSeq, stop, unlock, lang, get muted(){ return muted; }, setMuted(v){ muted=!!v; localStorage.setItem('ll_mute',muted?'1':'0'); if(muted) stop(); }, onState(f){ onState=f||(()=>{}); } };
 })();
+function llPlayChip(play){ const ai=document.querySelector('.lw-ai'); if(!ai||ai.querySelector('.ll-play')) return; const b=document.createElement('button'); b.className='ll-play'; b.innerHTML=(aiVoiceLang==='en-IN'?'▶ Play reply':'▶ മറുപടി കേൾക്കൂ'); b.onclick=()=>{ b.remove(); play(); }; const f=ai.querySelector('.ab-foot'); (f||ai).prepend(b); }
 /* record and let the server transcribe (works for Malayalam on every phone) */
 function llRecorder(micBtn,input,run){
-  let rec=null, stream=null, chunks=[], ctx=null, raf=0, timer=0, heard=false, quietSince=0, started=0;
-  const ui=(on)=>{ micBtn.classList.toggle('listening',on); input.placeholder=on?(aiVoiceLang==='ml-IN'?'കേൾക്കുന്നു… സംസാരിക്കൂ':'Listening… speak now'):(aiVoiceLang==='ml-IN'?'ടൈപ്പ് ചെയ്യുക അല്ലെങ്കിൽ സംസാരിക്കുക…':'Type or speak…'); };
-  const cleanup=()=>{ cancelAnimationFrame(raf); clearTimeout(timer); try{ stream&&stream.getTracks().forEach(t=>t.stop()); }catch(e){} try{ ctx&&ctx.close(); }catch(e){} stream=null; ctx=null; ui(false); };
+  let rec=null, stream=null, chunks=[], ctx=null, raf=0, timer=0, heard=false, quietSince=0, started=0, busy=false;
+  const ML=()=>aiVoiceLang!=='en-IN';
+  const ui=(on)=>{ micBtn.classList.toggle('listening',on); document.querySelector('.lw-ai')?.classList.toggle('recording',on);
+    input.placeholder=on?(ML()?'കേൾക്കുന്നു… കഴിഞ്ഞാൽ ടാപ്പ് ചെയ്യൂ':'Listening… tap to send'):(ML()?'ടൈപ്പ് ചെയ്യുക അല്ലെങ്കിൽ സംസാരിക്കുക…':'Type or speak…'); };
+  const cleanup=()=>{ cancelAnimationFrame(raf); clearTimeout(timer); try{ stream&&stream.getTracks().forEach(t=>t.stop()); }catch(e){} stream=null; ui(false); };
   const stopRec=()=>{ if(rec&&rec.state!=='inactive') rec.stop(); else cleanup(); };
   micBtn.onclick=async()=>{
     llVoice.unlock(); llVoice.stop();
+    if(busy) return;
     if(rec&&rec.state==='recording') return stopRec();
-    try{ stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); }
-    catch(e){ toast(aiVoiceLang==='ml-IN'?'മൈക്ക് അനുവദിക്കൂ, അല്ലെങ്കിൽ ടൈപ്പ് ചെയ്യൂ':'Allow the microphone, or type instead'); const bar=input.closest('.lw-in'); if(bar) bar.classList.remove('lx-hide'); return; }
+    // create/resume the audio context inside the tap (browsers keep it suspended otherwise)
+    try{ ctx=ctx||new (window.AudioContext||window.webkitAudioContext)(); ctx.resume&&ctx.resume(); }catch(e){ ctx=null; }
+    ui(true);
+    try{ stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}); }
+    catch(e){ ui(false); toast(ML()?'മൈക്ക് അനുവദിക്കൂ, അല്ലെങ്കിൽ ടൈപ്പ് ചെയ്യൂ':'Please allow the microphone, or type instead'); document.querySelector('#kb')?.click(); return; }
     const types=['audio/webm;codecs=opus','audio/mp4','audio/webm','audio/ogg']; const mt=types.find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
     rec=new MediaRecorder(stream,mt?{mimeType:mt}:undefined); chunks=[]; heard=false; quietSince=0; started=Date.now();
     rec.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
-    rec.onstop=async()=>{ const type=(rec.mimeType||mt||'audio/webm').split(';')[0]; cleanup(); if(!heard||!chunks.length){ toast(aiVoiceLang==='ml-IN'?'ഒന്നും കേട്ടില്ല — വീണ്ടും ശ്രമിക്കൂ':'Didn’t hear anything — try again'); return; }
-      const blob=new Blob(chunks,{type}); input.value=aiVoiceLang==='ml-IN'?'മനസ്സിലാക്കുന്നു…':'Understanding…'; input.disabled=true;
+    rec.onstop=async()=>{ const type=(rec.mimeType||mt||'audio/webm').split(';')[0]; const dur=Date.now()-started; cleanup();
+      if(!chunks.length||dur<500){ toast(ML()?'ഒന്നും കേട്ടില്ല — വീണ്ടും ശ്രമിക്കൂ':'Didn’t hear anything — try again'); return; }
+      const blob=new Blob(chunks,{type}); busy=true; document.querySelector('.lw-ai')?.classList.add('thinking'); input.value=ML()?'മനസ്സിലാക്കുന്നു…':'Understanding…';
       try{ const b64=await new Promise((ok,no)=>{ const fr=new FileReader(); fr.onload=()=>ok(String(fr.result).split(',')[1]); fr.onerror=no; fr.readAsDataURL(blob); });
-        const r=await api('/stt',{method:'POST',body:{audio:b64,mime:type,lang:llVoice.lang()}}); input.disabled=false; input.value=r.text||'';
-        if(r.text) run(r.text); else toast(aiVoiceLang==='ml-IN'?'വ്യക്തമായില്ല — വീണ്ടും പറയൂ':'Couldn’t catch that — please say it again'); }
-      catch(e){ input.disabled=false; input.value=''; toast(e.message||'Voice failed'); } };
-    rec.start(250); ui(true); buzz();
-    // stop automatically ~1.2 s after you finish speaking (max 12 s)
-    try{ ctx=new (window.AudioContext||window.webkitAudioContext)(); const an=ctx.createAnalyser(); an.fftSize=1024; ctx.createMediaStreamSource(stream).connect(an); const d=new Uint8Array(an.fftSize);
-      const loop=()=>{ an.getByteTimeDomainData(d); let peak=0; for(const v of d) peak=Math.max(peak,Math.abs(v-128)); const now=Date.now();
-        if(peak>14){ heard=true; quietSince=0; } else if(heard){ quietSince=quietSince||now; if(now-quietSince>1200) return stopRec(); } else if(now-started>6000) return stopRec();
-        raf=requestAnimationFrame(loop); }; loop(); }catch(e){ heard=true; }
-    timer=setTimeout(stopRec,12000);
+        const r=await api('/stt',{method:'POST',body:{audio:b64,mime:type,lang:llVoice.lang()}}); input.value='';
+        document.querySelector('.lw-ai')?.classList.remove('thinking');
+        if(r.text) run(r.text); else { toast(ML()?'വ്യക്തമായില്ല — വീണ്ടും പറയൂ':'Couldn’t catch that — please say it again'); llVoice.speak(ML()?'ക്ഷമിക്കണം, വ്യക്തമായില്ല. ഒന്നുകൂടി പറയാമോ?':'Sorry, I didn’t catch that. Could you say it again?'); } }
+      catch(e){ input.value=''; document.querySelector('.lw-ai')?.classList.remove('thinking'); toast((ML()?'വോയ്സ് പ്രവർത്തിച്ചില്ല — ടൈപ്പ് ചെയ്യൂ':'Voice didn’t work — please type')); document.querySelector('#kb')?.click(); }
+      busy=false; };
+    rec.start(250); buzz();
+    // auto-send ~1.3 s after you stop speaking; tap the orb any time to send now
+    try{ if(ctx){ const an=ctx.createAnalyser(); an.fftSize=1024; ctx.createMediaStreamSource(stream).connect(an); const d=new Uint8Array(an.fftSize);
+      const loop=()=>{ if(!rec||rec.state!=='recording') return; an.getByteTimeDomainData(d); let sum=0; for(const v of d){ const x=v-128; sum+=x*x; } const rms=Math.sqrt(sum/d.length); const now=Date.now();
+        document.querySelector('.lw-ai')?.style.setProperty('--lvl',Math.min(1,rms/20).toFixed(2));
+        if(rms>4){ heard=true; quietSince=0; } else if(heard){ quietSince=quietSince||now; if(now-quietSince>1300) return stopRec(); }
+        raf=requestAnimationFrame(loop); }; loop(); } }catch(e){}
+    timer=setTimeout(stopRec,15000);
   };
 }
+
 function setupVoice(micBtn, input, run){
   if(state.aiStatus&&state.aiStatus.voice&&window.MediaRecorder&&navigator.mediaDevices) return llRecorder(micBtn,input,run);
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -3667,7 +3680,7 @@ SCREENS.assistant=(el,{q,voice})=>{
   const S=ML()?[[I.store,'അടുത്തുള്ള റെസ്റ്റോറന്റ്','ബിരിയാണി കിട്ടുന്ന ഹോട്ടൽ'],[GI.cart,'പലചരക്ക് സാധനങ്ങൾ','പച്ചക്കറിയും പാലും'],[GI.wrench||I.cog,'വീട്ടിലെ സർവീസ് ബുക്ക് ചെയ്യാം','ഇലക്ട്രീഷ്യൻ'],[GI.package,'എന്റെ ഓർഡർ എവിടെ?','__track'],[GI.percent,'ഇന്നത്തെ ഓഫറുകൾ','__offers']]:[[I.store,'Find a nearby restaurant','biriyani restaurant'],[GI.cart,'Get groceries','vegetables and milk'],[GI.wrench||I.cog,'Book a home service','electrician'],[GI.package,'Track my order','__track'],[GI.percent,'Discover local offers','__offers']];
   el.innerHTML=`<div class="lw-ai"><header class="lw-aih"><button class="lv-ib" id="__back" aria-label="Back">${I.back}</button><span class="lw-aiw">${Array.from({length:9},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span><div class="lw-ailang" id="ail"><button data-vl="ml-IN">മ</button><button data-vl="en-IN">EN</button></div></header>
     <div class="lw-aititle"><h1>Ask Local Link</h1><p>${L("Your local shopping assistant","നിങ്ങളുടെ നാട്ടിലെ ഷോപ്പിങ് സഹായി")}</p></div>
-    <div class="lw-msgs" id="msgs"><div class="lw-b bot" id="greet">${L(`Hi${nm?" "+esc(nm):""}! 👋 Welcome to Local Link.<br>I can order from shops near you, find restaurants, book services like an electrician or plumber, track your order and show local offers.<br>Tap the mic and speak, or use the keyboard below to type.`,`നമസ്കാരം${nm?" "+esc(nm):""}! 👋 Local Link-ലേക്ക് സ്വാഗതം.<br>അടുത്തുള്ള കടകളിൽ നിന്ന് സാധനങ്ങൾ ഓർഡർ ചെയ്യാം, റെസ്റ്റോറന്റ് കണ്ടെത്താം, ഇലക്ട്രീഷ്യൻ പോലെയുള്ള സർവീസുകൾ ബുക്ക് ചെയ്യാം, ഓർഡർ എവിടെ എത്തി എന്ന് അറിയാം, ഓഫറുകൾ കാണാം.<br>മൈക്കിൽ ടാപ്പ് ചെയ്ത് സംസാരിക്കൂ, അല്ലെങ്കിൽ താഴെ കീബോർഡിൽ ടൈപ്പ് ചെയ്യൂ.`)}</div>
+    <div class="lw-msgs" id="msgs"><div class="lw-b bot" id="greet"><span class="gml">നമസ്കാരം${nm?" "+esc(nm):""}! 👋 Local Link-ലേക്ക് സ്വാഗതം. അടുത്തുള്ള കടകളിൽ നിന്ന് ഓർഡർ ചെയ്യാം, റെസ്റ്റോറന്റുകൾ കണ്ടെത്താം, സർവീസുകൾ ബുക്ക് ചെയ്യാം, ഓർഡർ ട്രാക്ക് ചെയ്യാം. മൈക്കിൽ ടാപ്പ് ചെയ്ത് സംസാരിക്കൂ, അല്ലെങ്കിൽ ടൈപ്പ് ചെയ്യൂ.</span><span class="gen">Hi${nm?" "+esc(nm):""}! Welcome to Local Link. I can order from nearby shops, find restaurants, book services and track your order. Tap the mic to speak, or type below.</span></div>
       <div class="lw-sugg" id="sugg">${S.map((s,i)=>`<button data-s="${esc(s[2])}" style="--n:${i}"><span>${s[0]}</span>${esc(s[1])}</button>`).join('')}</div></div>
     <div class="lw-orbz" id="orbz"><button class="lw-orb" id="orb" aria-label="Speak"><span class="h1"></span><span class="h2"></span><span class="c">${GI.mic}</span></button><small id="ost">${L("Tap to speak","സംസാരിക്കാൻ ടാപ്പ് ചെയ്യൂ")}</small></div>
     <div class="lw-in"><input id="aq" placeholder="${L("Type or speak…","ടൈപ്പ് ചെയ്യുക അല്ലെങ്കിൽ സംസാരിക്കുക…")}" autocomplete="off"/><button class="lw-mic" id="amic" aria-label="Voice">${GI.mic}</button><button class="lw-send" id="asend" aria-label="Send">${GI.send}</button></div></div>`;
@@ -3676,7 +3689,7 @@ SCREENS.assistant=(el,{q,voice})=>{
   $('#mute').onclick=()=>{ llVoice.setMuted(!llVoice.muted); $('#mute').textContent=llVoice.muted?'🔇':'🔊'; $('#mute').classList.toggle('off',llVoice.muted); toast(llVoice.muted?L('Voice replies off','ശബ്ദ മറുപടി ഓഫ്'):L('Voice replies on','ശബ്ദ മറുപടി ഓൺ')); };
   llVoice.onState(v=>{ el.classList.toggle('speaking',v==='speaking'); el.classList.toggle('voiceload',v==='loading'); const s=$('#ost'); if(s&&v==='speaking') s.textContent=L('Speaking…','പറയുന്നു…'); });
   const _bk=$('#__back'); if(_bk){ const o=_bk.onclick; _bk.onclick=e=>{ llVoice.stop(); o&&o(e); }; }
-  setTimeout(()=>{ const g=$('#greet'); if(g&&document.body.contains(g)&&!q) llVoice.speak(g.innerText.replace(/\n/g,' ')); },450);
+  setTimeout(()=>{ const g=$('#greet'); if(!g||!document.body.contains(g)||q) return; const a=g.querySelector(ML()?'.gml':'.gen').textContent, b=g.querySelector(ML()?'.gen':'.gml').textContent; llVoice.speakSeq([[a,ML()?'ml':'en'],[b,ML()?'en':'ml']]); },300);
   const msgs=$('#msgs'), inp=$('#aq'); const down=()=>msgs.scrollTo({top:msgs.scrollHeight,behavior:'smooth'});
   $('#ail').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.vl===aiVoiceLang); b.onclick=()=>{ if(aiVoiceLang===b.dataset.vl) return; aiVoiceLang=b.dataset.vl; localStorage.setItem('ll_voicelang2',aiVoiceLang); llVoice.stop(); buzz(); routeRender(); }; });
   const card=x=>{ const bizId=x.type==='business'?x.id:x.business_id; const ic={business:I.store,product:GI.cart,service:GI.wrench||I.cog,worker:GI.helmet||I.user,driver:GI.car||I.pin}[x.type]||I.pin;
@@ -3688,7 +3701,7 @@ SCREENS.assistant=(el,{q,voice})=>{
     return `<div class="lw-rc t-${x.type}"><span class="lw-ri">${ic}</span><div><small>${esc(x.type)}</small><b>${esc(x.name)}</b><p>${sub}</p>${acts?`<div class="lw-acts">${acts}</div>`:''}</div></div>`; };
   const add=(cls,html)=>{ const d=document.createElement('div'); d.className=cls; d.innerHTML=html; msgs.appendChild(d); down(); return d; };
   const run=async(text)=>{ text=(text||inp.value).trim(); if(!text) return; inp.value=''; const sg=$('#sugg'); if(sg) sg.remove(); $('#orbz').classList.add('mini');
-    add('lw-b me',esc(text)); const ld=add('lw-turn',`<div class="lw-b bot"><span class="ai-typing"><i></i><i></i><i></i></span></div>`); el.classList.add('thinking');
+    add('lw-b me',esc(text==='__track'?L('Track my order','എന്റെ ഓർഡർ എവിടെ?'):text==='__offers'?L('Discover local offers','ഇന്നത്തെ ഓഫറുകൾ'):text)); const ld=add('lw-turn',`<div class="lw-b bot"><span class="ai-typing"><i></i><i></i><i></i></span></div>`); el.classList.add('thinking');
     try{
       if(text==='__track'||/\b(my order|track|where is)\b/i.test(text)){ if(!token){ ld.innerHTML=`<div class="lw-b bot">${L('Log in to see your orders.','ഓർഡറുകൾ കാണാൻ ലോഗിൻ ചെയ്യൂ.')}</div><div class="lw-acts"><button class="lw-ac hot" data-login>Log in</button></div>`; }
         else { const os=await api('/orders'); const live=os.filter(o=>!['completed','rejected','cancelled'].includes(o.status));
@@ -4275,7 +4288,7 @@ SCREENS.assistant=(el,p)=>{ _lwAsk(el,p); const z=$('#orbz'), inp=el.querySelect
   const orb=$('#orb'); const wv=(r)=>`<span class="ab-wv ${r}">${Array.from({length:6},(_,i)=>`<i style="--n:${i}"></i>`).join('')}</span>`;
   z.className='ab-dock'; z.innerHTML='';
   z.insertAdjacentHTML('beforeend',`<button class="ab-ic ${llVoice.muted?'off':''}" id="spk" aria-label="Voice replies"><span>${llVoice.muted?SPK_OFF:SPK_ON}</span><small>${llVoice.muted?(ML?'ഓഫ്':'Off'):(ML?'ശബ്ദം':'Voice')}</small></button>`);
-  const mid=document.createElement('div'); mid.className='ab-mid'; mid.innerHTML=wv('l'); mid.appendChild(orb); mid.insertAdjacentHTML('beforeend',wv('r')); z.appendChild(mid);
+  const mid=document.createElement('div'); mid.className='ab-mid'; mid.dataset.hint=ML?'സംസാരിക്കാൻ ടാപ്പ് ചെയ്യൂ':'Tap to speak'; new MutationObserver(()=>{ const ai=el.querySelector('.lw-ai'); if(!ai) return; mid.dataset.hint=ai.classList.contains('recording')?(ML?'അയക്കാൻ ടാപ്പ് ചെയ്യൂ':'Tap to send'):ai.classList.contains('thinking')?(ML?'നോക്കുന്നു…':'Thinking…'):ai.classList.contains('speaking')?(ML?'പറയുന്നു…':'Speaking…'):(ML?'സംസാരിക്കാൻ ടാപ്പ് ചെയ്യൂ':'Tap to speak'); }).observe(el.querySelector('.lw-ai'),{attributes:true,attributeFilter:['class']}); mid.innerHTML=wv('l'); mid.appendChild(orb); mid.insertAdjacentHTML('beforeend',wv('r')); z.appendChild(mid);
   z.insertAdjacentHTML('beforeend',`<button class="ab-ic" id="kb" aria-label="Type instead"><span>${KB}</span><small>${ML?'ടൈപ്പ്':'Type'}</small></button>`);
   orb.onclick=()=>$('#amic').click();
   $('#spk').onclick=()=>{ llVoice.setMuted(!llVoice.muted); const b=$('#spk'); b.classList.toggle('off',llVoice.muted); b.querySelector('span').innerHTML=llVoice.muted?SPK_OFF:SPK_ON; b.querySelector('small').textContent=llVoice.muted?(ML?'ഓഫ്':'Off'):(ML?'ശബ്ദം':'Voice'); buzz(); };

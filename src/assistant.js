@@ -128,8 +128,23 @@ function hydrate(cat, parsed, source) {
   return { answer: parsed.answer || 'Here are some local matches.', results, source };
 }
 async function geminiSearch(query, lang) {
-  const { cat, sys, user } = promptFor(query, lang);
-  return hydrate(cat, await geminiJSON(sys, user), 'gemini');
+  const local = localSearch(query, lang);
+  const { cat, sys } = promptFor(query, lang);
+  // shortlist: local matches first, then top-rated places, so the prompt stays small and fast
+  const pick = (arr, type) => arr.filter(x => local.results.some(r => r.type === type && r.id === x.id));
+  const topBiz = cat.businesses.slice().sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 25);
+  const short = {
+    businesses: [...new Map([...pick(cat.businesses, 'business'), ...topBiz].map(b => [b.id, { id: b.id, name: b.name, type: b.subcategory, area: b.area, rating: b.rating }])).values()],
+    services: pick(cat.services, 'service').concat(cat.services.slice(0, 15)).map(s => ({ id: s.id, name: s.name, from: s.starting_price, business: s.business })),
+    products: pick(cat.products, 'product').map(p => ({ id: p.id, name: p.name, price: p.price, business: p.business })),
+    workers: cat.workers.map(w => ({ id: w.id, name: w.name, skills: w.skills, rate: w.rate })),
+    drivers: cat.drivers.map(d => ({ id: d.id, name: d.name, type: d.service_type, fare: d.fare_note })),
+  };
+  const hint = local.results.length ? `Likely matches (best first): ${local.results.map(r => `${r.type}:${r.id} ${r.name}`).join('; ')}.` : 'No keyword matches; infer intent.';
+  const out = hydrate(cat, await geminiJSON(sys, `Catalogue:\n${JSON.stringify(short)}\n\n${hint}\n\nUser query: "${query}"`), 'gemini');
+  if (!out.results.length && local.results.length) return { ...local, answer: out.answer && out.answer.length > 20 ? out.answer : local.answer };
+  if (!out.answer || out.answer.length < 8) out.answer = local.answer;
+  return out;
 }
 async function openaiSearch(query, lang) {
   const { cat, sys, user } = promptFor(query, lang);
@@ -155,7 +170,7 @@ async function openaiSearch(query, lang) {
 export async function ask(query, lang) {
   lang = lang === 'en' ? 'en' : 'ml';
   if (!query || !query.trim()) return { answer: lang==='ml' ? 'എന്തും ചോദിക്കാം — “ഒരു പ്ലംബറെ വേണം”, “250 രൂപയിൽ താഴെ ബിരിയാണി”.' : 'Ask me anything — “find a plumber”, “biriyani under ₹250”.', results: [], source: 'local' };
-  if (geminiKey()) { try { return await geminiSearch(query, lang); } catch (e) { console.warn('Gemini fallback →', e.message); } }
+  if (geminiKey()) { try { return await geminiSearch(query, lang); } catch (e) { console.warn('Gemini fallback →', e.message.slice(0,300)); } }
   if (process.env.OPENAI_API_KEY) { try { return await openaiSearch(query, lang); } catch (e) { console.warn('OpenAI fallback →', e.message); } }
   return localSearch(query, lang);
 }
