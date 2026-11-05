@@ -167,10 +167,14 @@ async function openaiSearch(query, lang) {
   return hydrate(cat, JSON.parse(data.choices[0].message.content), 'openai');
 }
 
-export async function ask(query, lang) {
+let openaiCoolUntil = 0;
+const within = (p, ms) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('timeout ' + ms + 'ms')), ms))]);
+export async function ask(query, lang, fast) {
   lang = lang === 'en' ? 'en' : 'ml';
   if (!query || !query.trim()) return { answer: lang==='ml' ? 'എന്തും ചോദിക്കാം — “ഒരു പ്ലംബറെ വേണം”, “250 രൂപയിൽ താഴെ ബിരിയാണി”.' : 'Ask me anything — “find a plumber”, “biriyani under ₹250”.', results: [], source: 'local' };
-  if (geminiKey()) { try { return await geminiSearch(query, lang); } catch (e) { console.warn('Gemini fallback →', e.message.slice(0,300)); } }
-  if (process.env.OPENAI_API_KEY) { try { return await openaiSearch(query, lang); } catch (e) { console.warn('OpenAI fallback →', e.message); } }
+  if (fast) return localSearch(query, lang);
+  // AI gets at most ~5 s in total; otherwise answer instantly from the local catalogue
+  if (geminiKey()) { try { return await within(geminiSearch(query, lang), 5000); } catch (e) { console.warn('Gemini fallback →', e.message.slice(0,300)); } }
+  else if (process.env.OPENAI_API_KEY && Date.now() > openaiCoolUntil) { try { return await within(openaiSearch(query, lang), 5000); } catch (e) { if (/429/.test(e.message)) openaiCoolUntil = Date.now() + 10 * 60e3; console.warn('OpenAI fallback →', e.message); } }
   return localSearch(query, lang);
 }

@@ -37,7 +37,7 @@ const partsOf = (d) => (d && d.candidates && d.candidates[0] && d.candidates[0].
 // JSON answer from the assistant prompt
 export async function geminiJSON(system, user, ms = 9000) {
   const d = await callAny('text', TEXT_MODELS(), { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: user }] }],
-    generationConfig: { temperature: 0.4, responseMimeType: 'application/json', maxOutputTokens: 400, thinkingConfig: { thinkingBudget: 0 } } }, ms);
+    generationConfig: { temperature: 0.4, responseMimeType: 'application/json', maxOutputTokens: 300, thinkingConfig: { thinkingBudget: 0 } } }, ms);
   return JSON.parse(partsOf(d).map(p => p.text || '').join(''));
 }
 
