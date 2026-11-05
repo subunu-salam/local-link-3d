@@ -1432,3 +1432,24 @@ body.ml .lw-b,body .lw-ai .lw-b{line-height:1.55}
   background:#fff !important; color:#07594F !important; font-size:18px !important; box-shadow:0 0 0 2px #13A58F, 0 8px 18px -10px rgba(7,89,79,.7) !important; animation:kbPulse 2.4s ease-out 1s 3}
 .lx-kb b{font-size:13px; font-weight:700}
 @keyframes kbPulse{0%{box-shadow:0 0 0 2px #13A58F, 0 0 0 0 rgba(19,165,143,.55)} 100%{box-shadow:0 0 0 2px #13A58F, 0 0 0 14px rgba(19,165,143,0)}}
+/* Ask bottom: one aligned dock — voice on/off · mic · type, input row above */
+.ab-foot{position:sticky; bottom:0; z-index:5; padding:8px 16px calc(12px + var(--bottom)); background:linear-gradient(180deg,rgba(238,246,242,0),var(--vbx-canvas,#EEF6F2) 28%)}
+body.cdark .ab-foot{background:linear-gradient(180deg,transparent,#0E1715 28%)}
+.ab-foot .lw-in{position:static; margin:0 0 10px; padding:5px 5px 5px 14px; border-radius:18px; gap:6px; box-shadow:0 8px 22px -14px rgba(0,0,0,.4); animation:lwIn .3s var(--spring)}
+.ab-foot .lw-in .lw-mic{display:none}
+.ab-foot .lw-in .lw-send{width:42px; height:42px; border-radius:14px}
+.ab-dock{display:grid; grid-template-columns:56px 1fr 56px; align-items:center; gap:8px; padding:0 !important; position:static !important}
+.ab-ic{display:flex; flex-direction:column; align-items:center; gap:4px; color:#07594F; background:none; border:0; padding:0}
+.ab-ic > span{width:48px; height:48px; border-radius:50%; display:grid; place-items:center; background:#fff; box-shadow:0 0 0 1.5px rgba(19,165,143,.35), 0 8px 18px -10px rgba(7,89,79,.6); transition:transform .25s var(--spring), background .2s, color .2s}
+.ab-ic svg{width:22px; height:22px} .ab-ic small{font-size:11px; font-weight:700; line-height:1}
+.ab-ic:active > span{transform:scale(.9)}
+.ab-ic.on > span{background:#07594F; color:#fff; box-shadow:0 8px 18px -10px rgba(7,89,79,.8)}
+.ab-ic.off{color:#8A9893} .ab-ic.off > span{background:#F1F4F3; box-shadow:0 0 0 1.5px #DDE4E2}
+body.cdark .ab-ic > span{background:var(--surface); color:#7FE0CF}
+.ab-mid{display:flex; align-items:center; justify-content:center; gap:10px}
+.ab-mid .lw-orb{width:68px !important; height:68px !important; flex:none}
+.ab-mid .lw-orb .c svg{width:26px; height:26px}
+.ab-wv{display:flex; align-items:center; gap:3px; height:28px} .ab-wv i{width:3px; height:30%; border-radius:2px; background:#13A58F; opacity:.55; animation:wv 1.2s ease-in-out infinite; animation-delay:calc(var(--n) * -110ms)}
+.lw-ai.listening .ab-wv i,.lw-ai.speaking .ab-wv i{opacity:1; animation-duration:.5s}
+.lw-ai .lw-msgs{padding-bottom:12px}
+.lx-kb{display:none !important}
