@@ -174,7 +174,7 @@ export async function ask(query, lang, fast) {
   if (!query || !query.trim()) return { answer: lang==='ml' ? 'എന്തും ചോദിക്കാം — “ഒരു പ്ലംബറെ വേണം”, “250 രൂപയിൽ താഴെ ബിരിയാണി”.' : 'Ask me anything — “find a plumber”, “biriyani under ₹250”.', results: [], source: 'local' };
   if (fast) return localSearch(query, lang);
   // AI gets at most ~5 s in total; otherwise answer instantly from the local catalogue
-  if (geminiKey()) { try { return await within(geminiSearch(query, lang), 5000); } catch (e) { console.warn('Gemini fallback →', e.message.slice(0,300)); } }
+  if (geminiKey()) { try { return await within(geminiSearch(query, lang), 3000); } catch (e) { console.warn('Gemini fallback →', e.message.slice(0,300)); } }
   else if (process.env.OPENAI_API_KEY && Date.now() > openaiCoolUntil) { try { return await within(openaiSearch(query, lang), 5000); } catch (e) { if (/429/.test(e.message)) openaiCoolUntil = Date.now() + 10 * 60e3; console.warn('OpenAI fallback →', e.message); } }
   return localSearch(query, lang);
 }
