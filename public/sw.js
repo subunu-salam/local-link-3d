@@ -4,7 +4,7 @@
    - Navigations: network-first, fall back to the cached app shell when offline.
    - Same-origin static assets: stale-while-revalidate (instant load, updates in bg).
    - Cross-origin (fonts, photos): left to the browser. */
-const VERSION = 'll-v65-live2';
+const VERSION = 'll-v66-pitch';
 const SHELL = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
 const SHELL_ASSETS = ['/', '/index.html', '/app.js', '/vb.css', '/customer.css', '/vbfx.js', '/favicon.svg',
@@ -26,6 +26,8 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  // the pitch site is never cached, so updates show straight away
+  if (url.origin === location.origin && url.pathname.startsWith('/pitch')) return;
 
   // never cache the API — always go to network
   if (url.origin === location.origin && url.pathname.startsWith('/api/')) {
