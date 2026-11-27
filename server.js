@@ -57,6 +57,64 @@ app.post('/api/auth/register', (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id=?').get(info.lastInsertRowid);
   res.json({ token: signToken(user), user: publicUser(user) });
 });
+/* ---------------- partner self-registration ---------------- */
+// Public: a shop owner registers from the Partner app. Creates a business_partner
+// login + their business as 'pending'. Nothing goes public until an admin approves.
+app.get('/api/partner/register/options', (_req, res) => {
+  res.json({
+    categories: db.prepare("SELECT id,name,icon FROM categories WHERE active=1 AND kind='business' ORDER BY sort").all(),
+    areas: db.prepare('SELECT a.id, a.name, p.name panchayath FROM areas a LEFT JOIN panchayaths p ON p.id=a.panchayath_id ORDER BY a.name').all(),
+    plans: db.prepare('SELECT id,name,price,period,tagline FROM subscription_plans ORDER BY sort').all(),
+  });
+});
+app.post('/api/partner/register', (req, res) => {
+  const b = req.body || {}; const s = (v, n=200) => String(v ?? '').trim().slice(0, n);
+  const name=s(b.name,80), email=s(b.email,120).toLowerCase(), phone=s(b.phone,20).replace(/\s+/g,''), password=String(b.password||'');
+  const biz=s(b.business_name,100), category_id=Number(b.category_id), area_id=Number(b.area_id);
+  const address=s(b.address,300), pincode=s(b.pincode,6), whatsapp=s(b.whatsapp,20).replace(/\s+/g,'')||phone;
+  if (!name||!email||!phone||!password) return res.status(400).json({ error:'Please fill in your name, email, phone and password.', step:0 });
+  if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error:'Please enter a valid email address.', step:0 });
+  if (!/^\+?\d{10,13}$/.test(phone)) return res.status(400).json({ error:'Please enter a valid 10-digit mobile number.', step:0 });
+  if (password.length < 6) return res.status(400).json({ error:'Password must be at least 6 characters.', step:0 });
+  if (!biz) return res.status(400).json({ error:'Please enter your shop / business name.', step:1 });
+  const cat = db.prepare("SELECT id,name,icon,color1,color2 FROM categories WHERE id=? AND kind='business'").get(category_id);
+  if (!cat) return res.status(400).json({ error:'Please choose a business category.', step:1 });
+  if (!db.prepare('SELECT id FROM areas WHERE id=?').get(area_id)) return res.status(400).json({ error:'Please choose your area.', step:2 });
+  if (!address) return res.status(400).json({ error:'Please enter your shop address.', step:2 });
+  if (pincode && !/^\d{6}$/.test(pincode)) return res.status(400).json({ error:'Pincode must be 6 digits.', step:2 });
+  const gstin=s(b.gstin,15).toUpperCase();
+  if (gstin && !/^[0-9A-Z]{15}$/.test(gstin)) return res.status(400).json({ error:'GSTIN should be 15 letters/numbers.', step:3 });
+  if (!b.agree) return res.status(400).json({ error:'Please accept the partner terms to continue.', step:4 });
+  if (db.prepare('SELECT id FROM users WHERE email=? OR phone=?').get(email, phone)) return res.status(409).json({ error:'An account already exists with this email or phone. Please sign in instead.', step:0 });
+  const toMin=(v,d)=>{ const m=/^(\d{1,2}):(\d{2})$/.exec(String(v||'')); return m ? Math.min(1439, Number(m[1])*60+Number(m[2])) : d; };
+  const methods = (Array.isArray(b.payment_methods)?b.payment_methods:['cash']).filter(m=>['cash','card','upi'].includes(m));
+  const plan_id = db.prepare('SELECT id FROM subscription_plans WHERE id=?').get(Number(b.plan_id)) ? Number(b.plan_id) : 1;
+  const mode = ['pickup','delivery','pickup_delivery'].includes(b.delivery_mode) ? b.delivery_mode : 'pickup_delivery';
+  let uid, bid;
+  const tx = db.transaction(() => {
+    const u = db.prepare("INSERT INTO users(name,email,phone,password_hash,role,avatar_color,area_id) VALUES (?,?,?,?,'business_partner','#0B5A55',?)")
+      .run(name, email, phone, bcrypt.hashSync(password, 10), area_id);
+    uid = Number(u.lastInsertRowid);
+    const slug = biz.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'').slice(0,50)+'-'+Math.random().toString(36).slice(2,6);
+    const r = db.prepare(`INSERT INTO businesses(owner_id,name,slug,category_id,subcategory,area_id,description,phone,whatsapp,address,
+        rating,review_count,price_level,emoji,color1,color2,open_min,close_min,verification_status,status,plan_id,featured,payment_methods,upi_id,
+        contact_name,contact_email,pincode,landmark,gstin,fssai,trade_license,delivery_mode,delivery_radius_km,association,source)
+      VALUES (?,?,?,?,?,?,?,?,?,?,0,0,2,?,?,?,?,?,'pending','pending',?,0,?,?,?,?,?,?,?,?,?,?,?,?,'self')`)
+      .run(uid, biz, slug, cat.id, s(b.subcategory,60)||cat.name, area_id, s(b.description,500)||null, phone, whatsapp, address,
+        cat.icon, cat.color1, cat.color2, toMin(b.open_time,540), toMin(b.close_time,1290), plan_id,
+        (methods.length?methods:['cash']).join(','), methods.includes('upi') ? (s(b.upi_id,60)||null) : null,
+        name, email, pincode||null, s(b.landmark,120)||null, gstin||null, s(b.fssai,20)||null, s(b.trade_license,40)||null,
+        mode, mode==='pickup' ? null : (Number(b.delivery_radius_km)||3), s(b.association,120)||null);
+    bid = Number(r.lastInsertRowid);
+    db.prepare("INSERT INTO notifications(user_id,type,title,body) VALUES (?,?,?,?)").run(uid,'announcement','Application received',
+      `Thanks for registering ${biz}. Our team will verify your details, usually within 24–48 hours. You can add products while you wait.`);
+    for (const a of db.prepare("SELECT id FROM users WHERE role IN ('admin','super_admin')").all())
+      db.prepare("INSERT INTO notifications(user_id,type,title,body) VALUES (?,?,?,?)").run(a.id,'partner_application','New partner registration',`${biz} (${cat.name}) is waiting for approval.`);
+  });
+  try { tx(); } catch (e) { return res.status(500).json({ error:'Could not register right now. Please try again.' }); }
+  const user = db.prepare('SELECT * FROM users WHERE id=?').get(uid);
+  res.json({ token: signToken(user), user: publicUser(user), business_id: bid });
+});
 app.get('/api/me', requireAuth, (req, res) => res.json({ user: publicUser(req.user) }));
 
 /* ---------------- reference / bootstrap ---------------- */
@@ -615,7 +673,7 @@ app.get('/api/admin/overview', adminOnly, (_req, res) => {
   const byCategory = db.prepare(`SELECT c.name label, COUNT(b.id) value FROM categories c LEFT JOIN businesses b ON b.category_id=c.id WHERE c.kind='business' GROUP BY c.id HAVING value>0 ORDER BY value DESC`).all();
   const ordersByStatus = db.prepare('SELECT status label, COUNT(*) value FROM orders GROUP BY status').all();
   const topRated = db.prepare("SELECT name, rating, review_count FROM businesses WHERE status='approved' ORDER BY rating DESC LIMIT 5").all();
-  const pendingList = db.prepare(`SELECT b.id, b.name, b.subcategory, a.name area, b.created_at FROM businesses b LEFT JOIN areas a ON a.id=b.area_id WHERE b.status='pending' ORDER BY b.created_at DESC LIMIT 20`).all();
+  const pendingList = db.prepare(`SELECT b.id, b.name, b.subcategory, a.name area, b.created_at, b.source FROM businesses b LEFT JOIN areas a ON a.id=b.area_id WHERE b.status='pending' ORDER BY b.created_at DESC LIMIT 20`).all();
   res.json({ stats, byCategory, ordersByStatus, topRated, pendingList });
 });
 /* ── UX funnel tracking (anonymous, a handful of event names) ── */
@@ -646,7 +704,7 @@ app.get('/api/admin/search', adminOnly, (req, res) => {
   });
 });
 const ADMIN_TABLES = {
-  businesses: `SELECT b.id, b.name, c.name category, a.name area, b.rating, b.verification_status, b.status FROM businesses b JOIN categories c ON c.id=b.category_id LEFT JOIN areas a ON a.id=b.area_id`,
+  businesses: `SELECT b.id, b.name, c.name category, a.name area, b.rating, b.verification_status, b.status, COALESCE(b.source,'admin') source FROM businesses b JOIN categories c ON c.id=b.category_id LEFT JOIN areas a ON a.id=b.area_id`,
   users: `SELECT id, name, email, phone, role, created_at FROM users`,
   categories: `SELECT id, name, slug, kind, sort, active FROM categories`,
   products: `SELECT p.id, p.name, b.name business, p.price, p.stock_status FROM products p JOIN businesses b ON b.id=p.business_id`,
@@ -665,7 +723,9 @@ const ADMIN_TABLES = {
 app.get('/api/admin/table/:name', adminOnly, (req, res) => {
   const base = ADMIN_TABLES[req.params.name];
   if (!base) return res.status(404).json({ error: 'Unknown table' });
-  res.json(db.prepare(base + ' ORDER BY 1 DESC').all());
+  // cap huge tables (25k+ businesses) so the admin page stays fast; use admin search for older rows
+  const limit = Math.min(5000, Math.max(50, Number(req.query.limit) || 1000));
+  res.json(db.prepare(base + ' ORDER BY 1 DESC LIMIT ?').all(limit));
 });
 app.get('/api/admin/businesses/:id/full', adminOnly, (req, res) => {
   const id = req.params.id;
@@ -686,6 +746,12 @@ app.post('/api/admin/businesses/:id/status', adminOnly, (req, res) => {
   const { status } = req.body || {};
   if (!['approved','pending','rejected','suspended'].includes(status)) return res.status(400).json({ error: 'Bad status' });
   db.prepare('UPDATE businesses SET status=? WHERE id=?').run(status, req.params.id);
+  // keep self-registered partners' verification + inbox in sync with quick approvals
+  const sb = db.prepare("SELECT name, owner_id FROM businesses WHERE id=? AND source='self'").get(req.params.id);
+  if (sb) {
+    db.prepare("UPDATE businesses SET verification_status=?, reviewed_at=datetime('now') WHERE id=?").run(status==='approved'?'verified':status==='pending'?'pending':'rejected', req.params.id);
+    if (sb.owner_id && status==='approved') db.prepare("INSERT INTO notifications(user_id,type,title,body) VALUES (?,?,?,?)").run(sb.owner_id,'announcement',`${sb.name} is live!`,'Your shop is approved and now visible to customers on Local Link.');
+  }
   res.json({ ok: true });
 });
 app.post('/api/admin/reviews/:id/status', adminOnly, (req, res) => {
@@ -714,9 +780,50 @@ app.post('/api/admin/partners', adminOnly, (req, res) => {
   res.json({ ok: true, user: { id: uid, name, email, phone }, credentials: { email, phone, password } });
 });
 
+/* ---------------- admin: partner registrations ---------------- */
+app.get('/api/admin/partner-applications', adminOnly, (req, res) => {
+  const st = ['pending','approved','rejected','suspended','all'].includes(req.query.status) ? req.query.status : 'pending';
+  const rows = db.prepare(`SELECT b.id, b.name, b.subcategory, b.status, b.verification_status, b.created_at, b.reviewed_at, b.review_note,
+      b.phone, b.whatsapp, b.address, b.pincode, b.landmark, b.gstin, b.fssai, b.trade_license, b.delivery_mode, b.delivery_radius_km,
+      b.association, b.payment_methods, b.upi_id, b.open_min, b.close_min, b.description, b.contact_name, b.contact_email,
+      c.name category, a.name area, sp.name plan, u.id user_id, u.name owner, u.email owner_email, u.phone owner_phone,
+      (SELECT COUNT(*) FROM products p WHERE p.business_id=b.id) products
+    FROM businesses b LEFT JOIN categories c ON c.id=b.category_id LEFT JOIN areas a ON a.id=b.area_id
+    LEFT JOIN subscription_plans sp ON sp.id=b.plan_id LEFT JOIN users u ON u.id=b.owner_id
+    WHERE b.source='self' ${st==='all'?'':'AND b.status=?'} ORDER BY b.created_at DESC, b.id DESC`).all(...(st==='all'?[]:[st]));
+  const counts = Object.fromEntries(db.prepare("SELECT status, COUNT(*) c FROM businesses WHERE source='self' GROUP BY status").all().map(r=>[r.status,r.c]));
+  res.json({ rows, counts });
+});
+app.post('/api/admin/partner-applications/:id/decision', adminOnly, (req, res) => {
+  const { status, note } = req.body || {};
+  if (!['approved','rejected','suspended','pending'].includes(status)) return res.status(400).json({ error:'Bad status' });
+  if (status==='rejected' && !String(note||'').trim()) return res.status(400).json({ error:'Please add a reason so the partner knows what to fix.' });
+  const b = db.prepare('SELECT id,name,owner_id FROM businesses WHERE id=?').get(req.params.id);
+  if (!b) return res.status(404).json({ error:'Not found' });
+  const ver = status==='approved' ? 'verified' : status==='pending' ? 'pending' : 'rejected';
+  db.prepare("UPDATE businesses SET status=?, verification_status=?, review_note=?, reviewed_at=datetime('now') WHERE id=?").run(status, ver, String(note||'').trim()||null, b.id);
+  if (b.owner_id) {
+    const msg = { approved:[`${b.name} is live!`,'Your shop is approved and now visible to customers on Local Link.'],
+      rejected:['Application needs changes', `${b.name}: ${String(note).trim()}`], suspended:['Shop suspended', `${b.name} has been suspended.${note?' '+note:''}`],
+      pending:['Application under review', `${b.name} is back under review.`] }[status];
+    db.prepare("INSERT INTO notifications(user_id,type,title,body) VALUES (?,?,?,?)").run(b.owner_id,'announcement',msg[0],msg[1]);
+  }
+  res.json({ ok:true });
+});
+// Partner fixes details after a rejection and resubmits
+app.post('/api/partner/application/resubmit', partnerOnly, (req, res) => {
+  const ids = ownerBusinessIds(req.user.id); const id = Number((req.body||{}).business_id) || ids[0];
+  if (!ids.includes(id)) return res.status(403).json({ error:'Not your business' });
+  const b = req.body || {}; const allow = ['address','pincode','landmark','gstin','fssai','trade_license','description','phone','whatsapp'];
+  const sets=[], vals=[]; for (const k of allow) if (k in b) { sets.push(`${k}=?`); vals.push(String(b[k]||'').trim()||null); }
+  sets.push("status='pending'","verification_status='pending'","review_note=NULL"); vals.push(id);
+  db.prepare(`UPDATE businesses SET ${sets.join(',')} WHERE id=?`).run(...vals);
+  res.json({ ok:true });
+});
+
 /* ---------------- admin: full CRUD ---------------- */
 const WRITABLE = {
-  businesses:['owner_id','name','slug','category_id','subcategory','area_id','description','phone','whatsapp','address','rating','review_count','price_level','emoji','color1','color2','cover_url','open_min','close_min','verification_status','status','plan_id','featured'],
+  businesses:['owner_id','name','slug','category_id','subcategory','area_id','description','phone','whatsapp','address','rating','review_count','price_level','emoji','color1','color2','cover_url','open_min','close_min','verification_status','status','plan_id','featured','contact_name','contact_email','pincode','landmark','gstin','fssai','trade_license','delivery_mode','delivery_radius_km','association','review_note'],
   news:['title','summary','body','category','emoji','color1','color2','area_id','status','published_at'],
   events:['title','description','venue','area_id','emoji','color1','color2','start_date','time_label','organizer','contact'],
   offers:['business_id','title','description','discount_label','color1','color2','start_date','end_date','status'],
