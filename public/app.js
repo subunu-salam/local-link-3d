@@ -108,8 +108,12 @@ async function api(pathname, opts={}) {
   if (token) headers.Authorization = 'Bearer ' + token;
   const isGet = !opts.method || opts.method==='GET'; const ck='llc:'+pathname;
   let res;
-  try{ res = await fetch('/api' + pathname, { ...opts, headers, body: opts.body ? JSON.stringify(opts.body) : undefined }); }
-  catch(netErr){ const c = isGet && safeParse(localStorage.getItem(ck)); if(c){ if(!api._offlineToast){ api._offlineToast=1; toast('You\'re offline — showing saved results'); setTimeout(()=>api._offlineToast=0,8000); } return c; } throw new Error('You\'re offline. Check your connection and try again.'); }
+  // admin calls get a timeout so a cold/slow server shows a retry message instead of a blank page
+  const ac = /^\/admin\//.test(pathname) && typeof AbortController!=='undefined' ? new AbortController() : null; const tmo = ac ? setTimeout(()=>ac.abort(), 30000) : null;
+  try{ res = await fetch('/api' + pathname, { ...opts, headers, body: opts.body ? JSON.stringify(opts.body) : undefined, ...(ac?{signal:ac.signal}:{}) }); }
+  catch(netErr){ if(tmo) clearTimeout(tmo); if(ac && ac.signal.aborted) throw new Error('The server is taking too long to respond (it may be waking up). Please try again in a moment.');
+    const c = isGet && safeParse(localStorage.getItem(ck)); if(c){ if(!api._offlineToast){ api._offlineToast=1; toast('You\'re offline — showing saved results'); setTimeout(()=>api._offlineToast=0,8000); } return c; } throw new Error('You\'re offline. Check your connection and try again.'); }
+  if(tmo) clearTimeout(tmo);
   const data = await res.json().catch(()=>({}));
   if(res.ok && isGet && /^\/(bootstrap|offers|businesses|products|services|news|events|places|categories)/.test(pathname)){ try{ localStorage.setItem(ck, JSON.stringify(data)); }catch(e){} }
   if (!res.ok) throw Object.assign(new Error(data.error || 'Request failed'), { status: res.status, data });
@@ -696,7 +700,7 @@ function renderBottomNav(){
     holder.innerHTML = `${hideBar?'':'<div id="qcCartBar" class="qc-cartwrap" aria-live="polite" hidden></div>'}<nav class="bnav lvdock" aria-label="Main"><i class="cx-ind"></i>${tab('home',I.home,'Home')}${tab('categories',I.grid,'Categories')}${askBtn}${tab('orders',GI.package,'Orders')}${tab('account',I.user,'Account')}</nav>`;
     renderCartBar();
   } else if (state.view==='partner'){
-    if (cur==='p_login'){ holder.innerHTML=''; return; }
+    if (cur==='p_login'||cur==='p_register'){ holder.innerHTML=''; return; }
     const addBtn=`<button class="vtab pd-addtab" data-tabnav="__talk" aria-label="Add product"><span class="vico pd-add">${I.plus}</span><span>Add</span></button>`;
     holder.innerHTML = `<nav class="bnav pdock" aria-label="Partner">${tab('p_dash',I.home,'Home')}${tab('p_products',I.store,'Products')}${addBtn}${tab('p_orders',I.bag,'Orders')}${tab('p_chats',GI.chat,'Chats','<span class="cartbadge pchatbadge" hidden></span>')}</nav>`;
     setTimeout(()=>{ try{ api('/partner/overview').then(d=>setPartnerChatBadge(d.usage&&d.usage.unreadChats)).catch(()=>{}); }catch(e){} }, 50);
@@ -1759,9 +1763,11 @@ function renderLogin(el, kind){
       <button data-d="admin@locallink.app">Admin</button></div>
     <p class="faint" style="font-size:11.5px;text-align:center;margin-top:14px">All demo accounts use password <b>password</b></p>
     ${kind==='customer'?`<p style="font-size:13px;text-align:center;margin-top:14px;color:var(--body)">New to Local Link? <a href="#" id="goreg" style="color:var(--primary);font-weight:700">Create an account</a></p>`:''}
+    ${kind==='partner'?`<div class="preg-cta"><div><b>Own a shop in Kerala?</b><span>Register free and start selling on Local Link</span></div><button class="btn sm" id="gopreg">Register your shop</button></div>`:''}
     <div style="flex:1"></div></div>`;
   const ab=$('#ab'); if(ab) ab.onclick=back;
   const gr=$('#goreg'); if(gr) gr.onclick=(e)=>{ e.preventDefault(); go('register'); };
+  const pg=$('#gopreg'); if(pg) pg.onclick=(e)=>{ e.preventDefault(); go('p_register'); };
   el.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{ $('#lid').value=b.dataset.d; $('#lpw').value='password'; });
   $('#lsubmit').onclick=async()=>{
     try{ const r=await api('/auth/login',{method:'POST',body:{identifier:$('#lid').value.trim(),password:$('#lpw').value}});
@@ -1812,6 +1818,113 @@ function routeAfterLogin(){
 
 /* ==================== PARTNER SCREENS ==================== */
 SCREENS.p_login = (el) => renderLogin(el, 'partner');
+/* ---- partner self-registration: 5 steps, same auth look as sign-in ---- */
+const PREG_STEPS=['Account','Business','Location','Documents','Review'];
+let pregDraft=null;
+SCREENS.p_register = async (el) => {
+  if(!pregDraft) pregDraft={ step:0, payment_methods:['cash'], delivery_mode:'pickup_delivery', delivery_radius_km:3, open_time:'09:00', close_time:'21:30', plan_id:1 };
+  const D=pregDraft;
+  el.innerHTML=`<div class="auth-wrap preg"><div class="sk" style="height:300px;border-radius:18px"></div></div>`;
+  let opt; try{ opt=await api('/partner/register/options'); }catch(e){ el.innerHTML=errorState(e.message,()=>routeRender()); return; }
+  const val=(k)=>esc(D[k]==null?'':String(D[k]));
+  const F=(id,label,html,hint)=>`<div class="field"><label for="${id}">${label}</label>${html}${hint?`<small class="preg-hint">${hint}</small>`:''}</div>`;
+  const inp=(id,label,attrs='',hint='')=>F(id,label,`<div class="input"><input id="${id}" data-k="${id}" value="${val(id)}" ${attrs}/></div>`,hint);
+  const areaName=(id)=>{ const a=opt.areas.find(x=>x.id==id); return a?a.name:''; };
+  const catName=(id)=>{ const c=opt.categories.find(x=>x.id==id); return c?c.name:''; };
+  const stepHtml=()=>{
+    if(D.step===0) return `
+      ${inp('name','Owner full name *','autocomplete="name" placeholder="As on your ID"')}
+      ${inp('phone','Mobile number *','type="tel" inputmode="numeric" autocomplete="tel" placeholder="10-digit mobile"','Customers and our team will reach you here. You can sign in with it.')}
+      ${inp('email','Email *','type="email" autocomplete="email" placeholder="you@shop.com"')}
+      ${inp('password','Create password *','type="password" autocomplete="new-password" placeholder="At least 6 characters"')}
+      ${inp('password2','Confirm password *','type="password" autocomplete="new-password" placeholder="Re-enter password"')}`;
+    if(D.step===1) return `
+      ${inp('business_name','Shop / business name *','placeholder="e.g. Fresh Mart Supermarket"')}
+      <div class="field"><label>Category *</label><div class="preg-cats">${opt.categories.map(c=>`<button type="button" class="preg-cat ${D.category_id==c.id?'on':''}" data-cat="${c.id}"><span>${c.icon||'🏷️'}</span>${esc(c.name)}</button>`).join('')}</div></div>
+      ${inp('subcategory','What do you sell?','placeholder="e.g. Grocery, Bakery, Pharmacy"')}
+      ${F('description','About your shop',`<div class="input"><textarea id="description" data-k="description" rows="2" placeholder="A line customers will see">${val('description')}</textarea></div>`)}
+      <div class="row" style="gap:10px">${F('open_time','Opens',`<div class="input"><input id="open_time" data-k="open_time" type="time" value="${val('open_time')}"/></div>`).replace('class="field"','class="field" style="flex:1"')}
+        ${F('close_time','Closes',`<div class="input"><input id="close_time" data-k="close_time" type="time" value="${val('close_time')}"/></div>`).replace('class="field"','class="field" style="flex:1"')}</div>`;
+    if(D.step===2) return `
+      ${F('area_id','Area *',`<div class="input"><select id="area_id" data-k="area_id"><option value="">Choose your area</option>${opt.areas.map(a=>`<option value="${a.id}" ${D.area_id==a.id?'selected':''}>${esc(a.name)}${a.panchayath?` · ${esc(a.panchayath)}`:''}</option>`).join('')}</select></div>`)}
+      ${F('address','Shop address *',`<div class="input"><textarea id="address" data-k="address" rows="2" placeholder="Building, street">${val('address')}</textarea></div>`)}
+      <div class="row" style="gap:10px"><div style="flex:1">${inp('pincode','Pincode','inputmode="numeric" maxlength="6" placeholder="673001"')}</div><div style="flex:1.4">${inp('landmark','Landmark','placeholder="Near…"')}</div></div>
+      ${inp('whatsapp','WhatsApp number','type="tel" inputmode="numeric" placeholder="Same as mobile if blank"')}
+      <div class="field"><label>How do customers get orders?</label><div class="preg-seg">${[['pickup','Pickup only'],['delivery','Delivery'],['pickup_delivery','Both']].map(([v,l])=>`<button type="button" data-mode="${v}" class="${D.delivery_mode===v?'on':''}">${l}</button>`).join('')}</div></div>
+      ${D.delivery_mode!=='pickup'?inp('delivery_radius_km','Delivery radius (km)','type="number" min="1" max="25" step="0.5"'):''}`;
+    if(D.step===3) return `
+      <p class="preg-note">${gi('shield')} Helps us verify your shop faster. Add what you have; you can add the rest later.</p>
+      ${inp('gstin','GSTIN','maxlength="15" style="text-transform:uppercase" placeholder="15-character GST number"')}
+      ${inp('fssai','FSSAI licence no.','maxlength="14" placeholder="For food businesses"')}
+      ${inp('trade_license','Trade licence no.','placeholder="Panchayath / municipality licence"')}
+      ${inp('association','Vyapari association / unit','placeholder="e.g. KVVES Kozhikode unit"')}
+      <div class="field"><label>Payments you accept</label><div class="pay-set">${[['cash','Cash'],['card','Card'],['upi','UPI / Online']].map(([v,l])=>`<label class="paychk"><input type="checkbox" data-pm="${v}" ${D.payment_methods.includes(v)?'checked':''}/> <span>${l}</span></label>`).join('')}</div></div>
+      ${D.payment_methods.includes('upi')?inp('upi_id','UPI ID','placeholder="yourstore@okhdfc"'):''}`;
+    const row=(k,v)=>`<div class="preg-rv"><span>${k}</span><b>${v?esc(String(v)):'—'}</b></div>`;
+    return `
+      <div class="field"><label>Choose a plan</label><div class="preg-plans">${opt.plans.map(p=>`<button type="button" class="preg-plan ${D.plan_id==p.id?'on':''}" data-plan="${p.id}"><b>${esc(p.name)}</b><span>${Number(p.price)?'₹'+Number(p.price).toLocaleString('en-IN')+(p.period?' / '+esc(p.period):''):'Free'}</span><small>${esc(p.tagline||'')}</small></button>`).join('')}</div></div>
+      <div class="preg-card"><div class="preg-ct">Account <a href="#" data-edit="0">Edit</a></div>${row('Owner',D.name)}${row('Mobile',D.phone)}${row('Email',D.email)}</div>
+      <div class="preg-card"><div class="preg-ct">Business <a href="#" data-edit="1">Edit</a></div>${row('Shop',D.business_name)}${row('Category',catName(D.category_id))}${row('Hours',(D.open_time||'')+' – '+(D.close_time||''))}</div>
+      <div class="preg-card"><div class="preg-ct">Location <a href="#" data-edit="2">Edit</a></div>${row('Area',areaName(D.area_id))}${row('Address',[D.address,D.landmark,D.pincode].filter(Boolean).join(', '))}${row('Orders',{pickup:'Pickup only',delivery:'Delivery',pickup_delivery:'Pickup & delivery'}[D.delivery_mode]+(D.delivery_mode!=='pickup'?` · ${D.delivery_radius_km||3} km`:''))}</div>
+      <div class="preg-card"><div class="preg-ct">Documents & payments <a href="#" data-edit="3">Edit</a></div>${row('GSTIN',D.gstin)}${row('FSSAI',D.fssai)}${row('Trade licence',D.trade_license)}${row('Payments',D.payment_methods.join(', ').toUpperCase())}</div>
+      <label class="preg-agree"><input type="checkbox" id="agree" ${D.agree?'checked':''}/> <span>I confirm these details are correct and agree to the Local Link partner terms.</span></label>`;
+  };
+  const draw=()=>{
+    el.innerHTML=`<div class="auth-wrap preg">
+      <div class="row" style="gap:10px;align-items:center"><button class="tb-btn" id="pgb" aria-label="Back">${I.back}</button><div style="flex:1"><b style="font-size:16px">Register your shop</b><div class="muted" style="font-size:12px">Step ${D.step+1} of 5 · ${PREG_STEPS[D.step]}</div></div>${logoMark(30)}</div>
+      <div class="preg-steps" aria-hidden="true">${PREG_STEPS.map((n,i)=>`<i class="${i<D.step?'done':i===D.step?'on':''}"><span>${i<D.step?'✓':i+1}</span><em>${n}</em></i>`).join('')}</div>
+      <div class="preg-body" id="pgbody">${stepHtml()}</div>
+      <div id="pgerr" class="preg-err" role="alert" hidden></div>
+      <button class="btn block" id="pgnext">${D.step<4?'Continue':'Submit for approval'}</button>
+      ${D.step===0?`<p style="font-size:13px;text-align:center;margin-top:12px;color:var(--body)">Already a partner? <a href="#" id="pglogin" style="color:var(--primary);font-weight:700">Sign in</a></p>`:''}
+      <div style="flex:1"></div></div>`;
+    const sync=()=>{ el.querySelectorAll('[data-k]').forEach(i=>{ D[i.dataset.k]=i.value.trim(); }); const ag=$('#agree'); if(ag) D.agree=ag.checked; };
+    el.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{ sync(); D.category_id=Number(b.dataset.cat); if(!D.subcategory) D.subcategory=''; draw(); });
+    el.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{ sync(); D.delivery_mode=b.dataset.mode; draw(); });
+    el.querySelectorAll('[data-plan]').forEach(b=>b.onclick=()=>{ sync(); D.plan_id=Number(b.dataset.plan); draw(); });
+    el.querySelectorAll('[data-pm]').forEach(c=>c.onchange=()=>{ sync(); D.payment_methods=[...el.querySelectorAll('[data-pm]:checked')].map(x=>x.dataset.pm); draw(); });
+    el.querySelectorAll('[data-edit]').forEach(a=>a.onclick=(e)=>{ e.preventDefault(); sync(); D.step=Number(a.dataset.edit); draw(); });
+    const pl=$('#pglogin'); if(pl) pl.onclick=(e)=>{ e.preventDefault(); back(); };
+    $('#pgb').onclick=()=>{ sync(); if(D.step>0){ D.step--; draw(); } else back(); };
+    const err=(m)=>{ const x=$('#pgerr'); x.textContent=m; x.hidden=false; buzz&&buzz([10,40,10]); };
+    const check=()=>{
+      if(D.step===0){ if(!D.name||!D.phone||!D.email||!D.password) return 'Please fill in all fields.';
+        if(!/^\+?\d{10,13}$/.test(D.phone.replace(/\s+/g,''))) return 'Enter a valid 10-digit mobile number.';
+        if(!/^\S+@\S+\.\S+$/.test(D.email)) return 'Enter a valid email address.';
+        if(D.password.length<6) return 'Password must be at least 6 characters.'; if(D.password!==D.password2) return 'Passwords do not match.'; }
+      if(D.step===1){ if(!D.business_name) return 'Enter your shop name.'; if(!D.category_id) return 'Choose a category.'; }
+      if(D.step===2){ if(!D.area_id) return 'Choose your area.'; if(!D.address) return 'Enter your shop address.'; if(D.pincode && !/^\d{6}$/.test(D.pincode)) return 'Pincode must be 6 digits.'; }
+      if(D.step===3){ if(D.gstin && !/^[0-9A-Za-z]{15}$/.test(D.gstin)) return 'GSTIN should be 15 letters/numbers.'; if(!D.payment_methods.length) return 'Pick at least one payment method.'; }
+      if(D.step===4){ if(!D.agree) return 'Please accept the partner terms.'; }
+      return null; };
+    $('#pgnext').onclick=async()=>{ sync(); const m=check(); if(m) return err(m);
+      if(D.step<4){ D.step++; draw(); const sc=$('#screen'); if(sc) sc.scrollTop=0; return; }
+      const btn=$('#pgnext'); btn.disabled=true; btn.textContent='Submitting…';
+      try{ const body={...D, area_id:Number(D.area_id)}; delete body.password2; delete body.step;
+        const r=await api('/partner/register',{method:'POST',body});
+        token=r.token; me=r.user; localStorage.setItem('ll_token',token); localStorage.setItem('ll_user',JSON.stringify(me));
+        pregDraft=null; toast('Application submitted 🎉'); nav.partner=[{name:'p_dash'}]; routeRender();
+      }catch(e){ btn.disabled=false; btn.textContent='Submit for approval'; const st=e.data&&typeof e.data.step==='number'?e.data.step:null; if(st!=null&&st!==D.step){ D.step=st; draw(); } err(e.message); }
+    };
+  };
+  draw();
+};
+/* status banner for self-registered shops waiting on / rejected by admin */
+function partnerAppBanner(businesses){
+  const b=(businesses||[]).find(x=>x.status&&x.status!=='approved'); if(!b) return '';
+  if(b.status==='pending') return `<div class="preg-status warn"><span>${gi('shield')}</span><div><b>${esc(b.name)} is under review</b><small>Our team verifies new shops within 24–48 hours. Add your products now — they go live the moment you're approved.</small></div></div>`;
+  if(b.status==='rejected') return `<div class="preg-status bad"><span>${gi('shield')}</span><div><b>Your application needs changes</b><small>${esc(b.review_note||'Please check your details and resubmit.')}</small><button class="btn sm" data-resub="${b.id}" style="margin-top:8px">Fix details & resubmit</button></div></div>`;
+  return `<div class="preg-status bad"><span>${gi('shield')}</span><div><b>${esc(b.name)} is ${esc(b.status)}</b><small>${esc(b.review_note||'Please contact Local Link support.')}</small></div></div>`;
+}
+function openResubmit(b){
+  const f=(k,l,ph='')=>`<div class="field"><label>${l}</label><div class="input"><input id="rs_${k}" value="${esc(b[k]||'')}" placeholder="${ph}"/></div></div>`;
+  showSheet('Fix & resubmit', `<p class="muted" style="font-size:12.5px;margin:0 0 10px">Reviewer note: <b>${esc(b.review_note||'—')}</b></p>
+    ${f('address','Shop address')}${f('pincode','Pincode')}${f('landmark','Landmark')}${f('phone','Phone')}${f('gstin','GSTIN')}${f('fssai','FSSAI licence')}${f('trade_license','Trade licence')}
+    <button class="btn block" id="rs_go">Resubmit for approval</button>`, ()=>{
+    $('#rs_go').onclick=async()=>{ const body={business_id:b.id}; ['address','pincode','landmark','phone','gstin','fssai','trade_license'].forEach(k=>body[k]=$('#rs_'+k).value);
+      try{ await api('/partner/application/resubmit',{method:'POST',body}); closeSheet(); toast('Resubmitted for review'); routeRender(); }catch(e){ toast(e.message); } };
+  });
+}
 /* lightweight inline-SVG bar chart (single teal series) */
 function barChartSVG(data){
   const d=(data||[]).map(x=>({label:x.label||'',value:Math.max(0,x.value||0)}));
@@ -1975,6 +2088,8 @@ SCREENS.p_dash = async (el) => {
     <div class="px" id="body" style="margin-top:12px">${skeletonRow(2)}</div><div style="height:90px"></div>`;
   renderForecastEntry($('#fcEntry')); renderPartnerToday($('#todo'));
   const [d, an] = await Promise.all([api('/partner/overview'), api('/partner/analytics').catch(()=>null)]);
+  { const bn=partnerAppBanner(d.businesses); if(bn){ const h=document.createElement('div'); h.className='px'; h.innerHTML=bn; const t=$('#todo'); if(t) t.parentNode.insertBefore(h,t);
+      const rb=h.querySelector('[data-resub]'); if(rb) rb.onclick=()=>openResubmit(d.businesses.find(x=>String(x.id)===rb.dataset.resub)); } }
   const stat=(lab,val,emoji)=>`<div class="pt-kpi"><span>${gi(emoji)}</span><div><b>${val}</b><small>${lab}</small></div></div>`;
   $('#body').innerHTML = `
     <div class="pt-sh"><b>Your shop at a glance</b><small>All time</small></div>
@@ -2410,7 +2525,7 @@ function renderAdmin(body){
   }
   const groups = [
     ['Overview', [['dashboard','Dashboard',I.chart]]],
-    ['Marketplace', [['businesses','Businesses',I.store],['products','Products',I.bag],['services','Services',I.tag],['offers','Offers',I.tag],['workers','Workers',GI.helmet],['drivers','Drivers',GI.car],['reviews','Reviews',I.star]]],
+    ['Marketplace', [['partner_apps','Partner registrations',I.users],['businesses','Businesses',I.store],['products','Products',I.bag],['services','Services',I.tag],['offers','Offers',I.tag],['workers','Workers',GI.helmet],['drivers','Drivers',GI.car],['reviews','Reviews',I.star]]],
     ['Community', [['news','News',GI.news],['events','Events',GI.calendar],['local_info','Local Info',GI.building]]],
     ['Operations', [['orders','Orders',I.bag],['leads','Leads',gi('star')],['users','Users',I.users],['categories','Categories',I.grid]]],
     ['System', [['locations','Locations',I.pin],['subscription_plans','Subscriptions',GI.card],['advertisements','Advertisements',GI.megaphone],['notifications','Notifications',I.bell],['settings','Settings',I.cog]]],
@@ -2450,7 +2565,7 @@ function renderAdmin(body){
 
 async function renderAdminRoute(){
   const el = $('#adbody'); const title=$('#adtitle');
-  const NICE = { local_info:'Local Info', subscription_plans:'Subscriptions' };
+  const NICE = { local_info:'Local Info', subscription_plans:'Subscriptions', partner_apps:'Partner registrations' };
   const nice = NICE[adminRoute] || (adminRoute.charAt(0).toUpperCase()+adminRoute.slice(1));
   if(title) title.textContent = nice;
   if(!el) return;
@@ -2458,6 +2573,7 @@ async function renderAdminRoute(){
   try{
     if(adminRoute==='businesses' && adminBiz){ if(title) title.textContent='Business'; return renderAdminBusinessDetail(el, adminBiz); }
     if(adminRoute==='dashboard') return renderAdminDashboard(el);
+    if(adminRoute==='partner_apps') return renderAdminPartnerApps(el);
     if(adminRoute==='locations') return renderAdminLocations(el);
     if(adminRoute==='notifications') return renderAdminNotifications(el);
     if(adminRoute==='settings') return renderAdminSettings(el);
@@ -2467,6 +2583,46 @@ async function renderAdminRoute(){
   }catch(e){ el.innerHTML = errorState(e.message); }
 }
 
+let paFilter='pending';
+async function renderAdminPartnerApps(el){
+  const d = await api('/admin/partner-applications?status='+paFilter);
+  const C=d.counts||{}; const hm=(m)=>{ m=Number(m||0); const h=Math.floor(m/60), mm=String(m%60).padStart(2,'0'); return `${h%12||12}:${mm} ${h>=12?'PM':'AM'}`; };
+  const tone=(s)=>/approv/.test(s)?'open':/pending/.test(s)?'warn':'closed';
+  const tabs=[['pending','Pending'],['approved','Approved'],['rejected','Rejected'],['suspended','Suspended'],['all','All']];
+  const kv=(k,v)=>`<div class="kv"><span class="kk">${k}</span><span class="vv">${v?esc(String(v)):'—'}</span></div>`;
+  el.innerHTML=`<div class="kpis">
+      ${[['Waiting for review',C.pending||0,'store'],['Approved',C.approved||0,'shield'],['Rejected',C.rejected||0,'inbox'],['Total registrations',Object.values(C).reduce((a,b)=>a+b,0),'users']].map(([l,v,ic])=>`<div class="kpi"><div class="kpi-top"><span>${l}</span><i class="kic">${gi(ic)}</i></div><b class="tabnums">${v}</b></div>`).join('')}
+    </div>
+    <div class="panel" style="margin-top:16px"><div class="ph"><h3>Partner registrations</h3>
+      <div class="row" style="gap:6px;flex-wrap:wrap">${tabs.map(([k,l])=>`<button class="btn sm ${paFilter===k?'':'ghost'}" data-paf="${k}">${l}${k!=='all'&&C[k]?` (${C[k]})`:''}</button>`).join('')}</div></div>
+      ${d.rows.length? `<div class="pa-list">${d.rows.map(r=>`<details class="pa-item" ${d.rows.length===1?'open':''}><summary>
+          <div class="pa-main"><b>${esc(r.name)}</b><small>${esc(r.category||'')}${r.subcategory&&r.subcategory!==r.category?' · '+esc(r.subcategory):''} · ${esc(r.area||'')}</small></div>
+          <div class="pa-own"><b>${esc(r.owner||'')}</b><small>${esc(r.owner_phone||'')}</small></div>
+          <span class="badge ${tone(r.status)}">${esc(r.status)}</span><span class="faint" style="font-size:12px;white-space:nowrap">${esc(fmtWhen(r.created_at))}</span></summary>
+        <div class="pa-body">
+          <div class="kvgrid">
+            ${kv('Owner',r.owner)}${kv('Mobile',r.owner_phone)}${kv('Email',r.owner_email)}${kv('WhatsApp',r.whatsapp)}
+            ${kv('Address',[r.address,r.landmark,r.pincode].filter(Boolean).join(', '))}${kv('Area',r.area)}
+            ${kv('Hours',hm(r.open_min)+' – '+hm(r.close_min))}${kv('Orders',{pickup:'Pickup only',delivery:'Delivery',pickup_delivery:'Pickup & delivery'}[r.delivery_mode]+(r.delivery_radius_km?` · ${r.delivery_radius_km} km`:''))}
+            ${kv('GSTIN',r.gstin)}${kv('FSSAI',r.fssai)}${kv('Trade licence',r.trade_license)}${kv('Association',r.association)}
+            ${kv('Payments',(r.payment_methods||'').toUpperCase()+(r.upi_id?' · '+r.upi_id:''))}${kv('Plan',r.plan)}${kv('Products added',r.products)}${kv('Reviewed',r.reviewed_at?fmtWhen(r.reviewed_at):'')}
+          </div>
+          ${r.description?`<p style="color:var(--body);margin:12px 0 0">${esc(r.description)}</p>`:''}
+          ${r.review_note?`<p class="muted" style="margin:10px 0 0;font-size:13px">Note to partner: <b>${esc(r.review_note)}</b></p>`:''}
+          <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
+            ${r.status!=='approved'?`<button class="btn sm" data-pad="approved" data-id="${r.id}">Approve & publish</button>`:''}
+            ${r.status!=='rejected'?`<button class="btn sm ghost" data-pad="rejected" data-id="${r.id}">Reject with reason</button>`:''}
+            ${r.status==='approved'?`<button class="btn sm ghost danger" data-pad="suspended" data-id="${r.id}">Suspend</button>`:''}
+            <button class="btn sm ghost" data-paopen="${r.id}">Open business</button>
+          </div></div></details>`).join('')}</div>`
+      : `<div class="empty" style="padding:36px"><div class="eic">${gi('inbox')}</div><p>${paFilter==='pending'?'No registrations waiting. New shops that sign up from the Partner app appear here.':'Nothing here yet.'}</p></div>`}
+    </div>`;
+  el.querySelectorAll('[data-paf]').forEach(b=>b.onclick=()=>{ paFilter=b.dataset.paf; renderAdminRoute(); });
+  el.querySelectorAll('[data-paopen]').forEach(b=>b.onclick=()=>{ adminRoute='businesses'; adminBiz=Number(b.dataset.paopen); const sh=document.getElementById('adminshell'); if(sh) renderAdmin(sh); else renderAdminRoute(); });
+  el.querySelectorAll('[data-pad]').forEach(b=>b.onclick=async()=>{ const st=b.dataset.pad; let note='';
+    if(st!=='approved'){ note=prompt(st==='rejected'?'Reason for rejection (sent to the partner):':'Reason for suspension (optional):')||''; if(st==='rejected'&&!note.trim()) return; }
+    try{ await api(`/admin/partner-applications/${b.dataset.id}/decision`,{method:'POST',body:{status:st,note}}); toast(st==='approved'?'Approved — shop is now live':'Partner notified'); renderAdminRoute(); }catch(e){ toast(e.message); } });
+}
 async function renderAdminLocations(el){
   const { areas, googleEnabled } = await api('/admin/areas');
   const banner = googleEnabled
@@ -2614,7 +2770,7 @@ async function renderAdminDashboard(el){
     </div>
     <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:14px;margin-top:14px" class="ad-row2">
       <div class="panel"><div class="ph"><h3>Approvals queue</h3><span class="badge ${d.pendingList&&d.pendingList.length?'warn':'open'}">${(d.pendingList||[]).length} waiting</span></div>
-        <div id="apq" class="ad-apq">${(d.pendingList||[]).length? d.pendingList.map(b=>`<div class="ad-ap" data-apid="${b.id}"><label><input type="checkbox" value="${b.id}" aria-label="Select ${esc(b.name)}"/></label><div><b>${esc(b.name)}</b><small>${esc(b.subcategory||'')}${b.area?' · '+esc(b.area):''}</small></div>
+        <div id="apq" class="ad-apq">${(d.pendingList||[]).length? d.pendingList.map(b=>`<div class="ad-ap" data-apid="${b.id}"><label><input type="checkbox" value="${b.id}" aria-label="Select ${esc(b.name)}"/></label><div><b>${esc(b.name)}</b>${b.source==='self'?' <span class="badge primary" style="font-size:10px">Self-registered</span>':''}<small>${esc(b.subcategory||'')}${b.area?' · '+esc(b.area):''}</small></div>
           <button class="btn sm" data-apst="approved">Approve</button><button class="btn sm ghost" data-apst="rejected">Reject</button></div>`).join('')
           + `<div class="ad-bulk"><label><input type="checkbox" id="apAll"/> Select all</label><button class="btn sm" data-bulk="approved">Approve selected</button><button class="btn sm ghost" data-bulk="rejected">Reject selected</button></div>`
           : `<div class="empty" style="padding:26px"><div class="eic">${gi('shield')}</div><p>Nothing waiting — all businesses reviewed.</p></div>`}</div></div>
@@ -2785,7 +2941,7 @@ async function renderAdminTable(el, name, nice){
   const badgeFor=(k,v)=>{ if(['status','verification_status','stock_status','service_type','period'].includes(k)){ const tone=/approv|publish|in_stock|verified|active|completed/i.test(v)?'open':/pending|new/i.test(v)?'warn':/reject|suspend|hidden|cancel|out_of/i.test(v)?'closed':'neutral'; return `<span class="badge ${tone}">${esc(String(v).replace(/_/g,' '))}</span>`; } if(k==='rating') return stars(v); if(k==='role') return `<span class="badge primary">${esc(String(v).replace(/_/g,' '))}</span>`; if(k==='price'||k==='total') return money(v); if(['active','emergency','popular','available','featured'].includes(k)) return `<span class="badge ${v?'open':'neutral'}">${v?'yes':'no'}</span>`; return esc(v==null?'':String(v).length>54?String(v).slice(0,54)+'…':v); };
   const canView = name==='businesses';
   const hasActions = canView||canApprove||canModerate||canCat||canEdit||canDelete;
-  el.innerHTML = `<div class="panel"><div class="ph"><h3>${data.length} ${(nice||name).toLowerCase()}</h3>
+  el.innerHTML = `${data.length>=1000?`<div class="ai-bubble" style="margin-bottom:12px">Showing the latest ${data.length.toLocaleString('en-IN')} ${(nice||name).toLowerCase()}. Use the search bar above to find any other record.</div>`:''}<div class="panel"><div class="ph"><h3>${data.length.toLocaleString('en-IN')} ${(nice||name).toLowerCase()}</h3>
       <div class="row" style="gap:8px">
         ${name==='businesses'?`<button class="btn sm ghost" data-goloc="1">${I.pin} Import from Google</button><button class="btn sm ghost" id="addpartner">${I.users} Add partner login</button>`:''}
         ${canAdd?`<button class="btn sm" id="addnew">${I.plus} Add ${SINGULAR[name]||name}</button>`:''}</div></div>

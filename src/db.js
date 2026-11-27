@@ -166,6 +166,20 @@ function migrate() {
   add('orders', 'note', 'TEXT');
   add('orders', 'discount', 'REAL DEFAULT 0');
   add('orders', 'rating', 'INTEGER');
+  // Partner self-registration (additive only — existing rows keep their values)
+  add('businesses', 'contact_name', 'TEXT');
+  add('businesses', 'contact_email', 'TEXT');
+  add('businesses', 'pincode', 'TEXT');
+  add('businesses', 'landmark', 'TEXT');
+  add('businesses', 'gstin', 'TEXT');
+  add('businesses', 'fssai', 'TEXT');
+  add('businesses', 'trade_license', 'TEXT');
+  add('businesses', 'delivery_mode', "TEXT DEFAULT 'pickup_delivery'");
+  add('businesses', 'delivery_radius_km', 'REAL');
+  add('businesses', 'association', 'TEXT');
+  add('businesses', 'source', "TEXT DEFAULT 'admin'");
+  add('businesses', 'review_note', 'TEXT');
+  add('businesses', 'reviewed_at', 'TEXT');
 }
 
 export function seed({ force = false } = {}) {
