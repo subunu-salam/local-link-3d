@@ -1041,4 +1041,7 @@ app.get('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🌿 Local Link running on http://localhost:${PORT}`));
+// On Vercel the app runs as a serverless function, so it is exported instead of listening.
+if (!process.env.VERCEL) app.listen(PORT, () => console.log(`🌿 Local Link running on http://localhost:${PORT}`));
+
+export default app;

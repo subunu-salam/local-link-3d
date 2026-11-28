@@ -6,7 +6,8 @@ import { fileURLToPath } from 'url';
 import { photoFor } from './photos.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_FILE = process.env.DATABASE_FILE || path.join(__dirname, '..', 'data', 'local-link.db');
+// On Vercel only /tmp is writable, so the local SQLite copy lives there.
+const DB_FILE = process.env.DATABASE_FILE || (process.env.VERCEL ? '/tmp/local-link.db' : path.join(__dirname, '..', 'data', 'local-link.db'));
 fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
 
 // ---------------------------------------------------------------------------
