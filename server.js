@@ -1000,6 +1000,18 @@ app.post('/api/admin/import-google', adminOnly, async (req, res) => {
   res.json({ ok: true, imported, skipped, errors, area: area.name });
 });
 
+/* ---------------- subdomain → app surface ----------------
+   partner.locallink.shop → Partner app, admin.locallink.shop → Admin panel.
+   The root domain keeps serving the Customer app. */
+app.use((req, res, next) => {
+  const host = (req.hostname || '').toLowerCase();
+  const sub = host.startsWith('partner.') ? 'partner' : host.startsWith('admin.') ? 'admin' : null;
+  if (sub && req.method === 'GET' && (req.path === '/' || req.path === '/apps')) {
+    return res.redirect(302, '/' + sub);
+  }
+  next();
+});
+
 /* ---------------- static SPA ---------------- */
 app.use(express.static(path.join(__dirname, 'public')));
 
